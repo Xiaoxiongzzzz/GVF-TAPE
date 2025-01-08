@@ -203,8 +203,8 @@ requests==2.32.3
 requests-oauthlib==2.0.0
 rfc3339-validator==0.1.4
 rfc3986-validator==0.1.1
-robomimic @ file:///mnt/code/ZhangXiaoxiong/ATM/third_party/robomimic
--e git+https://github.com/ARISE-Initiative/robosuite.git@eafb81f54ffc104f905ee48a16bb15f059176ad3#egg=robosuite&subdirectory=../../../third_party/robosuite
+# robomimic @ file:///mnt/code/ZhangXiaoxiong/ATM/third_party/robomimic
+# -e git+https://github.com/ARISE-Initiative/robosuite.git@eafb81f54ffc104f905ee48a16bb15f059176ad3#egg=robosuite&subdirectory=../../../third_party/robosuite
 rpds-py==0.20.0
 rsa==4.9
 safetensors==0.4.5
