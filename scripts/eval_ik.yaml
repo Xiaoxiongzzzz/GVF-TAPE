@@ -1,5 +1,6 @@
 # Global settings
-seed: 1  # Global random seed for reproducibility
+use_seed: true  # Whether to use fixed seed
+seed: 2  # Global random seed for reproducibility, only used if use_seed is true
 
 # GPU settings
 gpu_id: 1  # Main GPU for computation
@@ -7,7 +8,7 @@ render_gpu_id: 0  # GPU for rendering
 
 # Test settings
 num_test_pr_task: 50
-init_steps: 2  # number of initial steps with zero action
+init_steps: 10  # number of initial steps with zero action
 num_video_samples: 13  # number of video samples to generate
 pid_max_steps: 16  # maximum steps for PID control
 

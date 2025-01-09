@@ -56,10 +56,15 @@ def main():
     with open("scripts/eval_ik.yaml", 'r') as f:
         config = yaml.safe_load(f)
     
-    seed_everything(config['seed'], workers=True)
+    # Only set seed if use_seed is true
+    if config.get('use_seed', False):
+        seed_everything(config['seed'], workers=True)
+        exp_name = f"seed-{config['seed']}_experiment"
+    else:
+        exp_name = "seed-None_experiment"
     
     timestamp = time.strftime("%Y%m%d_%H%M%S")
-    base_output_dir = f"./results/ik_policy/experiment_seed{config['seed']}_{timestamp}"
+    base_output_dir = f"./results/ik_policy/{timestamp}_{exp_name}"
     os.makedirs(base_output_dir, exist_ok=True)
     
     torch.multiprocessing.set_sharing_strategy('file_system')
@@ -153,7 +158,8 @@ def main():
                         st_out = correct_orientation(st_out)
                         
                         frame = np.concatenate([cv2.flip(obs["agentview_image"], 0), video_clip[index]], axis=1)
-                        cv2.putText(frame, f"gripper est. {goal_out[-1]}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 255), 1)
+                        cv2.putText(frame, "Current", (10, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                        cv2.putText(frame, "Goal", (frame.shape[1]//2 + 10, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
                         roll_out_video.append(frame)
                         
                         if done:
@@ -198,7 +204,8 @@ def main():
     overall_success_rate = sum(all_task_results.values()) / len(all_task_results)
     with open(os.path.join(base_output_dir, "overall_results.txt"), "w") as f:
         f.write(f"Experiment Timestamp: {timestamp}\n")
-        f.write(f"Random Seed: {config['seed']}\n")
+        if config.get('use_seed', False):
+            f.write(f"Random Seed: {config['seed']}\n")
         f.write(f"Overall success rate across all tasks: {overall_success_rate:.2f}%\n\n")
         f.write("Individual Task Results:\n")
         for task_id, success_rate in all_task_results.items():
