@@ -1,5 +1,5 @@
 # Global settings
-seed: 2  # Global random seed for reproducibility
+seed: 1  # Global random seed for reproducibility
 
 # GPU settings
 gpu_id: 1  # Main GPU for computation

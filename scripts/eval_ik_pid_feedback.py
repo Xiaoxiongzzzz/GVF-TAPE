@@ -59,7 +59,7 @@ def main():
     seed_everything(config['seed'], workers=True)
     
     timestamp = time.strftime("%Y%m%d_%H%M%S")
-    base_output_dir = f"./results/ik_policy/experiment_{timestamp}"
+    base_output_dir = f"./results/ik_policy/experiment_seed{config['seed']}_{timestamp}"
     os.makedirs(base_output_dir, exist_ok=True)
     
     torch.multiprocessing.set_sharing_strategy('file_system')
