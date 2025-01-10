@@ -4,6 +4,8 @@ from utils.env_utils import set_up_libero_envs
 from utils.env_utils import process_obs
 from policy.ik_model.resnet import ResNet50Pretrained, ResNet50
 from model.resnet50_mlp import ResNet50MLP
+from model import *
+from model.vit_mlp import ViTMLP
 from torchvision.utils import save_image
 from einops import rearrange
 from scipy.spatial.transform import Rotation as R
@@ -20,9 +22,6 @@ import scipy.spatial.transform as st
 from scipy.spatial.transform import Rotation as R
 from lightning.pytorch import seed_everything
 
-transform = transforms.Compose(
-    [transforms.ToPILImage(), transforms.Resize(128), transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),]
-)
 
 def correct_orientation(eight_d_output):
     corrected_euler = st.Rotation.from_quat(eight_d_output[3:7]).as_euler("xzy", degrees=False)
@@ -70,6 +69,15 @@ def main():
     torch.multiprocessing.set_sharing_strategy('file_system')
     device = torch.device(f"cuda:{config['gpu_id']}")
     suite_name = "libero_spatial"
+    
+    transform = transforms.Compose(
+        [
+            transforms.ToPILImage(), 
+            transforms.Resize(config['image']['resize']), 
+            transforms.ToTensor(), 
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+        ]
+    )
 
     video_generator = prepare_video_generator(
         unet_path=config['video_generator_path'], 
@@ -78,7 +86,8 @@ def main():
     )
     for param in video_generator.parameters():
         param.requires_grad = False
-    ik_model = ResNet50MLP(out_size=8).to(device)
+    # ik_model = ResNet50MLP(out_size=8).to(device)
+    ik_model = ViTMLP(out_size=8, pretrained=False).to(device)
     ik_model.load_state_dict(torch.load(config['ik_model_path']))
     ik_model.eval()
 

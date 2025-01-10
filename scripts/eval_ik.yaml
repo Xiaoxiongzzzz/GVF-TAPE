@@ -3,7 +3,7 @@ use_seed: true  # Whether to use fixed seed
 seed: 2  # Global random seed for reproducibility, only used if use_seed is true
 
 # GPU settings
-gpu_id: 1  # Main GPU for computation
+gpu_id: 0  # Main GPU for computation
 render_gpu_id: 0  # GPU for rendering
 
 # Test settings
@@ -13,8 +13,13 @@ num_video_samples: 13  # number of video samples to generate
 pid_max_steps: 16  # maximum steps for PID control
 
 # Model paths
-video_generator_path: "/mnt/home/ZhangXiaoxiong/Documents/AVDC/results/RFlow_pixel/model_99000.pt"
-ik_model_path: "/mnt/home/ZhangXiaoxiong/Documents/train_libero_spatial_ik_ResNet50MLP_final.pth"
+# video_generator_path: "/mnt/home/ZhangXiaoxiong/Documents/AVDC/results/RFlow_pixel/model_99000.pt"
+# video_generator_path: "/mnt/home/ZhangXiaoxiong/Documents/AVDC/results/RFlow_pixel/model_51000.pt"
+video_generator_path: "/mnt/home/ZhangXiaoxiong/Documents/AVDC/results/RFlow_pixel/model_75000.pt"
+# ik_model_path: "/mnt/home/ZhangXiaoxiong/Documents/train_libero_spatial_ik_ResNet50MLP_final.pth"
+# ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.09/20.54.55_train_libero_spatial_ik_train_libero_spatial_ik/checkpoints/train_libero_spatial_ik_ResNet50MLP_best.pth"
+# ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.09/23.40.54_train_libero_spatial_ik_train_libero_spatial_ik/checkpoints/train_libero_spatial_ik_ResNet50MLP_best.pth"
+ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.10/11.27.58_train_libero_spatial_ik_vit_train_libero_spatial_ik_vit/checkpoints/train_libero_spatial_ik_vit_ViTMLP_epoch_30.pth"
 
 # PID Control parameters
 pid:
@@ -31,3 +36,7 @@ pid:
 video:
   duration: 50  # gif duration
   sample_timestep: 3  # video generator sample timestep
+
+# Image processing settings
+image:
+  resize: 224  # Image resize dimension
