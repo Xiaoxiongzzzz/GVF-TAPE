@@ -39,18 +39,18 @@ def correct_orientation(eight_d_output):
     )
     return new_8d
 
-SPATIAL_TASK_DICT = {
-    "task1": "pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate",
-    "task2": "pick_up_the_black_bowl_from_table_center_and_place_it_on_the_plate",
-    "task3": "pick_up_the_black_bowl_in_the_top_drawer_of_the_wooden_cabinet_and_place_it_on_the_plate",
-    "task4": "pick_up_the_black_bowl_next_to_the_cookie_box_and_place_it_on_the_plate",
-    "task5": "pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate",
-    "task6": "pick_up_the_black_bowl_next_to_the_ramekin_and_place_it_on_the_plate",
-    "task7": "pick_up_the_black_bowl_on_the_cookie_box_and_place_it_on_the_plate",
-    "task8": "pick_up_the_black_bowl_on_the_ramekin_and_place_it_on_the_plate",
-    "task9": "pick_up_the_black_bowl_on_the_stove_and_place_it_on_the_plate",
-    "task10": "pick_up_the_black_bowl_on_the_wooden_cabinet_and_place_it_on_the_plate"
-}
+# SPATIAL_TASK_DICT = {
+#     "task1": "pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate",
+#     "task2": "pick_up_the_black_bowl_from_table_center_and_place_it_on_the_plate",
+#     "task3": "pick_up_the_black_bowl_in_the_top_drawer_of_the_wooden_cabinet_and_place_it_on_the_plate",
+#     "task4": "pick_up_the_black_bowl_next_to_the_cookie_box_and_place_it_on_the_plate",
+#     "task5": "pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate",
+#     "task6": "pick_up_the_black_bowl_next_to_the_ramekin_and_place_it_on_the_plate",
+#     "task7": "pick_up_the_black_bowl_on_the_cookie_box_and_place_it_on_the_plate",
+#     "task8": "pick_up_the_black_bowl_on_the_ramekin_and_place_it_on_the_plate",
+#     "task9": "pick_up_the_black_bowl_on_the_stove_and_place_it_on_the_plate",
+#     "task10": "pick_up_the_black_bowl_on_the_wooden_cabinet_and_place_it_on_the_plate"
+# }
 
 # LB90_TASK_DICT = {
 
@@ -72,7 +72,21 @@ def main():
     
     torch.multiprocessing.set_sharing_strategy('file_system')
     device = torch.device(f"cuda:{config['gpu_id']}")
-    suite_name = "libero_spatial"
+    
+    # Get tasks from LIBERO benchmark
+    benchmark_dict = benchmark.get_benchmark_dict()
+    suite = benchmark_dict[config['task']['suite_name']]()
+    available_tasks = suite.get_task_names()
+    
+    # Filter tasks if specific ones are selected in config
+    if config['task']['selected_tasks']:
+        selected_tasks = {f"task{i+1}": task_name 
+                         for i, task_name in enumerate(available_tasks) 
+                         if f"task{i+1}" in config['task']['selected_tasks']}
+    else:
+        # Use all available tasks if none specified
+        selected_tasks = {f"task{i+1}": task_name 
+                         for i, task_name in enumerate(available_tasks)}
     
     transform = transforms.Compose(
         [
@@ -117,12 +131,16 @@ def main():
 
     all_task_results = {}
     
-    for task_id, task_name in SPATIAL_TASK_DICT.items():
+    for task_id, task_name in selected_tasks.items():
         print(f"\nEvaluating {task_id}: {task_name}")
         task_output_dir = os.path.join(base_output_dir, task_id)
         os.makedirs(task_output_dir, exist_ok=True)
         
-        env, task_prompt = set_up_libero_envs(suite_name, task_name, render_device=config['render_gpu_id'])
+        env, task_prompt = set_up_libero_envs(
+            suite_name=config['task']['suite_name'], 
+            task_name=task_name, 
+            render_device=config['render_gpu_id']
+        )
         task_successes = 0
 
         for test_time in tqdm(range(config['num_test_pr_task'])):
@@ -134,11 +152,11 @@ def main():
             for _ in range(config['num_video_samples']):
                 visual_obs, _ = process_obs(obs, extra_state_keys=[], device=device)
                 side_view = visual_obs[:,0]
-                print("##########################")
-                print(side_view.shape)
-                # print side view type
-                print(type(side_view))
-                print(side_view.dtype)
+                # print("##########################")
+                # print(side_view.shape)
+                # # print side view type
+                # print(type(side_view))
+                # print(side_view.dtype)
                 video_clip = video_generator(task_prompt, side_view)
                 video_clip = rearrange(video_clip, "b (f c) h w -> (b f) c h w", c=3)[::2]
                 video_clip = (video_clip.permute(0, 2, 3, 1).detach().cpu().numpy()*255).astype(np.uint8)
