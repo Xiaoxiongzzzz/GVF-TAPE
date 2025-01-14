@@ -15,11 +15,12 @@ pid_max_steps: 16  # maximum steps for PID control
 # Model paths
 # video_generator_path: "/mnt/home/ZhangXiaoxiong/Documents/AVDC/results/RFlow_pixel/model_99000.pt"
 # video_generator_path: "/mnt/home/ZhangXiaoxiong/Documents/AVDC/results/RFlow_pixel/model_51000.pt"
-video_generator_path: "/mnt/home/ZhangXiaoxiong/Documents/AVDC/results/RFlow_pixel/model_75000.pt"
+video_generator_path: "/mnt/home/ZhangXiaoxiong/Documents/AVDC/results/RFlow_pixel_libero_90/model_99000.pt"
 # ik_model_path: "/mnt/home/ZhangXiaoxiong/Documents/train_libero_spatial_ik_ResNet50MLP_final.pth"
 # ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.09/20.54.55_train_libero_spatial_ik_train_libero_spatial_ik/checkpoints/train_libero_spatial_ik_ResNet50MLP_best.pth"
 # ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.09/23.40.54_train_libero_spatial_ik_train_libero_spatial_ik/checkpoints/train_libero_spatial_ik_ResNet50MLP_best.pth"
-ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.10/11.27.58_train_libero_spatial_ik_vit_train_libero_spatial_ik_vit/checkpoints/train_libero_spatial_ik_vit_ViTMLP_epoch_30.pth"
+# ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.10/11.27.58_train_libero_spatial_ik_vit_train_libero_spatial_ik_vit/checkpoints/train_libero_spatial_ik_vit_ViTMLP_epoch_30.pth"
+ik_model_path: "/mnt/home/ZhangChuye/Documents/video_IK_exp/data_dir/pretrained_ckpt/ckpt/lb_8tk_ik/train_arx_random_absolute_ik_ResNet50MLP_final.pth"
 
 # PID Control parameters
 pid:
@@ -35,8 +36,8 @@ pid:
 # Video settings
 video:
   duration: 50  # gif duration
-  sample_timestep: 3  # video generator sample timestep
+  sample_timestep: 8  # video generator sample timestep
 
 # Image processing settings
 image:
-  resize: 224  # Image resize dimension
+  resize: 128  # Image resize dimension

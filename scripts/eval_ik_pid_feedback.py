@@ -37,19 +37,29 @@ def correct_orientation(eight_d_output):
     )
     return new_8d
 
-TASK_DICT = {
-    "task1": "pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate",
-    "task2": "pick_up_the_black_bowl_from_table_center_and_place_it_on_the_plate",
-    "task3": "pick_up_the_black_bowl_in_the_top_drawer_of_the_wooden_cabinet_and_place_it_on_the_plate",
-    "task4": "pick_up_the_black_bowl_next_to_the_cookie_box_and_place_it_on_the_plate",
-    "task5": "pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate",
-    "task6": "pick_up_the_black_bowl_next_to_the_ramekin_and_place_it_on_the_plate",
-    "task7": "pick_up_the_black_bowl_on_the_cookie_box_and_place_it_on_the_plate",
-    "task8": "pick_up_the_black_bowl_on_the_ramekin_and_place_it_on_the_plate",
-    "task9": "pick_up_the_black_bowl_on_the_stove_and_place_it_on_the_plate",
-    "task10": "pick_up_the_black_bowl_on_the_wooden_cabinet_and_place_it_on_the_plate"
-}
+# TASK_DICT = {
+#     "task1": "pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate",
+#     "task2": "pick_up_the_black_bowl_from_table_center_and_place_it_on_the_plate",
+#     "task3": "pick_up_the_black_bowl_in_the_top_drawer_of_the_wooden_cabinet_and_place_it_on_the_plate",
+#     "task4": "pick_up_the_black_bowl_next_to_the_cookie_box_and_place_it_on_the_plate",
+#     "task5": "pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate",
+#     "task6": "pick_up_the_black_bowl_next_to_the_ramekin_and_place_it_on_the_plate",
+#     "task7": "pick_up_the_black_bowl_on_the_cookie_box_and_place_it_on_the_plate",
+#     "task8": "pick_up_the_black_bowl_on_the_ramekin_and_place_it_on_the_plate",
+#     "task9": "pick_up_the_black_bowl_on_the_stove_and_place_it_on_the_plate",
+#     "task10": "pick_up_the_black_bowl_on_the_wooden_cabinet_and_place_it_on_the_plate"
+# }
 
+TASK_DICT = {
+    "task1": "LIVING_ROOM_SCENE5_put_the_red_mug_on_the_left_plate",
+    "task2": "LIVING_ROOM_SCENE5_put_the_red_mug_on_the_right_plate",
+    "task3": "LIVING_ROOM_SCENE5_put_the_white_mug_on_the_left_plate",
+    "task4": "LIVING_ROOM_SCENE5_put_the_yellow_and_white_mug_on_the_right_plate",
+    "task5": "LIVING_ROOM_SCENE6_put_the_chocolate_pudding_to_the_left_of_the_plate",
+    "task6": "LIVING_ROOM_SCENE6_put_the_chocolate_pudding_to_the_right_of_the_plate",
+    "task7": "LIVING_ROOM_SCENE6_put_the_red_mug_on_the_plate",
+    "task8": "LIVING_ROOM_SCENE6_put_the_white_mug_on_the_plate"
+    }
 def main():
     # Load config
     with open("scripts/eval_ik.yaml", 'r') as f:
@@ -68,16 +78,14 @@ def main():
     
     torch.multiprocessing.set_sharing_strategy('file_system')
     device = torch.device(f"cuda:{config['gpu_id']}")
-    suite_name = "libero_spatial"
+    suite_name = "libero_90"
     
-    transform = transforms.Compose(
-        [
+    transform = transforms.Compose([
             transforms.ToPILImage(), 
             transforms.Resize(config['image']['resize']), 
             transforms.ToTensor(), 
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-        ]
-    )
+            ])
 
     video_generator = prepare_video_generator(
         unet_path=config['video_generator_path'], 
@@ -86,8 +94,8 @@ def main():
     )
     for param in video_generator.parameters():
         param.requires_grad = False
-    # ik_model = ResNet50MLP(out_size=8).to(device)
-    ik_model = ViTMLP(out_size=8, pretrained=False).to(device)
+    ik_model = ResNet50MLP(out_size=8).to(device)
+    # ik_model = ViTMLP(out_size=8, pretrained=False).to(device)
     ik_model.load_state_dict(torch.load(config['ik_model_path']))
     ik_model.eval()
 
@@ -110,7 +118,7 @@ def main():
             for _ in range(config['num_video_samples']):
                 visual_obs, _ = process_obs(obs, extra_state_keys=[], device=device)
                 side_view = visual_obs[:,0]
-                video_clip = video_generator(task_prompt, side_view)
+                video_clip = video_generator(task_name.replace("_", " "), side_view)
                 video_clip = rearrange(video_clip, "b (f c) h w -> (b f) c h w", c=3)[::2]
                 video_clip = (video_clip.permute(0, 2, 3, 1).detach().cpu().numpy()*255).astype(np.uint8)
                 
