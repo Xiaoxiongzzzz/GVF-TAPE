@@ -4,7 +4,9 @@ from utils.env_utils import set_up_libero_envs
 from utils.env_utils import process_obs
 from policy.ik_model.resnet import ResNet50Pretrained, ResNet50
 from model.resnet50_mlp import ResNet50MLP
-from model import *
+from model.resnet18_mlp import ResNet18MLP
+from model.cnn_mlp import CNNMLP
+
 from model.vit_mlp import ViTMLP
 from torchvision.utils import save_image
 from einops import rearrange
@@ -37,7 +39,7 @@ def correct_orientation(eight_d_output):
     )
     return new_8d
 
-TASK_DICT = {
+SPATIAL_TASK_DICT = {
     "task1": "pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate",
     "task2": "pick_up_the_black_bowl_from_table_center_and_place_it_on_the_plate",
     "task3": "pick_up_the_black_bowl_in_the_top_drawer_of_the_wooden_cabinet_and_place_it_on_the_plate",
@@ -49,6 +51,8 @@ TASK_DICT = {
     "task9": "pick_up_the_black_bowl_on_the_stove_and_place_it_on_the_plate",
     "task10": "pick_up_the_black_bowl_on_the_wooden_cabinet_and_place_it_on_the_plate"
 }
+
+# LB90_TASK_DICT = {
 
 def main():
     # Load config
@@ -87,13 +91,33 @@ def main():
     for param in video_generator.parameters():
         param.requires_grad = False
     # ik_model = ResNet50MLP(out_size=8).to(device)
-    ik_model = ViTMLP(out_size=8, pretrained=False).to(device)
+    # Initialize IK model based on config
+    if config['model']['type'] == 'vit':
+        ik_model = ViTMLP(
+            out_size=config['model']['out_size'], 
+            pretrained=config['model']['pretrained']
+        ).to(device)
+    elif config['model']['type'] == 'resnet50':
+        ik_model = ResNet50MLP(
+            out_size=config['model']['out_size']
+        ).to(device)
+    elif config['model']['type'] == 'cnn':
+        ik_model = CNNMLP(
+            out_size=config['model']['out_size']
+        ).to(device)
+    elif config['model']['type'] == 'resnet18':
+        ik_model = ResNet18MLP(
+            out_size=config['model']['out_size']
+        ).to(device)
+    else:
+        raise ValueError(f"Unknown model type: {config['model']['type']}")
+        
     ik_model.load_state_dict(torch.load(config['ik_model_path']))
     ik_model.eval()
 
     all_task_results = {}
     
-    for task_id, task_name in TASK_DICT.items():
+    for task_id, task_name in SPATIAL_TASK_DICT.items():
         print(f"\nEvaluating {task_id}: {task_name}")
         task_output_dir = os.path.join(base_output_dir, task_id)
         os.makedirs(task_output_dir, exist_ok=True)
@@ -110,6 +134,11 @@ def main():
             for _ in range(config['num_video_samples']):
                 visual_obs, _ = process_obs(obs, extra_state_keys=[], device=device)
                 side_view = visual_obs[:,0]
+                print("##########################")
+                print(side_view.shape)
+                # print side view type
+                print(type(side_view))
+                print(side_view.dtype)
                 video_clip = video_generator(task_prompt, side_view)
                 video_clip = rearrange(video_clip, "b (f c) h w -> (b f) c h w", c=3)[::2]
                 video_clip = (video_clip.permute(0, 2, 3, 1).detach().cpu().numpy()*255).astype(np.uint8)
