@@ -291,7 +291,7 @@ class GoalGaussianDiffusion(nn.Module):
         beta_schedule = 'sigmoid',
         schedule_fn_kwargs = dict(),
         ddim_sampling_eta = 0.,
-        auto_normalize = True,
+        auto_normalize = False,
         min_snr_loss_weight = False, # https://arxiv.org/abs/2303.09556
         min_snr_gamma = 5
     ):
@@ -524,7 +524,7 @@ class GoalGaussianDiffusion(nn.Module):
 
         x_start = None
 
-        for time, time_next in tqdm(time_pairs, desc = 'sampling loop time step'):
+        for time, time_next in time_pairs:
             time_cond = torch.full((batch,), time, device = device, dtype = torch.long)
             # self_cond = x_start if self.self_condition else None
             pred_noise, x_start, *_ = self.model_predictions(img, time_cond, x_cond, task_embed, clip_x_start = False, rederive_pred_noise = True, guidance_weight=guidance_weight)

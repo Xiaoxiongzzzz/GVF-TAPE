@@ -4,8 +4,9 @@ from einops import rearrange
 from diffusion_model.UNets import UnetLatent, UnetMW
 from diffusion_model.RectifiedFlow import RectifiedFlow
 from diffusers.models import AutoencoderKL
-from peft import PeftModel
 from transformers import CLIPTextModel, CLIPTokenizer
+from diffusion_model.GoalDiffusion import GoalGaussianDiffusion
+from ema_pytorch import EMA
 
 
 class LatentVideoGenerator(nn.Module):
@@ -81,6 +82,7 @@ class PixelVideoGenerator(nn.Module):
         batch_text_embed = self.text_encoder(**batch_text_ids).last_hidden_state
 
         return batch_text_embed
+
 def prepare_video_generator(unet_path, device, sample_timestep=10, latent=False):
     unet = UnetLatent().to(device) if latent else UnetMW().to(device) 
     unet.load_state_dict(torch.load(unet_path)["model"])
@@ -104,12 +106,70 @@ def prepare_video_generator(unet_path, device, sample_timestep=10, latent=False)
 
     return video_generator
 
+class DiffusionVideoGenerator(nn.Module):
+    def __init__(self, diffusion_model, tokenizer, text_encoder, device):
+        super().__init__()
+        self.diffusion_model = diffusion_model
+        self.tokenizer = tokenizer
+        self.text_encoder = text_encoder
+        self.device = device
+
+        self.f = 6
+    def forward(self, batch_text, x_cond):
+        '''
+        Input:
+            batch_text: str or list of str
+            x_cond: shape = [b, c, h, w]
+        Output:
+            x: shape = [b, (f, c), h, w]
+        '''
+        B = x_cond.shape[0]
+        x_cond = x_cond/255.
+        task_embed = self.encode_batch_text(batch_text)
+        x = self.diffusion_model.sample(x_cond, task_embed, batch_size = B)
+
+        return x
+
+    def encode_batch_text(self, batch_text):
+        
+        batch_text_ids = self.tokenizer(batch_text, return_tensors = 'pt', padding = True, truncation = True, max_length = 128).to(self.device)
+        batch_text_embed = self.text_encoder(**batch_text_ids).last_hidden_state
+
+        return batch_text_embed
+    
+def prepare_diffusion_video_generator(diffusion_model_path, device, sample_timestep=10, image_size=(128, 128)):
+    diffusion_model = EMA(GoalGaussianDiffusion(
+        channels=3*(7-1),
+        model=UnetMW(),
+        image_size=image_size,
+        timesteps=100,
+        sampling_timesteps=sample_timestep,
+        loss_type="l2",
+        objective="pred_v",
+        beta_schedule="cosine",
+        min_snr_loss_weight=True,
+    ))
+    diffusion_model.load_state_dict(torch.load(diffusion_model_path)['ema'])
+    diffusion_model.eval().to(device)
+
+    # Language Model
+    pretrained_model = "openai/clip-vit-base-patch32"
+    tokenizer = CLIPTokenizer.from_pretrained(pretrained_model)
+    text_encoder = CLIPTextModel.from_pretrained(pretrained_model).to(device)
+    text_encoder.requires_grad_(False)
+    text_encoder.eval()
+
+    diffusion_video_generator = DiffusionVideoGenerator(diffusion_model.ema_model,
+                                                    tokenizer, text_encoder, device)
+
+    return diffusion_video_generator
+
 # Test Code
 # if __name__ == "__main__":
 #     text = "open the drawer"
-#     x_cond = torch.randn(1, 3, 480, 640).to(torch.device("cuda"))
-#     video_generator = prepare_video_generator("/mnt/home/ZhangXiaoxiong/Documents/AVDC/results/RFlow_real_world/model_99000.pt", 
+#     x_cond = torch.randn(1, 3, 128, 128).to(torch.device("cuda"))
+#     diffusion_video_generator = prepare_diffusion_video_generator("/mnt/home/ZhangXiaoxiong/Documents/AVDC/results/ddpm_libero_spatial/model-31.pt", 
 #                                                 device=torch.device("cuda"),
-#                                                 latent=True)
-#     x = video_generator(text, x_cond)
+#                                                 sample_timestep=10)
+#     sample = diffusion_video_generator(text, x_cond)
 #     import ipdb; ipdb.set_trace()

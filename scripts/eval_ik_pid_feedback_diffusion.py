@@ -1,5 +1,5 @@
 from libero.libero import benchmark
-from diffusion_model.VideoGenerator import prepare_video_generator
+from diffusion_model.VideoGenerator import prepare_video_generator, prepare_diffusion_video_generator
 from utils.env_utils import set_up_libero_envs
 from utils.env_utils import process_obs
 from policy.ik_model.resnet import ResNet50Pretrained, ResNet50
@@ -50,27 +50,17 @@ TASK_DICT = {
     "task10": "pick_up_the_black_bowl_on_the_wooden_cabinet_and_place_it_on_the_plate"
 }
 
-# TASK_DICT = {
-#     "task1": "LIVING_ROOM_SCENE5_put_the_red_mug_on_the_left_plate",
-#     "task2": "LIVING_ROOM_SCENE5_put_the_red_mug_on_the_right_plate",
-#     "task3": "LIVING_ROOM_SCENE5_put_the_white_mug_on_the_left_plate",
-#     "task4": "LIVING_ROOM_SCENE5_put_the_yellow_and_white_mug_on_the_right_plate",
-#     "task5": "LIVING_ROOM_SCENE6_put_the_chocolate_pudding_to_the_left_of_the_plate",
-#     "task6": "LIVING_ROOM_SCENE6_put_the_chocolate_pudding_to_the_right_of_the_plate",
-#     "task7": "LIVING_ROOM_SCENE6_put_the_red_mug_on_the_plate",
-#     "task8": "LIVING_ROOM_SCENE6_put_the_white_mug_on_the_plate"
-#     }
 def main():
     # Load config
-    with open("conf/eval_ik.yaml", 'r') as f:
+    with open("conf/eval_ik_diffusion.yaml", 'r') as f:
         config = yaml.safe_load(f)
     
     # Only set seed if use_seed is true
     if config.get('use_seed', False):
         seed_everything(config['seed'], workers=True)
-        exp_name = f"seed-{config['seed']}_experiment"
+        exp_name = f"seed-{config['seed']}_experiment_diffusion"
     else:
-        exp_name = "seed-None_experiment"
+        exp_name = "seed-None_experiment_diffusion"
     
     timestamp = time.strftime("%Y%m%d_%H%M%S")
     base_output_dir = f"./results/ik_policy/{timestamp}_{exp_name}"
@@ -87,15 +77,15 @@ def main():
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
             ])
 
-    video_generator = prepare_video_generator(
-        unet_path=config['video_generator_path'], 
+    video_generator = prepare_diffusion_video_generator(
+        diffusion_model_path=config['diffusion_model_path'], 
         device=device, 
         sample_timestep=config['video']['sample_timestep']
-    )
+    ).eval()
     for param in video_generator.parameters():
         param.requires_grad = False
+
     ik_model = ResNet50MLP(out_size=8).to(device)
-    # ik_model = ViTMLP(out_size=8, pretrained=False).to(device)
     ik_model.load_state_dict(torch.load(config['ik_model_path']))
     ik_model.eval()
 

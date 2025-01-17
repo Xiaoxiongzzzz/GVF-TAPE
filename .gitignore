@@ -1,4 +1,4 @@
 results/
-conf/
 wandb/
 src/
+*.pth
