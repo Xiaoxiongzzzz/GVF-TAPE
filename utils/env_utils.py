@@ -12,7 +12,7 @@ states_key_mapping = {
 }
 
 
-def set_up_libero_envs(suite_name: str, task_name: str, render_device: int):
+def set_up_libero_envs(suite_name: str, task_name: str, render_device: int, horizon: int):
     '''
     Args:
     suite_name: e.g. libero_spatial, libero_goal ...
@@ -38,6 +38,7 @@ def set_up_libero_envs(suite_name: str, task_name: str, render_device: int):
     "camera_widths": 128,
     "render_gpu_device_id": render_device, 
     "has_renderer": True,
+    "horizon": horizon,
     }
     env = OffScreenRenderEnv(**env_args)
     env.seed(0)

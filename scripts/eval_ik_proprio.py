@@ -139,7 +139,8 @@ def main():
         env, task_prompt = set_up_libero_envs(
             suite_name=config['task']['suite_name'], 
             task_name=task_name, 
-            render_device=config['render_gpu_id']
+            render_device=config['render_gpu_id'],
+            horizon=config['task']['horizon']
         )
         task_successes = 0
 
@@ -170,7 +171,7 @@ def main():
                     with torch.no_grad():
                         goal_out = ik_model(goal_img)
                     goal_out = goal_out.squeeze().cpu().numpy()
-                    goal_out = correct_orientation(goal_out)
+                    # goal_out = correct_orientation(goal_out)
                     
                     # Predicted proprioceptive state
                     img_st = obs["agentview_image"]
@@ -180,7 +181,7 @@ def main():
                     with torch.no_grad():
                         st_out = ik_model(img_st)
                     st_out = st_out.squeeze().cpu().numpy()
-                    st_out = correct_orientation(st_out)
+                    # st_out = correct_orientation(st_out)
                     
                     # Get proprioceptive state
                     # proprio_st = np.concatenate([obs["robot0_eef_pos"].reshape(3,), obs["robot0_eef_quat"].reshape(4,), obs["robot0_gripper_qpos"][:, 0].reshape(1,)], axis=0)
