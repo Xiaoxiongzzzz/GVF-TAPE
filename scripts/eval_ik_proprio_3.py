@@ -6,6 +6,7 @@ from policy.ik_model.resnet import ResNet50Pretrained, ResNet50
 from model.resnet50_mlp import ResNet50MLP
 from model.resnet18_mlp import ResNet18MLP
 from model.cnn_mlp import CNNMLP
+import robosuite.utils.transform_utils as T
 
 from model.vit_mlp import ViTMLP
 from torchvision.utils import save_image
@@ -25,34 +26,16 @@ from scipy.spatial.transform import Rotation as R
 from lightning.pytorch import seed_everything
 
 
-# def correct_orientation(eight_d_output):
-#     corrected_euler = st.Rotation.from_quat(eight_d_output[3:7]).as_euler("xzy", degrees=False)
-#     corrected_euler[2] *= -1
-#     corrected_quat = st.Rotation.from_euler("xzy", corrected_euler, degrees=False).as_quat()
-    
-#     new_8d = np.concatenate(
-#         (
-#             eight_d_output[:3].reshape(-1,),
-#             corrected_quat.reshape(-1,),
-#             eight_d_output[7].reshape(-1,),
-#         )
-#     )
-#     return new_8d
+def update(goal_euler):
+    if goal_euler[0] > 0:
+        goal_euler[0] =  goal_euler[0] - 3.14
+    elif goal_euler[0] == 0:
+        goal_euler[0] = 3.14
+    else:
+        goal_euler[0] = 3.14 + goal_euler[0]
 
-# SPATIAL_TASK_DICT = {
-#     "task1": "pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate",
-#     "task2": "pick_up_the_black_bowl_from_table_center_and_place_it_on_the_plate",
-#     "task3": "pick_up_the_black_bowl_in_the_top_drawer_of_the_wooden_cabinet_and_place_it_on_the_plate",
-#     "task4": "pick_up_the_black_bowl_next_to_the_cookie_box_and_place_it_on_the_plate",
-#     "task5": "pick_up_the_black_bowl_next_to_the_plate_and_place_it_on_the_plate",
-#     "task6": "pick_up_the_black_bowl_next_to_the_ramekin_and_place_it_on_the_plate",
-#     "task7": "pick_up_the_black_bowl_on_the_cookie_box_and_place_it_on_the_plate",
-#     "task8": "pick_up_the_black_bowl_on_the_ramekin_and_place_it_on_the_plate",
-#     "task9": "pick_up_the_black_bowl_on_the_stove_and_place_it_on_the_plate",
-#     "task10": "pick_up_the_black_bowl_on_the_wooden_cabinet_and_place_it_on_the_plate"
-# }
-
-# LB90_TASK_DICT = {
+def pd_control(diff, last_diff, kp, kd):
+    return kp*diff + kd*(diff - last_diff)
 
 def main():
     # Load config
@@ -142,13 +125,14 @@ def main():
             render_device=config['render_gpu_id']
         )
         task_successes = 0
-
+        done = False
         for test_time in tqdm(range(config['num_test_pr_task'])):
             obs = env.reset()
             for _ in range(config['init_steps']):
-                obs, _, done, _ = env.step(np.zeros(7))
+                obs, _, _, _ = env.step(np.zeros(7))
 
             roll_out_video = []
+            numGen_count = 0
             for _ in range(config['num_video_samples']):
                 visual_obs, _ = process_obs(obs, extra_state_keys=[], device=device)
                 side_view = visual_obs[:,0]
@@ -164,6 +148,7 @@ def main():
                 vhrz = config['video']['act_horizon']
                 assert len(video_clip) > vhrz, "Video clip length must be greater than act_horizon"
                 
+
                 for index in range(vhrz):
                     goal_img = video_clip[index]
                     goal_img = transform(goal_img).unsqueeze(0).to(device)
@@ -175,8 +160,16 @@ def main():
                     # and I am going to change it back to euler angles
                     
                     goal_out = goal_out.squeeze().cpu().numpy()
-                    # goal_out = correct_orientation(goal_out)
+                    goal_euler = R.from_quat(goal_out[3:7]).as_euler("xyz", degrees=False)
                     
+
+                    update(goal_euler)
+
+                    # goal_out = correct_orientation(goal_out)
+                    prio_quat = obs["robot0_eef_quat"]
+                    prio_euler = R.from_quat(prio_quat).as_euler("xyz", degrees=False)
+
+                    update(prio_euler)
 
                     # Predicted proprioceptive state
                     img_st = obs["agentview_image"]
@@ -186,6 +179,12 @@ def main():
                     with torch.no_grad():
                         st_out = ik_model(img_st)
                     st_out = st_out.squeeze().cpu().numpy()
+
+                    
+                    st_out_euler = R.from_quat(st_out[3:7]).as_euler("xyz", degrees=False)
+                    update(st_out_euler)
+
+
                     # st_out = correct_orientation(st_out)
                     
                     # Get proprioceptive state
@@ -210,38 +209,79 @@ def main():
                     
 
                     pid_step = 0
-                    prev_error = np.zeros(7)
-                    integral_error = np.zeros(7)
+                    prev_ang_error = np.zeros(3)
+                    prev_pos_error = np.zeros(3)
+                    # integral_error = np.zeros(7)
                             
                     while np.linalg.norm(proprio_st - goal_out) > config['pid']['convergence_threshold'] and pid_step < config['pid_max_steps']:
                         pid_step += 1
-                        control_trans = goal_out[:3] - proprio_st[:3]
+                        diff_pose = goal_out[:3] - proprio_st[:3]
                         control_quat = (st.Rotation.from_quat(goal_out[3:7])* st.Rotation.from_quat(proprio_st[3:7]).inv())
-                        control_rot = control_quat.as_euler("xyz", degrees=False)
 
                         gripper_goal = goal_out[7] if goal_out[7] > config['pid']['grip_threshold'] else 0.00
                         control_gripper = (gripper_goal - proprio_st[7]) * 0.04
 
                         ik_act = np.zeros(7)
-                        ik_act[:3] = config['pid']['pos_scale'] * control_trans
-                        ik_act[3:6] = config['pid']['rot_scale'] * control_rot
+                        # ik_act[:3] = diff_pose
+                        # ik_act[3:6] = config['pid']['rot_scale'] * control_rot
+                        print("goal", goal_euler)
+                        print("state", st_out_euler)
+                        # print("goal", goal_euler)
+                        print("prio", prio_euler)
+                        diff_euler = np.zeros(3)
+                        for i in range(3):
+                            dis = goal_euler[i] - prio_euler[i]
+                            if dis > np.pi:
+                                diff_euler[i] = dis - 2*np.pi
+                            elif dis < -np.pi:
+                                diff_euler[i] = dis + 2*np.pi
+                            else:
+                                diff_euler[i] = dis
+
+                        # diff_euler = goal_euler - prio_euler
+                        print("diff", diff_euler)
+                        print("=====")
+                        # print()
+                        # print(diff_euler)
+                        ik_act[0:3] = pd_control(diff_pose, prev_pos_error, config['pospid']['kp'], config['pospid']['kd'])
+                        ik_act[3:6] = pd_control(diff_euler, prev_ang_error, config['angpid']['kp'], config['angpid']['kd'])
+                        # ik_act[0:3] = config['pospid']['kp'] * diff_pose - config['pospid']['kd'] * (diff_pose - prev_pos_error)
+                        # ik_act[3:6] = config['angpid']['kp'] * diff_euler - config['angpid']['kd'] * (diff_euler - prev_ang_error)
                         ik_act[6] = config['pid']['grip_scale'] * control_gripper
                         ik_act = ik_act.astype(np.float32)
                         
-                        prev_error = ik_act
-                        integral_error += ik_act
-                        control_signal = (config['pid']['kp'] * ik_act + 
-                                        config['pid']['ki'] * integral_error + 
-                                        config['pid']['kd'] * (ik_act - prev_error))
+                        prev_pos_error = diff_pose
+                        prev_ang_error = diff_euler
+                        # integral_error += ik_act
+                        # control_signal = (config['pid']['kp'] * ik_act + 
+                        #                 config['pid']['ki'] * integral_error + 
+                        #                 config['pid']['kd'] * (ik_act - prev_error))
+                        # control_signal = ik_act
+                        if done:
+                            break
+                        # obs, _, done, _ = env.step(control_signal)
+                        obs, _, done, _ = env.step(ik_act)
                         
-                        obs, _, done, _ = env.step(control_signal)
+                        prio_quat = obs["robot0_eef_quat"]
+                        prio_euler = R.from_quat(prio_quat).as_euler("xyz", degrees=False)
+
                         
                         img_st = obs["agentview_image"]
                         img_st = cv2.flip(img_st, 0)
                         img_st = transform(img_st).unsqueeze(0).to(device)
+                        
+                        
+                        
                         with torch.no_grad():
                             st_out = ik_model(img_st)
                         st_out = st_out.squeeze().cpu().numpy()
+                        st_out_euler = R.from_quat(st_out[3:7]).as_euler("xyz", degrees=False)
+
+
+                        update(prio_euler)
+                        update(st_out_euler)
+
+
                         # st_out = correct_orientation(st_out)
                         try:
                             gripper_pos = obs["robot0_gripper_qpos"]
@@ -259,25 +299,30 @@ def main():
                             print("Error processing gripper position:", e)
                             print("Gripper position data:", obs["robot0_gripper_qpos"])
                             raise
-                        
-                        # put control as str
-                        # control_str = [f"{control:.2f}" for control in control_signal]
-                        # control_signal
-                        # control_signal_str = f"{config['pid']['kp']} * {ik_act} + {config['pid']['ki']} * {integral_error} + {config['pid']['kd']} * ({ik_act} - {prev_error})"
-
-                
 
                         frame = np.concatenate([cv2.flip(obs["agentview_image"], 0), video_clip[index]], axis=1)
                         cv2.putText(frame, "Current", (10, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-                        
-                        cv2.putText(frame, control_signal.__str__(), (0, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.2, (0, 255, 0), 1)
-                        
                         cv2.putText(frame, "Goal", (frame.shape[1]//2 + 10, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+                        g_str = np.array2string(goal_euler, formatter={'float_kind':lambda x: "%.2f" % x})
+                        # s_str = np.array2string(st_out_euler, formatter={'float_kind':lambda x: "%.2f" % x})
+                        a_str = np.array2string(ik_act[3:6], formatter={'float_kind':lambda x: "%.2f" % x})
+                        p_str = np.array2string(prio_euler, formatter={'float_kind':lambda x: "%.2f" % x})
+                        diff_str = np.array2string(diff_euler, formatter={'float_kind':lambda x: "%.2f" % x})
+
+
+                        cv2.putText(frame, f"Goal: {g_str}", (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+                        cv2.putText(frame, f"Prio: {p_str}", (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+                        cv2.putText(frame, f"diff: {diff_str}", (10, 110), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+                        cv2.putText(frame, f"action: {a_str}", (10, 120), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 255, 0), 1)
+
+                        
+
+                        cv2.putText(frame, f"numGen: {numGen_count}", (180, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (220, 0, 0), 1)
                         roll_out_video.append(frame)
                         
                         if done:
                             break
-
+                    numGen_count += 1
                     if done:
                         break
             if done:
@@ -311,7 +356,7 @@ def main():
             f.write(f"Task: {task_name}\n")
             f.write(f"Success rate: {task_success_rate:.2f}%\n")
             f.write(f"Successful attempts: {task_successes}/{config['num_test_pr_task']}\n")
-            f.write(f"PID params: kp={config['pid']['kp']}, ki={config['pid']['ki']}, kd={config['pid']['kd']}\n")
+            f.write(f"PID params: kp={config['pospid']['kp']}, ki={config['pospid']['ki']}, kd={config['pospid']['kd']}\n")
     
     # Save overall results
     overall_success_rate = sum(all_task_results.values()) / len(all_task_results)

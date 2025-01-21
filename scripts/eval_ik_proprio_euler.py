@@ -6,7 +6,7 @@ from policy.ik_model.resnet import ResNet50Pretrained, ResNet50
 from model.resnet50_mlp import ResNet50MLP
 from model.resnet18_mlp import ResNet18MLP
 from model.cnn_mlp import CNNMLP
-
+import robosuite.utils.transform_utils as T
 from model.vit_mlp import ViTMLP
 from torchvision.utils import save_image
 from einops import rearrange
@@ -23,7 +23,32 @@ import torchvision.transforms as transforms
 import scipy.spatial.transform as st
 from scipy.spatial.transform import Rotation as R
 from lightning.pytorch import seed_everything
+import math
 
+def quat2axisangle(quat):
+    """
+    Converts quaternion to axis-angle format.
+    Returns a unit vector direction scaled by its angle in radians.
+
+    Args:
+        quat (np.array): (w,x,y,z) vec4 float angles
+
+    Returns:
+        np.array: (ax,ay,az) axis-angle exponential coordinates
+    """
+
+    # clip quaternion
+    if quat[0] > 1.0:
+        quat[0] = 1.0
+    elif quat[0] < -1.0:
+        quat[0] = -1.0
+
+    den = np.sqrt(1.0 - quat[0] * quat[0])
+    if math.isclose(den, 0.0):
+        # This is (close to) a zero degree rotation, immediately return
+        return np.zeros(3)
+
+    return (quat[1:] * 2.0 * math.acos(quat[0])) / den
 
 # def correct_orientation(eight_d_output):
 #     corrected_euler = st.Rotation.from_quat(eight_d_output[3:7]).as_euler("xzy", degrees=False)
@@ -171,11 +196,27 @@ def main():
                         goal_out = ik_model(goal_img)
                     
 
-                    # supervised format: [x, y, z, qx, qy, qz, qw, gripper]
+                    # supervised format: [x, y, z, qw，qx, qy, qz, gripper]
+                    
+                    # 应该是
+                    # supervised format: [x, y, z, qw，qx, qy, qz, gripper]
                     # and I am going to change it back to euler angles
                     
+                    # goal_out = goal_out.squeeze().cpu().numpy()
                     goal_out = goal_out.squeeze().cpu().numpy()
                     # goal_out = correct_orientation(goal_out)
+
+                    # same as dataset 
+                    axis_angles = st.Rotation.from_quat(goal_out[3:7]).as_euler("xzy", degrees=False)
+                    prio_axis_angles = T.quat2axisangle(obs["robot0_eef_quat"])
+                    print("===")
+                    print(axis_angles)
+                    print(prio_axis_angles)
+                    # print("===")
+
+
+                    # axis_angles
+                    
                     
 
                     # Predicted proprioceptive state
@@ -186,6 +227,8 @@ def main():
                     with torch.no_grad():
                         st_out = ik_model(img_st)
                     st_out = st_out.squeeze().cpu().numpy()
+
+                    st_out_euler = st.Rotation.from_quat(st_out[3:7]).as_euler("xzy", degrees=False)
                     # st_out = correct_orientation(st_out)
                     
                     # Get proprioceptive state
@@ -198,9 +241,15 @@ def main():
                         else:
                             gripper_value = np.array([float(gripper_pos)]).reshape(1,)
                             
+                        # proprio_st = np.concatenate([
+                        #     obs["robot0_eef_pos"].reshape(3,),
+                        #     obs["robot0_eef_quat"].reshape(4,),
+                        #     gripper_value
+                        # ], axis=0)
                         proprio_st = np.concatenate([
                             obs["robot0_eef_pos"].reshape(3,),
-                            obs["robot0_eef_quat"].reshape(4,),
+                            # obs["robot0_eef_quat"].reshape(4,),
+                            quat2axisangle(obs["robot0_eef_quat"].reshape(4,)),
                             gripper_value
                         ], axis=0)
                     except Exception as e:
@@ -216,7 +265,8 @@ def main():
                     while np.linalg.norm(proprio_st - goal_out) > config['pid']['convergence_threshold'] and pid_step < config['pid_max_steps']:
                         pid_step += 1
                         control_trans = goal_out[:3] - proprio_st[:3]
-                        control_quat = (st.Rotation.from_quat(goal_out[3:7])* st.Rotation.from_quat(proprio_st[3:7]).inv())
+                        # control_quat = (st.Rotation.from_quat(goal_out[3:6])* st.Rotation.from_quat(proprio_st[3:7]).inv())
+                        control_eular = goal_out - proprio_st
                         control_rot = control_quat.as_euler("xyz", degrees=False)
 
                         gripper_goal = goal_out[7] if goal_out[7] > config['pid']['grip_threshold'] else 0.00
@@ -260,18 +310,9 @@ def main():
                             print("Gripper position data:", obs["robot0_gripper_qpos"])
                             raise
                         
-                        # put control as str
-                        # control_str = [f"{control:.2f}" for control in control_signal]
-                        # control_signal
-                        # control_signal_str = f"{config['pid']['kp']} * {ik_act} + {config['pid']['ki']} * {integral_error} + {config['pid']['kd']} * ({ik_act} - {prev_error})"
-
-                
-
+                        
                         frame = np.concatenate([cv2.flip(obs["agentview_image"], 0), video_clip[index]], axis=1)
                         cv2.putText(frame, "Current", (10, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-                        
-                        cv2.putText(frame, control_signal.__str__(), (0, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.2, (0, 255, 0), 1)
-                        
                         cv2.putText(frame, "Goal", (frame.shape[1]//2 + 10, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
                         roll_out_video.append(frame)
                         

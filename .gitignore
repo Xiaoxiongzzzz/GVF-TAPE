@@ -2,3 +2,4 @@ results/
 conf/
 wandb/
 src/
+.vscode/

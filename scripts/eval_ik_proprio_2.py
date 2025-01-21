@@ -6,6 +6,7 @@ from policy.ik_model.resnet import ResNet50Pretrained, ResNet50
 from model.resnet50_mlp import ResNet50MLP
 from model.resnet18_mlp import ResNet18MLP
 from model.cnn_mlp import CNNMLP
+import robosuite.utils.transform_utils as T
 
 from model.vit_mlp import ViTMLP
 from torchvision.utils import save_image
@@ -25,6 +26,13 @@ from scipy.spatial.transform import Rotation as R
 from lightning.pytorch import seed_everything
 
 
+def update(goal_euler):
+    if goal_euler[0] > 0:
+        goal_euler[0] =  goal_euler[0] - 3.14
+    elif goal_euler[0] == 0:
+        goal_euler[0] = 3.14
+    else:
+        goal_euler[0] = 3.14 + goal_euler[0]
 # def correct_orientation(eight_d_output):
 #     corrected_euler = st.Rotation.from_quat(eight_d_output[3:7]).as_euler("xzy", degrees=False)
 #     corrected_euler[2] *= -1
@@ -175,8 +183,17 @@ def main():
                     # and I am going to change it back to euler angles
                     
                     goal_out = goal_out.squeeze().cpu().numpy()
+                    goal_out_angle_axis = R.from_quat(goal_out[3:7]).as_euler("xzy", degrees=False)
+                    goal_out_quat = T.axisangle2quat(goal_out_angle_axis)
+                    goal_euler = R.from_quat(goal_out_quat).as_euler("xyz", degrees=False)
+
+                    update(goal_euler)
+
                     # goal_out = correct_orientation(goal_out)
-                    
+                    prio_quat = obs["robot0_eef_quat"]
+                    prio_euler = R.from_quat(prio_quat).as_euler("xyz", degrees=False)
+
+                    update(prio_euler)
 
                     # Predicted proprioceptive state
                     img_st = obs["agentview_image"]
@@ -186,6 +203,13 @@ def main():
                     with torch.no_grad():
                         st_out = ik_model(img_st)
                     st_out = st_out.squeeze().cpu().numpy()
+
+                    st_out_angle_axis = R.from_quat(st_out[3:7]).as_euler("xzy", degrees=False)
+                    st_out_quat = T.axisangle2quat(st_out_angle_axis)
+                    st_out_euler = R.from_quat(st_out_quat).as_euler("xyz", degrees=False)
+
+
+
                     # st_out = correct_orientation(st_out)
                     
                     # Get proprioceptive state
@@ -224,9 +248,20 @@ def main():
 
                         ik_act = np.zeros(7)
                         ik_act[:3] = config['pid']['pos_scale'] * control_trans
-                        ik_act[3:6] = config['pid']['rot_scale'] * control_rot
+                        # ik_act[3:6] = config['pid']['rot_scale'] * control_rot
+                        print("goal", goal_euler)
+                        print("state", st_out_euler)
+                        # print("goal", goal_euler)
+                        print("prio", prio_euler)
+                        diff_euler = goal_euler - prio_euler
+                        print("diff", diff_euler)
+                        print("=====")
+                        # print()
+                        # print(diff_euler)
+                        ik_act[3:6] = config['pid']['rot_scale'] * diff_euler
                         ik_act[6] = config['pid']['grip_scale'] * control_gripper
                         ik_act = ik_act.astype(np.float32)
+                        
                         
                         prev_error = ik_act
                         integral_error += ik_act
@@ -235,6 +270,9 @@ def main():
                                         config['pid']['kd'] * (ik_act - prev_error))
                         
                         obs, _, done, _ = env.step(control_signal)
+                        prio_quat = obs["robot0_eef_quat"]
+                        prio_euler = R.from_quat(prio_quat).as_euler("xyz", degrees=False)
+
                         
                         img_st = obs["agentview_image"]
                         img_st = cv2.flip(img_st, 0)
@@ -242,6 +280,15 @@ def main():
                         with torch.no_grad():
                             st_out = ik_model(img_st)
                         st_out = st_out.squeeze().cpu().numpy()
+                        st_out_angle_axis = R.from_quat(st_out[3:7]).as_euler("xzy", degrees=False)
+                        st_out_quat = T.axisangle2quat(st_out_angle_axis)
+                        st_out_euler = R.from_quat(st_out_quat).as_euler("xyz", degrees=False)
+
+
+                        update(prio_euler)
+                        update(st_out_euler)
+
+
                         # st_out = correct_orientation(st_out)
                         try:
                             gripper_pos = obs["robot0_gripper_qpos"]
@@ -259,20 +306,19 @@ def main():
                             print("Error processing gripper position:", e)
                             print("Gripper position data:", obs["robot0_gripper_qpos"])
                             raise
-                        
-                        # put control as str
-                        # control_str = [f"{control:.2f}" for control in control_signal]
-                        # control_signal
-                        # control_signal_str = f"{config['pid']['kp']} * {ik_act} + {config['pid']['ki']} * {integral_error} + {config['pid']['kd']} * ({ik_act} - {prev_error})"
-
-                
 
                         frame = np.concatenate([cv2.flip(obs["agentview_image"], 0), video_clip[index]], axis=1)
                         cv2.putText(frame, "Current", (10, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-                        
-                        cv2.putText(frame, control_signal.__str__(), (0, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.2, (0, 255, 0), 1)
-                        
                         cv2.putText(frame, "Goal", (frame.shape[1]//2 + 10, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+                        g_str = np.array2string(goal_euler, formatter={'float_kind':lambda x: "%.2f" % x})
+                        s_str = np.array2string(st_out_euler, formatter={'float_kind':lambda x: "%.2f" % x})
+                        p_str = np.array2string(prio_euler, formatter={'float_kind':lambda x: "%.2f" % x})
+
+                        cv2.putText(frame, f"Goal: {g_str}", (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
+                        cv2.putText(frame, f"State: {s_str}", (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+                        cv2.putText(frame, f"Prio: {p_str}", (10, 110), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+
+
                         roll_out_video.append(frame)
                         
                         if done:
