@@ -25,19 +25,19 @@ from scipy.spatial.transform import Rotation as R
 from lightning.pytorch import seed_everything
 
 
-def correct_orientation(eight_d_output):
-    corrected_euler = st.Rotation.from_quat(eight_d_output[3:7]).as_euler("xzy", degrees=False)
-    corrected_euler[2] *= -1
-    corrected_quat = st.Rotation.from_euler("xzy", corrected_euler, degrees=False).as_quat()
+# def correct_orientation(eight_d_output):
+#     corrected_euler = st.Rotation.from_quat(eight_d_output[3:7]).as_euler("xzy", degrees=False)
+#     corrected_euler[2] *= -1
+#     corrected_quat = st.Rotation.from_euler("xzy", corrected_euler, degrees=False).as_quat()
     
-    new_8d = np.concatenate(
-        (
-            eight_d_output[:3].reshape(-1,),
-            corrected_quat.reshape(-1,),
-            eight_d_output[7].reshape(-1,),
-        )
-    )
-    return new_8d
+#     new_8d = np.concatenate(
+#         (
+#             eight_d_output[:3].reshape(-1,),
+#             corrected_quat.reshape(-1,),
+#             eight_d_output[7].reshape(-1,),
+#         )
+#     )
+#     return new_8d
 
 # SPATIAL_TASK_DICT = {
 #     "task1": "pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate",
@@ -110,6 +110,7 @@ def main():
         ik_model = ViTMLP(
             out_size=config['model']['out_size'], 
             pretrained=config['model']['pretrained']
+            
         ).to(device)
     elif config['model']['type'] == 'resnet50':
         ik_model = ResNet50MLP(
@@ -178,9 +179,9 @@ def main():
                     img_st = cv2.flip(img_st, 0)
                     img_st = transform(img_st).unsqueeze(0).to(device)
 
-                    with torch.no_grad():
-                        st_out = ik_model(img_st)
-                    st_out = st_out.squeeze().cpu().numpy()
+                    # with torch.no_grad():
+                    #     st_out = ik_model(img_st)
+                    # st_out = st_out.squeeze().cpu().numpy()
                     # st_out = correct_orientation(st_out)
                     
                     # Get proprioceptive state
@@ -210,6 +211,9 @@ def main():
                             
                     while np.linalg.norm(proprio_st - goal_out) > config['pid']['convergence_threshold'] and pid_step < config['pid_max_steps']:
                         pid_step += 1
+
+                        time.sleep(0.01)
+                        
                         control_trans = goal_out[:3] - proprio_st[:3]
                         control_quat = (st.Rotation.from_quat(goal_out[3:7])* st.Rotation.from_quat(proprio_st[3:7]).inv())
                         control_rot = control_quat.as_euler("xyz", degrees=False)
@@ -234,10 +238,10 @@ def main():
                         img_st = obs["agentview_image"]
                         img_st = cv2.flip(img_st, 0)
                         img_st = transform(img_st).unsqueeze(0).to(device)
-                        with torch.no_grad():
-                            st_out = ik_model(img_st)
-                        st_out = st_out.squeeze().cpu().numpy()
-                        st_out = correct_orientation(st_out)
+                        # with torch.no_grad():
+                        #     st_out = ik_model(img_st)
+                        # st_out = st_out.squeeze().cpu().numpy()
+                        # # st_out = correct_orientation(st_out)
                         try:
                             gripper_pos = obs["robot0_gripper_qpos"]
                             if isinstance(gripper_pos, np.ndarray):
@@ -266,6 +270,8 @@ def main():
 
                     if done:
                         break
+
+                    time.sleep(0.01)
             if done:
                 print(f"Test {test_time}: Success!")
                 status = "success"
@@ -273,6 +279,8 @@ def main():
             else:
                 print(f"Test {test_time}: Fail!")
                 status = "fail"
+
+            time.sleep(0.01)
                 
             # Save as GIF instead of MP4
             video_name = f"test_{test_time:02d}_{status}_steps{len(roll_out_video)}.gif"

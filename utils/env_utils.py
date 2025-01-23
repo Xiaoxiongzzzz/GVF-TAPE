@@ -39,6 +39,7 @@ def set_up_libero_envs(suite_name: str, task_name: str, render_device: int, hori
     "render_gpu_device_id": render_device, 
     "has_renderer": True,
     "horizon": horizon,
+    "initialization_noise": {"magnitude": 0.00000, "type": "gaussian"},
     }
     env = OffScreenRenderEnv(**env_args)
     env.seed(0)
