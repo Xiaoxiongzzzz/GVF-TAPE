@@ -25,7 +25,7 @@ video_generator_path: "/mnt/home/ZhangChuye/Data/results/RFlow_pixel/model_99000
 # ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.09/20.54.55_train_libero_spatial_ik_train_libero_spatial_ik/checkpoints/train_libero_spatial_ik_ResNet50MLP_best.pth"
 # ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.19/04.09.21_train_libero_goal_ik_train_resnet50_50traj/checkpoints/train_resnet50_50traj_ResNet50MLP_best.pth"
 # ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.21/17.08.27_train_libero_goal_ik_train_resnet50_50traj/checkpoints/train_resnet50_50traj_ResNet50MLP_best.pth"
-ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.23/00.54.55_train_libero_spatial_play_data_train_vit/checkpoints/train_vit_ViTMLP_best.pth"
+ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.23/17.25.18_train_libero_spatial_ik_vit_train_vit_expert_data/checkpoints/train_vit_expert_data_ViTMLP_best.pth"
 # ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.10/11.27.58_train_libero_spatial_ik_vit_train_libero_spatial_ik_vit/checkpoints/train_libero_spatial_ik_vit_ViTMLP_epoch_30.pth"
 # ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.11/01.41.59_train_libero_spatial_ik_cnn_train_libero_spatial_ik_cnn/checkpoints/train_libero_spatial_ik_cnn_CNNMLP_best.pth"
 # ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.11/13.15.05_train_libero_spatial_ik_train_libero_spatial_ResNet/checkpoints/train_libero_spatial_ResNet_ResNet18MLP_best.pth"
