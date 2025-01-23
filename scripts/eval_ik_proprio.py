@@ -137,21 +137,25 @@ def main():
         task_output_dir = os.path.join(base_output_dir, task_id)
         os.makedirs(task_output_dir, exist_ok=True)
         
-        env, task_prompt = set_up_libero_envs(
-            suite_name=config['task']['suite_name'], 
-            task_name=task_name, 
-            render_device=config['render_gpu_id'],
-            horizon=config['task']['horizon']
-        )
+        
         task_successes = 0
 
-        for test_time in tqdm(range(config['num_test_pr_task'])):
-            obs = env.reset()
+        for test_time in range(config['num_test_pr_task']):
+            print("---"*5)
+            print(f"Test {test_time} of {config['num_test_pr_task']} Start!")
+            # obs = env.reset()
+            env, task_prompt = set_up_libero_envs(
+                suite_name=config['task']['suite_name'], 
+                task_name=task_name, 
+                render_device=config['render_gpu_id'],
+                horizon=config['task']['horizon'],
+                init_state_id=test_time
+            )
             for _ in range(config['init_steps']):
                 obs, _, done, _ = env.step(np.zeros(7))
 
             roll_out_video = []
-            for _ in range(config['num_video_samples']):
+            for video_sample in range(config['num_video_samples']):
                 visual_obs, _ = process_obs(obs, extra_state_keys=[], device=device)
                 side_view = visual_obs[:,0]
                 # print("##########################")
@@ -159,6 +163,9 @@ def main():
                 # # print side view type
                 # print(type(side_view))
                 # print(side_view.dtype)
+                # 
+                print(f"Video sample {video_sample} of {config['num_video_samples']} Start!")
+
                 video_clip = video_generator(task_prompt, side_view)
                 video_clip = rearrange(video_clip, "b (f c) h w -> (b f) c h w", c=3) # [::2]
                 video_clip = (video_clip.permute(0, 2, 3, 1).detach().cpu().numpy()*255).astype(np.uint8)
@@ -212,7 +219,7 @@ def main():
                     while np.linalg.norm(proprio_st - goal_out) > config['pid']['convergence_threshold'] and pid_step < config['pid_max_steps']:
                         pid_step += 1
 
-                        time.sleep(0.01)
+                        time.sleep(config['loop_sleep_time'])
                         
                         control_trans = goal_out[:3] - proprio_st[:3]
                         control_quat = (st.Rotation.from_quat(goal_out[3:7])* st.Rotation.from_quat(proprio_st[3:7]).inv())
@@ -266,12 +273,20 @@ def main():
                         roll_out_video.append(frame)
                         
                         if done:
+                            print("Done!!!")
                             break
+                    
+                    # print(f"if done: {done}")
 
                     if done:
+                        # print("Done!!!")
                         break
 
-                    time.sleep(0.01)
+                    # print(f"frame {index} of {vhrz} in sample {video_sample} End!")
+                    time.sleep(config['loop_sleep_time'])
+                if done:
+                    # print("Done!!!")
+                    break
             if done:
                 print(f"Test {test_time}: Success!")
                 status = "success"
@@ -280,7 +295,7 @@ def main():
                 print(f"Test {test_time}: Fail!")
                 status = "fail"
 
-            time.sleep(0.01)
+            time.sleep(config['loop_sleep_time'])
                 
             # Save as GIF instead of MP4
             video_name = f"test_{test_time:02d}_{status}_steps{len(roll_out_video)}.gif"
@@ -295,7 +310,7 @@ def main():
             with open(info_path, "a") as f:
                 f.write(f"Test {test_time}: {'Success' if done else 'Fail'}\n")
 
-        env.close()
+            env.close()
         
         # Calculate and save task-specific results
         task_success_rate = (task_successes / config['num_test_pr_task']) * 100

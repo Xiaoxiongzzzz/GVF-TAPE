@@ -12,7 +12,7 @@ states_key_mapping = {
 }
 
 
-def set_up_libero_envs(suite_name: str, task_name: str, render_device: int, horizon: int):
+def set_up_libero_envs(suite_name: str, task_name: str, render_device: int, horizon: int, init_state_id: int):
     '''
     Args:
     suite_name: e.g. libero_spatial, libero_goal ...
@@ -39,14 +39,15 @@ def set_up_libero_envs(suite_name: str, task_name: str, render_device: int, hori
     "render_gpu_device_id": render_device, 
     "has_renderer": True,
     "horizon": horizon,
-    "initialization_noise": {"magnitude": 0.00000, "type": "gaussian"},
     }
     env = OffScreenRenderEnv(**env_args)
     env.seed(0)
     env.reset()
 
     initial_states = task_suite.get_task_init_states(task_id)
-    init_state_id = 0
+
+    while init_state_id >= len(initial_states):
+        init_state_id -= len(initial_states)
     env.set_init_state(initial_states[init_state_id])
 
     return env, task_prompt
