@@ -23,6 +23,8 @@ import torchvision.transforms as transforms
 import scipy.spatial.transform as st
 from scipy.spatial.transform import Rotation as R
 from lightning.pytorch import seed_everything
+from collections import defaultdict
+import time as timer
 
 
 # def correct_orientation(eight_d_output):
@@ -131,6 +133,7 @@ def main():
     ik_model.eval()
 
     all_task_results = {}
+    inference_times = defaultdict(list)  # To store inference times
     
     for task_id, task_name in selected_tasks.items():
         print(f"\nEvaluating {task_id}: {task_name}")
@@ -139,6 +142,10 @@ def main():
         
         
         task_successes = 0
+        task_inference_times = {
+            'video_gen': [],
+            'ik_model': []
+        }
 
         for test_time in range(config['num_test_pr_task']):
             print("---"*5)
@@ -156,7 +163,7 @@ def main():
 
             roll_out_video = []
             for video_sample in range(config['num_video_samples']):
-                t_before_gen = time.time()
+                t_before_gen = timer.perf_counter()
 
                 visual_obs, _ = process_obs(obs, extra_state_keys=[], device=device)
                 side_view = visual_obs[:,0]
@@ -172,21 +179,25 @@ def main():
                 video_clip = rearrange(video_clip, "b (f c) h w -> (b f) c h w", c=3) # [::2]
                 video_clip = (video_clip.permute(0, 2, 3, 1).detach().cpu().numpy()*255).astype(np.uint8)
 
-                t_after_gen = time.time()
+                video_gen_time = timer.perf_counter() - t_before_gen
+                task_inference_times['video_gen'].append(video_gen_time)
+
+                # t_after_gen = timer.perf_counter()
                 
                 vhrz = config['video']['act_horizon']
                 assert len(video_clip) > vhrz, "Video clip length must be greater than act_horizon"
                 
                 for index in range(vhrz):
                     goal_img = video_clip[index]
-                    t_before_ik = time.time()
+                    t_before_ik = timer.perf_counter()
                     goal_img = transform(goal_img).unsqueeze(0).to(device)
                     with torch.no_grad():
                         goal_out = ik_model(goal_img)
                     goal_out = goal_out.squeeze().cpu().numpy()
                     # goal_out = correct_orientation(goal_out)
                     
-                    t_after_ik = time.time()
+                    ik_time = timer.perf_counter() - t_before_ik
+                    task_inference_times['ik_model'].append(ik_time)
                     
                     # Predicted proprioceptive state
                     img_st = obs["agentview_image"]
@@ -328,7 +339,15 @@ def main():
             f.write(f"Success rate: {task_success_rate:.2f}%\n")
             f.write(f"Successful attempts: {task_successes}/{config['num_test_pr_task']}\n")
             f.write(f"PID params: kp={config['pid']['kp']}, ki={config['pid']['ki']}, kd={config['pid']['kd']}\n")
-    
+            f.write("\nInference Times:\n")
+            f.write(f"Video Generator - Avg: {np.mean(task_inference_times['video_gen'])*1000:.2f}ms, "
+                    f"Std: {np.std(task_inference_times['video_gen'])*1000:.2f}ms\n")
+            f.write(f"IK Model - Avg: {np.mean(task_inference_times['ik_model'])*1000:.2f}ms, "
+                    f"Std: {np.std(task_inference_times['ik_model'])*1000:.2f}ms\n")
+
+        # Store timing info for overall results
+        inference_times[task_id] = task_inference_times
+
     # Save overall results
     overall_success_rate = sum(all_task_results.values()) / len(all_task_results)
     with open(os.path.join(base_output_dir, "overall_results.txt"), "w") as f:
@@ -336,6 +355,19 @@ def main():
         if config.get('use_seed', False):
             f.write(f"Random Seed: {config['seed']}\n")
         f.write(f"Overall success rate across all tasks: {overall_success_rate:.2f}%\n\n")
+        
+        # Calculate and write overall inference times
+        all_video_gen_times = [time for task_times in inference_times.values() 
+                              for time in task_times['video_gen']]
+        all_ik_times = [time for task_times in inference_times.values() 
+                        for time in task_times['ik_model']]
+        
+        f.write("Overall Inference Times:\n")
+        f.write(f"Video Generator - Avg: {np.mean(all_video_gen_times)*1000:.2f}ms, "
+                f"Std: {np.std(all_video_gen_times)*1000:.2f}ms\n")
+        f.write(f"IK Model - Avg: {np.mean(all_ik_times)*1000:.2f}ms, "
+                f"Std: {np.std(all_ik_times)*1000:.2f}ms\n\n")
+        
         f.write("Individual Task Results:\n")
         for task_id, success_rate in all_task_results.items():
             f.write(f"{task_id}: {success_rate:.2f}%\n")
