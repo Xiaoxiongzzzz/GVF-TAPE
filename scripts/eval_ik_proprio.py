@@ -156,6 +156,8 @@ def main():
 
             roll_out_video = []
             for video_sample in range(config['num_video_samples']):
+                t_before_gen = time.time()
+
                 visual_obs, _ = process_obs(obs, extra_state_keys=[], device=device)
                 side_view = visual_obs[:,0]
                 # print("##########################")
@@ -169,17 +171,22 @@ def main():
                 video_clip = video_generator(task_prompt, side_view)
                 video_clip = rearrange(video_clip, "b (f c) h w -> (b f) c h w", c=3) # [::2]
                 video_clip = (video_clip.permute(0, 2, 3, 1).detach().cpu().numpy()*255).astype(np.uint8)
+
+                t_after_gen = time.time()
                 
                 vhrz = config['video']['act_horizon']
                 assert len(video_clip) > vhrz, "Video clip length must be greater than act_horizon"
                 
                 for index in range(vhrz):
                     goal_img = video_clip[index]
+                    t_before_ik = time.time()
                     goal_img = transform(goal_img).unsqueeze(0).to(device)
                     with torch.no_grad():
                         goal_out = ik_model(goal_img)
                     goal_out = goal_out.squeeze().cpu().numpy()
                     # goal_out = correct_orientation(goal_out)
+                    
+                    t_after_ik = time.time()
                     
                     # Predicted proprioceptive state
                     img_st = obs["agentview_image"]
@@ -268,8 +275,8 @@ def main():
                         
                         
                         frame = np.concatenate([cv2.flip(obs["agentview_image"], 0), video_clip[index]], axis=1)
-                        cv2.putText(frame, "Current", (10, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-                        cv2.putText(frame, "Goal", (frame.shape[1]//2 + 10, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+                        # cv2.putText(frame, "Current", (10, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                        # cv2.putText(frame, "Goal", (frame.shape[1]//2 + 10, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
                         roll_out_video.append(frame)
                         
                         if done:
