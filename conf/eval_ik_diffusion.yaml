@@ -1,6 +1,6 @@
 # Global settings
 use_seed: true  # Whether to use fixed seed
-seed: 0  # Global random seed for reproducibility, only used if use_seed is true
+seed: 1  # Global random seed for reproducibility, only used if use_seed is true
 
 # GPU settings
 gpu_id: 0  # Main GPU for computation
@@ -30,7 +30,7 @@ pid:
 # Video settings
 video:
   duration: 50  # gif duration
-  sample_timestep: 3  # video generator sample timestep
+  sample_timestep: 5  # video generator sample timestep
 
 # Image processing settings
 image:

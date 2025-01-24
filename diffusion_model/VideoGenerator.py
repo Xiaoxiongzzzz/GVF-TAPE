@@ -7,10 +7,11 @@ from diffusers.models import AutoencoderKL
 from transformers import CLIPTextModel, CLIPTokenizer
 from diffusion_model.GoalDiffusion import GoalGaussianDiffusion
 from ema_pytorch import EMA
+from torchvision import transforms
 
 
 class LatentVideoGenerator(nn.Module):
-    def __init__(self, model, vae, tokenizer, text_encoder, rectified_flow, device):
+    def __init__(self, model, vae, tokenizer, text_encoder, rectified_flow, device, size = (512, 512)):
         super().__init__()
         self.device = device
         self.model = model
@@ -18,9 +19,10 @@ class LatentVideoGenerator(nn.Module):
         self.tokenizer = tokenizer
         self.text_encoder = text_encoder
         self.rectified_flow = rectified_flow
+        self.resize = transforms.Resize(size)
 
         self.f = 6
-    def forward(self, batch_text, x_cond):
+    def forward(self, batch_text, x_cond: torch.Tensor):
         """
         Input:
             batch_text: str or list of str
@@ -29,6 +31,7 @@ class LatentVideoGenerator(nn.Module):
             x: shape = [b, (f, c), h, w]
         """
         B = x_cond.shape[0]
+        x_cond = self.resize(x_cond)
         x_cond = x_cond/255.
         task_embed = self.encode_batch_text(batch_text)
         x_cond_encode = self.vae.encode(x_cond).latent_dist.mean.mul_(self.vae.config.scaling_factor)
@@ -58,7 +61,7 @@ class PixelVideoGenerator(nn.Module):
         self.rectified_flow = rectified_flow
 
         self.f = 6
-    def forward(self, batch_text, x_cond):
+    def forward(self, batch_text, x_cond: torch.Tensor):
         """
         Input:
             batch_text: str or list of str

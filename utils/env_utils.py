@@ -12,7 +12,7 @@ states_key_mapping = {
 }
 
 
-def set_up_libero_envs(suite_name: str, task_name: str, render_device: int):
+def set_up_libero_envs(suite_name: str, task_name: str, render_device: int, horizon: int, init_state_id: int):
     '''
     Args:
     suite_name: e.g. libero_spatial, libero_goal ...
@@ -38,13 +38,16 @@ def set_up_libero_envs(suite_name: str, task_name: str, render_device: int):
     "camera_widths": 128,
     "render_gpu_device_id": render_device, 
     "has_renderer": True,
+    "horizon": horizon,
     }
     env = OffScreenRenderEnv(**env_args)
     env.seed(0)
     env.reset()
 
     initial_states = task_suite.get_task_init_states(task_id)
-    init_state_id = 0
+
+    while init_state_id >= len(initial_states):
+        init_state_id -= len(initial_states)
     env.set_init_state(initial_states[init_state_id])
 
     return env, task_prompt
@@ -71,4 +74,3 @@ def process_obs(obs, extra_state_keys, device):
     extra_states = {k: v.to(torch.float32).to(device) for k, v in extra_states.items()}
 
     return visual_obs, extra_states
-

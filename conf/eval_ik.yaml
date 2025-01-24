@@ -3,24 +3,36 @@ use_seed: true  # Whether to use fixed seed
 seed: 0  # Global random seed for reproducibility, only used if use_seed is true
 
 # GPU settings
-gpu_id: 0  # Main GPU for computation
+gpu_id: 1  # Main GPU for computation
 render_gpu_id: 0  # GPU for rendering
 
 # Test settings
-num_test_pr_task: 50
+num_test_pr_task: 25
 init_steps: 10  # number of initial steps with zero action
 num_video_samples: 13  # number of video samples to generate
-pid_max_steps: 16  # maximum steps for PID control
+pid_max_steps: 8  # maximum steps for PID control
+
+loop_sleep_time: 0.03  # sleep time for each loop
+
+# Task settings
+
 
 # Model paths
-# video_generator_path: "/mnt/home/ZhangXiaoxiong/Documents/AVDC/results/RFlow_pixel/model_99000.pt"
+# video_generator_path: "/mnt/home/ZhangChuye/Data/results/RFlow_pixel_libero_object/model_99000.pt"
+# video_generator_path: "/mnt/home/ZhangChuye/Data/results/RFlow_pixel_libero_goal/model_99000.pt"
+video_generator_path: "/mnt/home/ZhangXiaoxiong/Documents/AVDC/results/RFlow_libero_spatial_True/model_99000.pt"
 # video_generator_path: "/mnt/home/ZhangXiaoxiong/Documents/AVDC/results/RFlow_pixel/model_51000.pt"
-video_generator_path: "/mnt/home/ZhangXiaoxiong/Documents/AVDC/results/RFlow_pixel/model_99000.pt"
+# video_generator_path: "/mnt/home/ZhangXiaoxiong/Documents/AVDC/results/RFlow_pixel/model_75000.pt"
 # ik_model_path: "/mnt/home/ZhangXiaoxiong/Documents/train_libero_spatial_ik_ResNet50MLP_final.pth"
 # ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.09/20.54.55_train_libero_spatial_ik_train_libero_spatial_ik/checkpoints/train_libero_spatial_ik_ResNet50MLP_best.pth"
-# ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.09/23.40.54_train_libero_spatial_ik_train_libero_spatial_ik/checkpoints/train_libero_spatial_ik_ResNet50MLP_best.pth"
+# ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.19/04.09.21_train_libero_goal_ik_train_resnet50_50traj/checkpoints/train_resnet50_50traj_ResNet50MLP_best.pth"
+# ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.21/17.08.27_train_libero_goal_ik_train_resnet50_50traj/checkpoints/train_resnet50_50traj_ResNet50MLP_best.pth"
+# ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.23/17.25.18_train_libero_spatial_ik_vit_train_vit_expert_data/checkpoints/train_vit_expert_data_ViTMLP_best.pth"
+ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.24/02.10.41_train_libero_spatial_play_data_train_vit/checkpoints/train_vit_ViTMLP_best.pth"
 # ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.10/11.27.58_train_libero_spatial_ik_vit_train_libero_spatial_ik_vit/checkpoints/train_libero_spatial_ik_vit_ViTMLP_epoch_30.pth"
-ik_model_path: "/mnt/home/ZhangXiaoxiong/Data/outputs/2025.01.08/15.33.05_train_libero_spatial_ik_train_libero_spatial_ik/checkpoints/train_libero_spatial_ik_ResNet50MLP_final.pth"
+# ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.11/01.41.59_train_libero_spatial_ik_cnn_train_libero_spatial_ik_cnn/checkpoints/train_libero_spatial_ik_cnn_CNNMLP_best.pth"
+# ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.11/13.15.05_train_libero_spatial_ik_train_libero_spatial_ResNet/checkpoints/train_libero_spatial_ResNet_ResNet18MLP_best.pth"
+# ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.14/02.19.27_train_libero_goal_ik_20traj/checkpoints/20traj_ResNet50MLP_best.pth"
 
 # PID Control parameters
 pid:
@@ -30,14 +42,28 @@ pid:
   pos_scale: 100  # scale factor for position control (ik_act[:3])
   rot_scale: 1    # scale factor for rotation control (ik_act[3:6])
   grip_scale: -10 # scale factor for gripper control (ik_act[6])
-  grip_threshold: 0.7  # threshold for binary gripper control
+  grip_threshold: 0.6  # threshold for binary gripper control
   convergence_threshold: 0.001  # threshold for PID control convergence
 
 # Video settings
 video:
   duration: 50  # gif duration
   sample_timestep: 3  # video generator sample timestep
+  act_horizon: 4
+  latent: True
 
 # Image processing settings
 image:
   resize: 128  # Image resize dimension
+
+# Model settings
+model:
+  type: "vit"  # Options: "vit", "resnet50", "cnn"
+  out_size: 8
+  pretrained: false
+
+# Task settings
+task:
+  horizon: 2000
+  suite_name: "libero_spatial"  # Options: "libero_spatial", "libero_90", etc.
+  selected_tasks: []  # Empty list means use all tasks, or specify like ["task1", "task3"]

@@ -8,12 +8,18 @@ class ViTMLP(nn.Module):
                  out_size=8,
                  pretrained=True,
                  model_name='vit_base_patch16_224',  # or 'vit_large_patch16_224'
-                 mlp_size=256
+                 mlp_size=256,
+                 img_height=128,
+                 img_width=128
                  ):
         super().__init__()
         
-        # Load pretrained ViT
-        self.vit = timm.create_model(model_name, pretrained=pretrained)
+        # Create model with custom image size
+        self.vit = timm.create_model(
+            model_name,
+            pretrained=pretrained,
+            img_size=(img_height, img_width),
+        )
         
         # Get embedding dimension from the model
         dim = self.vit.embed_dim  # 768 for base, 1024 for large
