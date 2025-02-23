@@ -41,9 +41,14 @@ def main():
         exp_name = "seed-None_experiment"
     
     timestamp = time.strftime("%Y%m%d_%H%M%S")
-    base_output_dir = f"./results/ik_policy/{timestamp}_{exp_name}"
+    base_output_dir = f"/mnt/home/zhangchuye/Data/vg_results/{timestamp}_{exp_name}"
     os.makedirs(base_output_dir, exist_ok=True)
     
+    # Save the full config file
+    config_save_path = os.path.join(base_output_dir, "config.yaml")
+    with open(config_save_path, 'w') as f:
+        yaml.dump(config, f, default_flow_style=False)
+
     torch.multiprocessing.set_sharing_strategy('file_system')
     device = torch.device(f"cuda:{config['gpu_id']}")
     
@@ -159,7 +164,7 @@ def main():
                 # t_after_gen = timer.perf_counter()
                 
                 vhrz = config['video']['act_horizon']
-                assert len(video_clip) > vhrz, "Video clip length must be greater than act_horizon"
+                assert len(video_clip) >= vhrz, "Video clip length must be greater than act_horizon"
                 
                 for index in range(vhrz):
                     goal_img = video_clip[index]
@@ -329,6 +334,17 @@ def main():
         if config.get('use_seed', False):
             f.write(f"Random Seed: {config['seed']}\n")
         f.write(f"Overall success rate across all tasks: {overall_success_rate:.2f}%\n\n")
+        
+        f.write("Configuration:\n")
+        f.write(f"Model Type: {config['model']['type']}\n")
+        f.write(f"Model Output Size: {config['model']['out_size']}\n")
+        f.write(f"Video Generator Path: {config['video_generator_path']}\n")
+        f.write(f"IK Model Path: {config['ik_model_path']}\n")
+        f.write(f"Image Size: {config['image']['resize']}\n")
+        f.write(f"Video Sample Timestep: {config['video']['sample_timestep']}\n")
+        f.write(f"Video Latent: {config['video']['latent']}\n")
+        f.write(f"Number of Test per Task: {config['num_test_pr_task']}\n")
+        f.write(f"Number of Video Samples: {config['num_video_samples']}\n\n")
         
         # Calculate and write overall inference times
         all_video_gen_times = [time for task_times in inference_times.values() 

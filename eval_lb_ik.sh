@@ -1,5 +1,11 @@
 #!/bin/bash
-source ~/mambaforge/etc/profile.d/conda.sh
+
+# conda init
+
+
+source /mnt/home/zhangchuye/anaconda3/etc/profile.d/conda.sh
+
+# conda init
 
 # Activate conda environment
 conda activate video_gen
@@ -8,7 +14,7 @@ conda activate video_gen
 mkdir -p ./results/ik_policy
 
 # Run the evaluation script
-python -m scripts.eval_ik_pid_feedback
+python -m scripts.eval_ik_proprio
 
 # Optional: you can add date to the command output
 echo "Evaluation completed at $(date)"

@@ -108,7 +108,7 @@ jupytext==1.16.4
 keras==2.13.1
 kiwisolver==1.4.7
 libclang==18.1.1
--e git+https://github.com/Lifelong-Robot-Learning/LIBERO.git@f78abd68ee283de9f9be3c8f7e2a9ad60246e95c#egg=libero
+# -e git+https://github.com/Lifelong-Robot-Learning/LIBERO.git@f78abd68ee283de9f9be3c8f7e2a9ad60246e95c#egg=libero
 lightning==2.1.0
 lightning-utilities==0.9.0
 line-profiler==4.1.1
