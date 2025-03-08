@@ -63,13 +63,11 @@ def main():
                          for i, task_name in enumerate(available_tasks)}
     
     transform = transforms.Compose(
-        [
-            transforms.ToPILImage(), 
-            transforms.Resize(config['image']['resize']), 
-            transforms.ToTensor(), 
+        [   
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
         ]
     )
+
 
     video_generator = prepare_video_generator(
         unet_path=config['video_generator_path'], 
@@ -151,7 +149,7 @@ def main():
                 video_clip = video_generator(task_prompt, side_view)
                 video_clip = rearrange(video_clip, "b (f c) h w -> (b f) c h w", c=3) # [::2]
                 video_clip = F.interpolate(video_clip, size=(128, 128), mode='bicubic')
-                video_clip = (video_clip.permute(0, 2, 3, 1).detach().cpu().numpy()*255).astype(np.uint8)
+                video_clip_np = (video_clip.permute(0, 2, 3, 1).detach().cpu().numpy()*255).astype(np.uint8)
 
                 video_gen_time = timer.perf_counter() - t_before_gen
                 task_inference_times['video_gen'].append(video_gen_time)
@@ -164,19 +162,18 @@ def main():
                 for index in range(vhrz):
                     goal_img = video_clip[index]
                     t_before_ik = timer.perf_counter()
-                    goal_img = transform(goal_img).unsqueeze(0).to(device)
+                    goal_img = transform(goal_img.to(device)).unsqueeze(0)
                     with torch.no_grad():
                         goal_out = ik_model(goal_img)
                     goal_out = goal_out.squeeze().cpu().numpy()
-                    # goal_out = correct_orientation(goal_out)
                     
                     ik_time = timer.perf_counter() - t_before_ik
                     task_inference_times['ik_model'].append(ik_time)
                     
                     # Predicted proprioceptive state
                     img_st = obs["agentview_image"]
-                    img_st = cv2.flip(img_st, 0)
-                    img_st = transform(img_st).unsqueeze(0).to(device)
+                    img_st = torch.from_numpy(np.flip(img_st, 0).copy()).to(device).permute(2, 0, 1) / 255.0
+                    img_st = transform(img_st).unsqueeze(0)
 
                     # with torch.no_grad():
                     #     st_out = ik_model(img_st)
@@ -235,8 +232,8 @@ def main():
                         obs, _, done, _ = env.step(control_signal)
                         
                         img_st = obs["agentview_image"]
-                        img_st = cv2.flip(img_st, 0)
-                        img_st = transform(img_st).unsqueeze(0).to(device)
+                        img_st = torch.from_numpy(np.flip(img_st, 0).copy()).to(device).permute(2, 0, 1) / 255.0
+                        img_st = transform(img_st).unsqueeze(0)
                         # with torch.no_grad():
                         #     st_out = ik_model(img_st)
                         # st_out = st_out.squeeze().cpu().numpy()
@@ -259,7 +256,7 @@ def main():
                             raise
                         
                         
-                        frame = np.concatenate([cv2.flip(obs["agentview_image"], 0), video_clip[index]], axis=1)
+                        frame = np.concatenate([cv2.flip(obs["agentview_image"], 0), video_clip_np[index]], axis=1)
                         # cv2.putText(frame, "Current", (10, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                         # cv2.putText(frame, "Goal", (frame.shape[1]//2 + 10, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
                         roll_out_video.append(frame)
