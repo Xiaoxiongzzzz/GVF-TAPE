@@ -90,6 +90,7 @@ def main():
         selected_tasks = {f"task{i+1}": task_name 
                          for i, task_name in enumerate(available_tasks)}
     
+    # TODO: add a new dimension (0.5, 0.5, 0.5) -> (0.5, 0.5, 0.5, 0.5)
     transform = transforms.Compose(
         [
             transforms.ToPILImage(), 
@@ -111,8 +112,9 @@ def main():
     if config['model']['type'] == 'vit':
         ik_model = ViTMLP(
             out_size=config['model']['out_size'], 
-            pretrained=config['model']['pretrained']
-            
+            pretrained=config['model']['pretrained'],
+            img_width=config['image']['width'],
+            img_height=config['image']['height']
         ).to(device)
     elif config['model']['type'] == 'resnet50':
         ik_model = ResNet50MLP(
@@ -190,6 +192,9 @@ def main():
                 for index in range(vhrz):
                     goal_img = video_clip[index]
                     t_before_ik = timer.perf_counter()
+                    
+                    # TODO: stack depth as the 4th channel of goal_img
+                    
                     goal_img = transform(goal_img).unsqueeze(0).to(device)
                     with torch.no_grad():
                         goal_out = ik_model(goal_img)
@@ -254,9 +259,22 @@ def main():
                         
                         prev_error = ik_act
                         integral_error += ik_act
-                        control_signal = (config['pid']['kp'] * ik_act + 
-                                        config['pid']['ki'] * integral_error + 
-                                        config['pid']['kd'] * (ik_act - prev_error))
+                        # separate pid for trans, rot, gripper
+                        # Calculate PID control signals for translation, rotation and gripper
+                        control_signal_trans = (config['pid']['kp_trans'] * ik_act[:3] + 
+                                        config['pid']['ki_trans'] * integral_error[:3] + 
+                                        config['pid']['kd_trans'] * (ik_act[:3] - prev_error[:3]))
+                        control_signal_rot = (config['pid']['kp_rot'] * ik_act[3:6] + 
+                                        config['pid']['ki_rot'] * integral_error[3:6] + 
+                                        config['pid']['kd_rot'] * (ik_act[3:6] - prev_error[3:6]))
+                        control_signal_grip = np.array([(config['pid']['kp_grip'] * ik_act[6] + 
+                                        config['pid']['ki_grip'] * integral_error[6] + 
+                                        config['pid']['kd_grip'] * (ik_act[6] - prev_error[6]))])
+                        
+                        # Ensure all signals have same dimensionality before concatenating
+                        control_signal = np.concatenate([control_signal_trans.reshape(-1), 
+                                                       control_signal_rot.reshape(-1),
+                                                       control_signal_grip.reshape(-1)])
                         
                         obs, _, done, _ = env.step(control_signal)
                         

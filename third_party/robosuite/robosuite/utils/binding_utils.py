@@ -59,6 +59,8 @@ if _MUJOCO_GL not in ("disable", "disabled", "off", "false", "0"):
     else:
         from robosuite.renderers.context.glfw_context import GLFWGLContext as GLContext
 
+os.environ['MUJOCO_GL'] = 'osmesa' 
+# os.environ['PYOPENGL_PLATFORM'] = 'osmesa'
 
 class MjRenderContext:
     """
