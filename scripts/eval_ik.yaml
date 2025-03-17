@@ -54,7 +54,7 @@ pid:
   kp_grip: 0.2
   ki_grip: 0.01
   kd_grip: 0.05
-  
+
   pos_scale: 100  # scale factor for position control (ik_act[:3])
   rot_scale: 1    # scale factor for rotation control (ik_act[3:6])
   grip_scale: -10 # scale factor for gripper control (ik_act[6])
@@ -65,7 +65,7 @@ pid:
 video:
   duration: 50  # gif duration
   sample_timestep: 8  # video generator sample timestep
-  act_horizon: 4
+  act_horizon: 6
 
 # Image processing settings
 image:

@@ -187,7 +187,7 @@ def main():
                 # t_after_gen = timer.perf_counter()
                 
                 vhrz = config['video']['act_horizon']
-                assert len(video_clip) > vhrz, "Video clip length must be greater than act_horizon"
+                assert len(video_clip) >= vhrz, "Video clip length must be greater than act_horizon"
                 
                 for index in range(vhrz):
                     goal_img = video_clip[index]
@@ -356,7 +356,10 @@ def main():
             f.write(f"Task: {task_name}\n")
             f.write(f"Success rate: {task_success_rate:.2f}%\n")
             f.write(f"Successful attempts: {task_successes}/{config['num_test_pr_task']}\n")
-            f.write(f"PID params: kp={config['pid']['kp']}, ki={config['pid']['ki']}, kd={config['pid']['kd']}\n")
+            # write pid params separately
+            f.write(f"PID params: kp_trans={config['pid']['kp_trans']}, ki_trans={config['pid']['ki_trans']}, kd_trans={config['pid']['kd_trans']}\n")
+            f.write(f"PID params: kp_rot={config['pid']['kp_rot']}, ki_rot={config['pid']['ki_rot']}, kd_rot={config['pid']['kd_rot']}\n")
+            f.write(f"PID params: kp_grip={config['pid']['kp_grip']}, ki_grip={config['pid']['ki_grip']}, kd_grip={config['pid']['kd_grip']}\n")
             f.write("\nInference Times:\n")
             f.write(f"Video Generator - Avg: {np.mean(task_inference_times['video_gen'])*1000:.2f}ms, "
                     f"Std: {np.std(task_inference_times['video_gen'])*1000:.2f}ms\n")
@@ -389,6 +392,8 @@ def main():
         f.write("Individual Task Results:\n")
         for task_id, success_rate in all_task_results.items():
             f.write(f"{task_id}: {success_rate:.2f}%\n")
-        f.write(f"\nPID params: kp={config['pid']['kp']}, ki={config['pid']['ki']}, kd={config['pid']['kd']}\n")
+        f.write(f"\nPID params: kp_trans={config['pid']['kp_trans']}, ki_trans={config['pid']['ki_trans']}, kd_trans={config['pid']['kd_trans']}\n")
+        f.write(f"PID params: kp_rot={config['pid']['kp_rot']}, ki_rot={config['pid']['ki_rot']}, kd_rot={config['pid']['kd_rot']}\n")
+        f.write(f"PID params: kp_grip={config['pid']['kp_grip']}, ki_grip={config['pid']['ki_grip']}, kd_grip={config['pid']['kd_grip']}\n")
 
 main()
