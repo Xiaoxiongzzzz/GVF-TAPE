@@ -4,7 +4,7 @@ seed: 0  # Global random seed for reproducibility, only used if use_seed is true
 
 # GPU settings
 gpu_id: 1  # Main GPU for computation
-render_gpu_id: 0  # GPU for rendering
+render_gpu_id: 1  # GPU for rendering
 
 # Test settings
 num_test_pr_task: 25
@@ -20,7 +20,8 @@ loop_sleep_time: 0.01  # sleep time for each loop
 # Model paths
 video_generator_path: "/mnt/data0/xiaoxiong/single_view_goal_diffusion/results/libero_goal/RFlow_libero_goal_depth/ckpt/model_95000.pt"
 
-ik_model_path: "/mnt/data2/ZhangChuye/Documents/vik_module/log/outputs/2025.03.15/02.09.58_train_libero_goal_expert_data_train_vit/checkpoints/train_vit_ViTMLP_best.pth"
+# ik_model_path: "/home/ZhangChuye/Documents/vik_module/log/outputs/2025.03.29/01.04.13_train_libero_goal_expert_data_train_vit/checkpoints/train_vit_CrossDepthViTMLP_best.pth"
+ik_model_path: "/home/ZhangChuye/Documents/vik_module/log/outputs/2025.03.29/00.52.47_train_libero_goal_expert_data_train_vit/checkpoints/train_vit_DepthViTMLP_best.pth"
 # ik_model_path: "/mnt/data2/ZhangChuye/Documents/vik_module/log/outputs/2025.03.25/21.01.42_train_libero_goal_expert_data_train_vit/checkpoints/train_vit_ViTMLP_best.pth"
 
 # PID Control parameters
@@ -32,7 +33,6 @@ pid:
   kd_rot: 1.0
   ki_rot: 0.1
   kp_rot: 2.0
-
 
   kd_trans: 0.05
   ki_trans: 0.01
@@ -57,10 +57,10 @@ image:
 
 # Model settings
 model:
-  type: "vit"  # Options: "vit", "resnet50", "cnn"
+  type: "depth_vit"  # Options: "vit", "resnet50", "cnn"
   out_size: 8
   pretrained: false
-  encoder_type:"base" # Options: "base", "small" 
+  encoder_type: "vit_base_patch16_224" # Options: "vit_base_patch16_224", "vit_small_patch16_224" 
 
 # Task settings
 task:
@@ -71,4 +71,5 @@ task:
 # Output settings
 output:
   base_dir: "/home/ZhangChuye/Documents/VideoGeneration/results/depth_ablation_results"
-  exp_name: "libero_goal_100%_25k_expert"
+  # Base + Two Encoders + Single Modality Attention
+  exp_name: "depth_base_two_encoders_single_modality_attention"

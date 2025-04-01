@@ -1,3 +1,36 @@
+import warnings
+
+# Filter out specific deprecation warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore", message=".*declare_namespace.*")
+warnings.filterwarnings("ignore", message=".*pkg_resources.*")
+warnings.filterwarnings("ignore", message=".*lightning.fabric.*")
+warnings.filterwarnings("ignore", message=".*lightning.pytorch.*")
+warnings.filterwarnings("ignore", message=".*mpl_toolkits.*")
+warnings.filterwarnings("ignore", message=".*google.*")
+# Filter libero dataset path warnings
+warnings.filterwarnings("ignore", message=".*datasets path.*does not exist.*")
+# Filter additional warnings
+warnings.filterwarnings("ignore", message=".*timm.layers.*")
+warnings.filterwarnings("ignore", message=".*lightning_utilities.*")
+warnings.filterwarnings("ignore", message=".*is deprecated as an API.*")
+# Filter more specific warnings
+warnings.filterwarnings("ignore", message=".*Importing from timm.models.layers is deprecated.*")
+warnings.filterwarnings("ignore", message=".*pkg_resources is deprecated.*")
+warnings.filterwarnings("ignore", message=".*implicit namespace packages.*")
+# Filter namespace warnings
+warnings.filterwarnings("ignore", message=".*declare_namespace('mpl_toolkits').*")
+warnings.filterwarnings("ignore", message=".*declare_namespace('google').*")
+warnings.filterwarnings("ignore", message=".*declare_namespace('lightning.fabric').*")
+warnings.filterwarnings("ignore", message=".*declare_namespace('lightning').*")
+warnings.filterwarnings("ignore", message=".*declare_namespace('lightning.pytorch').*")
+# Filter huggingface warnings
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", message=".*resume_download.*")
+# Filter by module
+warnings.filterwarnings("ignore", module="pkg_resources.*")
+warnings.filterwarnings("ignore", module="lightning.*")
+
 from libero.libero import benchmark
 from diffusion_model.VideoGenerator import prepare_video_generator
 from utils.env_utils import set_up_libero_envs, process_obs
@@ -6,6 +39,8 @@ from model.resnet50_mlp import ResNet50MLP
 from model.resnet18_mlp import ResNet18MLP
 from model.cnn_mlp import CNNMLP
 from model.vit_mlp import ViTMLP
+from model.depth_vit_mlp import DepthViTMLP
+from model.cross_depth_vit_mlp import CrossDepthViTMLP
 
 from torchvision.utils import save_image
 from einops import rearrange
@@ -24,10 +59,14 @@ from lightning.pytorch import seed_everything
 from collections import defaultdict
 import time as timer
 import multiprocessing as mp
+import shutil
 
 
 class IKEvaluator:
-    def __init__(self, config_path="conf/eval_ik.yaml"):
+    def __init__(self, config_path="conf/eval_depth_encoder.yaml"):
+        # Store config path
+        self.config_path = config_path
+        
         # Load configuration
         with open(config_path, 'r') as f:
             self.config = yaml.safe_load(f)
@@ -44,7 +83,10 @@ class IKEvaluator:
         
         # Set up image transformation
         self.transform = transforms.Compose([
-            transforms.Resize((224, 224)),
+            transforms.Resize(
+                (self.config['image']['resize'], self.config['image']['resize']), 
+                antialias=True  # Explicitly set antialias parameter
+            ),
             transforms.Normalize((0.5, 0.5, 0.5, 0.5), (0.5, 0.5, 0.5, 0.5)),
         ])
         
@@ -65,12 +107,19 @@ class IKEvaluator:
             "/mnt/data0/xiaoxiong/single_view_goal_diffusion/libero_results")
         exp_name = self.config.get('output', {}).get('exp_name', "default_experiment")
         
-        # Create output directory with timestamp
+        # Get current timestamp
+        timestamp = time.strftime("%Y%m%d_%H%M")
+        
+        # Create output directory with timestamp and seed
         self.base_output_dir = os.path.join(
             base_dir,
-            f"{exp_name}_{seed_suffix}"
+            f"{exp_name}_{timestamp}_{seed_suffix}"
         )
         os.makedirs(self.base_output_dir, exist_ok=True)
+        
+        # Copy config file to output directory
+        config_filename = os.path.basename(self.config_path)
+        shutil.copy2(self.config_path, os.path.join(self.base_output_dir, config_filename))
         
     def _setup_models(self):
         """Initialize video generator and IK model"""
@@ -92,7 +141,26 @@ class IKEvaluator:
         if model_type == 'vit':
             self.ik_model = ViTMLP(
                 out_size=out_size, 
-                pretrained=self.config['model'].get('pretrained', True)
+                pretrained=self.config['model'].get('pretrained', True),
+                img_height=self.config['image']['resize'],
+                img_width=self.config['image']['resize'],
+                model_name=self.config['model']['encoder_type']
+            ).to(self.device)
+        elif model_type == 'depth_vit':
+            self.ik_model = DepthViTMLP(
+                out_size=out_size, 
+                pretrained=self.config['model'].get('pretrained', True),
+                img_height=self.config['image']['resize'],
+                img_width=self.config['image']['resize'],
+                model_name=self.config['model']['encoder_type']
+            ).to(self.device)
+        elif model_type == 'cross_depth_vit':
+            self.ik_model = CrossDepthViTMLP(
+                out_size=out_size, 
+                pretrained=self.config['model'].get('pretrained', True),
+                img_height=self.config['image']['resize'],
+                img_width=self.config['image']['resize'],
+                model_name=self.config['model']['encoder_type']
             ).to(self.device)
         elif model_type == 'resnet50':
             self.ik_model = ResNet50MLP(out_size=out_size).to(self.device)
@@ -167,10 +235,27 @@ class IKEvaluator:
         ik_act = ik_act.astype(np.float32)
         
         # Apply PID control
-        pid_config = self.config['pid']
-        control_signal = (pid_config['kp'] * ik_act + 
-                         pid_config['ki'] * integral_error + 
-                         pid_config['kd'] * (ik_act - prev_error))
+        # pid_config = self.config['pid']
+        # control_signal = (pid_config['kp'] * ik_act + 
+        #                  pid_config['ki'] * integral_error + 
+        #                  pid_config['kd'] * (ik_act - prev_error))
+        # Calculate PID control signals for translation, rotation and gripper
+        control_signal_trans = (self.config['pid']['kp_trans'] * ik_act[:3] + 
+                        self.config['pid']['ki_trans'] * integral_error[:3] + 
+                        self.config['pid']['kd_trans'] * (ik_act[:3] - prev_error[:3]))
+        control_signal_rot = (self.config['pid']['kp_rot'] * ik_act[3:6] + 
+                        self.config['pid']['ki_rot'] * integral_error[3:6] + 
+                        self.config['pid']['kd_rot'] * (ik_act[3:6] - prev_error[3:6]))
+        control_signal_grip = np.array([(self.config['pid']['kp_grip'] * ik_act[6] + 
+                        self.config['pid']['ki_grip'] * integral_error[6] + 
+                        self.config['pid']['kd_grip'] * (ik_act[6] - prev_error[6]))])
+        
+        # Ensure all signals have same dimensionality before concatenating
+        control_signal = np.concatenate([control_signal_trans.reshape(-1), 
+                                        control_signal_rot.reshape(-1),
+                                        control_signal_grip.reshape(-1)])
+                        
+        
         
         return control_signal, ik_act
     
@@ -358,8 +443,12 @@ class IKEvaluator:
             f.write(f"Task: {task_name}\n")
             f.write(f"Success rate: {success_rate:.2f}%\n")
             f.write(f"Successful attempts: {successes}/{self.config['num_test_pr_task']}\n")
-            f.write(f"PID parameters: kp={self.config['pid']['kp']}, ki={self.config['pid']['ki']}, "
-                   f"kd={self.config['pid']['kd']}\n")
+            f.write(f"kp_trans={self.config['pid']['kp_trans']}, ki_trans={self.config['pid']['ki_trans']}, "
+                   f"kd_trans={self.config['pid']['kd_trans']}\n")
+            f.write(f"kp_rot={self.config['pid']['kp_rot']}, ki_rot={self.config['pid']['ki_rot']}, "
+                   f"kd_rot={self.config['pid']['kd_rot']}\n")
+            f.write(f"kp_grip={self.config['pid']['kp_grip']}, ki_grip={self.config['pid']['ki_grip']}, "
+                   f"kd_grip={self.config['pid']['kd_grip']}\n")
             f.write("\nInference Times:\n")
             f.write(f"Video Generator - Avg: {np.mean(inference_times['video_gen'])*1000:.2f}ms, "
                    f"Std: {np.std(inference_times['video_gen'])*1000:.2f}ms\n")
@@ -484,7 +573,7 @@ class IKEvaluator:
 
 def main():
     # Create evaluator and run evaluation
-    evaluator = IKEvaluator("conf/eval_ik.yaml")
+    evaluator = IKEvaluator("conf/eval_depth_encoder.yaml")
     results = evaluator.run_evaluation()
     print("Evaluation completed, results:", results)
 
