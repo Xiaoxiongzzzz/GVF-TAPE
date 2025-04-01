@@ -1,9 +1,9 @@
 # Global settings
 use_seed: true  # Whether to use fixed seed
-seed: 2  # Global random seed for reproducibility, only used if use_seed is true
+seed: 0  # Global random seed for reproducibility, only used if use_seed is true
 
 # GPU settings
-gpu_id: 1  # Main GPU for computation
+gpu_id: 0  # Main GPU for computation
 render_gpu_id: 0  # GPU for rendering
 
 # Test settings
@@ -18,16 +18,10 @@ loop_sleep_time: 0.03  # sleep time for each loop
 
 
 # Model paths
-# video_generator_path: "/mnt/home/ZhangChuye/Data/results/RFlow_pixel_libero_object/model_99000.pt"
-# video_generator_path: "/mnt/home/ZhangChuye/Data/results/RFlow_pixel_libero_goal/model_99000.pt"
-video_generator_path: "/mnt/home/ZhangXiaoxiong/Documents/AVDC/results/RFlow_pixel_libero_goal/model_99000.pt"
-# video_generator_path: "/mnt/home/ZhangXiaoxiong/Documents/AVDC/results/RFlow_pixel/model_75000.pt"
-# ik_model_path: "/mnt/home/ZhangXiaoxiong/Documents/train_libero_spatial_ik_ResNet50MLP_final.pth"
-# ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.09/20.54.55_train_libero_spatial_ik_train_libero_spatial_ik/checkpoints/train_libero_spatial_ik_ResNet50MLP_best.pth"
-# ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.19/04.09.21_train_libero_goal_ik_train_resnet50_50traj/checkpoints/train_resnet50_50traj_ResNet50MLP_best.pth"
-# ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.21/17.08.27_train_libero_goal_ik_train_resnet50_50traj/checkpoints/train_resnet50_50traj_ResNet50MLP_best.pth"
-# ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.23/17.25.18_train_libero_spatial_ik_vit_train_vit_expert_data/checkpoints/train_vit_expert_data_ViTMLP_best.pth"
-ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.30/16.05.00_train_libero_goal_play_data_train_vit/checkpoints/train_vit_ViTMLP_best.pth"
+video_generator_path: "/mnt/data0/xiaoxiong/single_view_goal_diffusion/results/libero_goal/RFlow_libero_goal_100%_50k_depth/ckpt/model_20000.pt"
+
+ik_model_path: "/mnt/data2/ZhangChuye/Documents/vik_module/log/outputs/2025.03.15/02.09.58_train_libero_goal_expert_data_train_vit/checkpoints/train_vit_ViTMLP_best.pth"
+# ik_model_path: "/mnt/data2/ZhangChuye/Documents/vik_module/log/outputs/2025.03.25/21.01.42_train_libero_goal_expert_data_train_vit/checkpoints/train_vit_ViTMLP_best.pth"
 
 # PID Control parameters
 pid:
@@ -44,9 +38,9 @@ pid:
 video:
   duration: 50  # gif duration
   sample_timestep: 3  # video generator sample timestep
-  act_horizon: 4
+  act_horizon: 6
   latent: False
-
+  depth: True
 # Image processing settings
 image:
   resize: 128  # Image resize dimension
@@ -62,3 +56,8 @@ task:
   horizon: 2000
   suite_name: "libero_goal"  # Options: "libero_spatial", "libero_90", etc.
   selected_tasks: []  # Empty list means use all tasks, or specify like ["task1", "task3"]
+
+# Output settings
+output:
+  base_dir: "/mnt/data0/xiaoxiong/single_view_goal_diffusion/libero_results"
+  exp_name: "libero_goal_100%_25k_expert"

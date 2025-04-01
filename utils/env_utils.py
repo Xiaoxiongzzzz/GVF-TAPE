@@ -29,7 +29,7 @@ def set_up_libero_envs(suite_name: str, task_name: str, render_device: int, hori
     task = task_suite.get_task(task_id)
     task_prompt = task.language
 
-    bddl_files_path = '/mnt/home/ZhangXiaoxiong/Documents/VideoGeneration/third_party/LIBERO/libero/libero/bddl_files'
+    bddl_files_path = '/home/ZhangXiaoxiong/Document/VideoGeneration/third_party/LIBERO/libero/libero/bddl_files'
     task_bddl_file = os.path.join(bddl_files_path, task.problem_folder, task.bddl_file)
 
     env_args ={

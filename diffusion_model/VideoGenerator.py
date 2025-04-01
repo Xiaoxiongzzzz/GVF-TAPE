@@ -52,20 +52,21 @@ class LatentVideoGenerator(nn.Module):
         return batch_text_embed
 
 class PixelVideoGenerator(nn.Module):
-    def __init__(self, model, tokenizer, text_encoder, rectified_flow, device):
+    def __init__(self, model, tokenizer, text_encoder, rectified_flow, device, depth=False):
         super().__init__()
         self.device = device
         self.model = model
         self.tokenizer = tokenizer
         self.text_encoder = text_encoder
         self.rectified_flow = rectified_flow
-
+        self.depth = depth
+        self.channel = 3 if not depth else 4
         self.f = 6
     def forward(self, batch_text, x_cond: torch.Tensor):
         """
         Input:
             batch_text: str or list of str
-            x_cond: shape = [b, c, h, w]
+            x_cond: shape = [b, c(3), h, w]
         Output:
             x: shape = [b, (f, c), h, w]
         """
@@ -75,7 +76,7 @@ class PixelVideoGenerator(nn.Module):
         # task_embed = task_embed.repeat_interleave(10, dim=0)
         h, w = x_cond.shape[2], x_cond.shape[3]
 
-        noise = torch.randn((B, (3*self.f), h, w), device = self.device)
+        noise = torch.randn((B, (self.channel*self.f), h, w), device = self.device)
         x = self.rectified_flow.sample(self.model, noise, x_cond, task_embed)
 
         return x
@@ -86,8 +87,8 @@ class PixelVideoGenerator(nn.Module):
 
         return batch_text_embed
 
-def prepare_video_generator(unet_path, device, sample_timestep=10, latent=False):
-    unet = UnetLatent().to(device) if latent else UnetMW().to(device) 
+def prepare_video_generator(unet_path, device, sample_timestep=10, latent=False, depth=False):
+    unet = UnetLatent().to(device) if latent else UnetMW(depth).to(device) 
     unet.load_state_dict(torch.load(unet_path)["model"])
     unet.eval().requires_grad_(False)
 
@@ -105,7 +106,7 @@ def prepare_video_generator(unet_path, device, sample_timestep=10, latent=False)
         vae.requires_grad_(False)
         video_generator = LatentVideoGenerator(unet, vae, tokenizer, text_encoder, rectified_flow, device)
     else:
-        video_generator = PixelVideoGenerator(unet, tokenizer, text_encoder, rectified_flow, device)
+        video_generator = PixelVideoGenerator(unet, tokenizer, text_encoder, rectified_flow, device, depth)
 
     return video_generator
 
@@ -167,12 +168,13 @@ def prepare_diffusion_video_generator(diffusion_model_path, device, sample_times
 
     return diffusion_video_generator
 
-# Test Code
+# # Test Code
 # if __name__ == "__main__":
 #     text = "open the drawer"
 #     x_cond = torch.randn(1, 3, 128, 128).to(torch.device("cuda"))
-#     diffusion_video_generator = prepare_diffusion_video_generator("/mnt/home/ZhangXiaoxiong/Documents/AVDC/results/ddpm_libero_spatial/model-31.pt", 
+#     video_generator = prepare_video_generator("/mnt/data0/xiaoxiong/single_view_goal_diffusion/results/RFlow_libero_goal_depth/ckpt/model_0.pt", 
 #                                                 device=torch.device("cuda"),
-#                                                 sample_timestep=10)
-#     sample = diffusion_video_generator(text, x_cond)
+#                                                 sample_timestep=10,
+#                                                 depth=True)
+#     sample = video_generator(text, x_cond)
 #     import ipdb; ipdb.set_trace()

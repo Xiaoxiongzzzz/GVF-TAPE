@@ -1,16 +1,14 @@
 from libero.libero import benchmark
 from diffusion_model.VideoGenerator import prepare_video_generator
-from utils.env_utils import set_up_libero_envs
-from utils.env_utils import process_obs
+from utils.env_utils import set_up_libero_envs, process_obs
 from policy.ik_model.resnet import ResNet50Pretrained, ResNet50
 from model.resnet50_mlp import ResNet50MLP
 from model.resnet18_mlp import ResNet18MLP
 from model.cnn_mlp import CNNMLP
-
 from model.vit_mlp import ViTMLP
+
 from torchvision.utils import save_image
 from einops import rearrange
-from scipy.spatial.transform import Rotation as R
 from tqdm import tqdm
 import numpy as np
 import os
@@ -22,326 +20,476 @@ import imageio
 import torchvision.transforms as transforms
 import scipy.spatial.transform as st
 import torch.nn.functional as F
-from scipy.spatial.transform import Rotation as R
 from lightning.pytorch import seed_everything
 from collections import defaultdict
 import time as timer
+import multiprocessing as mp
+
+
+class IKEvaluator:
+    def __init__(self, config_path="conf/eval_ik.yaml"):
+        # Load configuration
+        with open(config_path, 'r') as f:
+            self.config = yaml.safe_load(f)
+        
+        # Set basic parameters
+        self.device = torch.device(f"cuda:{self.config['gpu_id']}")
+        torch.multiprocessing.set_sharing_strategy('file_system')
+        
+        # Set up experiment environment
+        self._setup_experiment()
+        
+        # Load models
+        self._setup_models()
+        
+        # Set up image transformation
+        self.transform = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.Normalize((0.5, 0.5, 0.5, 0.5), (0.5, 0.5, 0.5, 0.5)),
+        ])
+        
+        # Get task list
+        self._setup_tasks()
+        
+    def _setup_experiment(self):
+        """Set up experiment environment and output directories"""
+        # Set random seed
+        if self.config.get('use_seed', False):
+            seed_everything(self.config['seed'], workers=True)
+            seed_suffix = f"seed-{self.config['seed']}"
+        else:
+            seed_suffix = "seed-None"
+            
+        # Get output directory configuration
+        base_dir = self.config.get('output', {}).get('base_dir', 
+            "/mnt/data0/xiaoxiong/single_view_goal_diffusion/libero_results")
+        exp_name = self.config.get('output', {}).get('exp_name', "default_experiment")
+        
+        # Create output directory with timestamp
+        self.base_output_dir = os.path.join(
+            base_dir,
+            f"{exp_name}_{seed_suffix}"
+        )
+        os.makedirs(self.base_output_dir, exist_ok=True)
+        
+    def _setup_models(self):
+        """Initialize video generator and IK model"""
+        # Load video generator
+        self.video_generator = prepare_video_generator(
+            unet_path=self.config['video_generator_path'], 
+            device=self.device, 
+            sample_timestep=self.config['video']['sample_timestep'],
+            latent=self.config['video']['latent'],
+            depth=self.config['video']['depth'],
+        )
+        for param in self.video_generator.parameters():
+            param.requires_grad = False
+        
+        # Load IK model
+        model_type = self.config['model']['type']
+        out_size = self.config['model']['out_size']
+        
+        if model_type == 'vit':
+            self.ik_model = ViTMLP(
+                out_size=out_size, 
+                pretrained=self.config['model'].get('pretrained', True)
+            ).to(self.device)
+        elif model_type == 'resnet50':
+            self.ik_model = ResNet50MLP(out_size=out_size).to(self.device)
+        elif model_type == 'cnn':
+            self.ik_model = CNNMLP(out_size=out_size).to(self.device)
+        elif model_type == 'resnet18':
+            self.ik_model = ResNet18MLP(out_size=out_size).to(self.device)
+        else:
+            raise ValueError(f"Unknown model type: {model_type}")
+            
+        self.ik_model.load_state_dict(torch.load(self.config['ik_model_path']))
+        self.ik_model.eval()
+        
+    def _setup_tasks(self):
+        """Get list of tasks to evaluate"""
+        benchmark_dict = benchmark.get_benchmark_dict()
+        suite = benchmark_dict[self.config['task']['suite_name']]()
+        available_tasks = suite.get_task_names()
+        
+        # Filter tasks
+        if self.config['task']['selected_tasks']:
+            self.selected_tasks = {
+                f"task{i+1}": task_name 
+                for i, task_name in enumerate(available_tasks) 
+                if f"task{i+1}" in self.config['task']['selected_tasks']
+            }
+        else:
+            # If none specified, use all available tasks
+            self.selected_tasks = {
+                f"task{i+1}": task_name 
+                for i, task_name in enumerate(available_tasks)
+            }
+    
+    def _get_proprio_state(self, obs):
+        """Get robot proprioceptive state"""
+        try:
+            gripper_pos = obs["robot0_gripper_qpos"]
+            if isinstance(gripper_pos, np.ndarray):
+                gripper_value = gripper_pos.flatten()[0:1]
+            else:
+                gripper_value = np.array([float(gripper_pos)]).reshape(1,)
+                
+            return np.concatenate([
+                obs["robot0_eef_pos"].reshape(3,),
+                obs["robot0_eef_quat"].reshape(4,),
+                gripper_value
+            ], axis=0)
+        except Exception as e:
+            print("Error processing gripper position:", e)
+            print("Gripper position data:", obs["robot0_gripper_qpos"])
+            raise
+    
+    def _compute_pid_control(self, goal_out, proprio_st, prev_error, integral_error):
+        """Compute PID control signal"""
+        # Calculate position control
+        control_trans = goal_out[:3] - proprio_st[:3]
+        
+        # Calculate rotation control
+        control_quat = (st.Rotation.from_quat(goal_out[3:7]) * 
+                        st.Rotation.from_quat(proprio_st[3:7]).inv())
+        control_rot = control_quat.as_euler("xyz", degrees=False)
+        
+        # Calculate gripper control
+        gripper_goal = goal_out[7] if goal_out[7] > self.config['pid']['grip_threshold'] else 0.00
+        control_gripper = (gripper_goal - proprio_st[7]) * 0.04
+        
+        # Combine control signals
+        ik_act = np.zeros(7)
+        ik_act[:3] = self.config['pid']['pos_scale'] * control_trans
+        ik_act[3:6] = self.config['pid']['rot_scale'] * control_rot
+        ik_act[6] = self.config['pid']['grip_scale'] * control_gripper
+        ik_act = ik_act.astype(np.float32)
+        
+        # Apply PID control
+        pid_config = self.config['pid']
+        control_signal = (pid_config['kp'] * ik_act + 
+                         pid_config['ki'] * integral_error + 
+                         pid_config['kd'] * (ik_act - prev_error))
+        
+        return control_signal, ik_act
+    
+    def _generate_video(self, task_prompt, side_view):
+        """Generate video prediction"""
+        t_before_gen = timer.perf_counter()
+        
+        video_clip = self.video_generator(task_prompt, side_view)
+        video_clip = rearrange(video_clip, "b (f c) h w -> (b f) c h w", c=4)
+        video_clip_np = (video_clip[:, :3, :, :].permute(0, 2, 3, 1).detach().cpu().numpy()*255).astype(np.uint8)
+        
+        video_gen_time = timer.perf_counter() - t_before_gen
+        
+        return video_clip, video_clip_np, video_gen_time
+    
+    def _predict_goal(self, goal_img):
+        """Predict goal state using IK model"""
+        t_before_ik = timer.perf_counter()
+        
+        goal_img = self.transform(goal_img.to(self.device)).unsqueeze(0)
+        with torch.no_grad():
+            goal_out = self.ik_model(goal_img)
+        goal_out = goal_out.squeeze().cpu().numpy()
+        
+        ik_time = timer.perf_counter() - t_before_ik
+        
+        return goal_out, ik_time
+    
+    def _run_single_test(self, task_name, test_time, task_output_dir):
+        """Run a single test case and return results"""
+        print(f"Test {test_time+1}/{self.config['num_test_pr_task']} Start!")
+        
+        # Setup environment
+        env, task_prompt = set_up_libero_envs(
+            suite_name=self.config['task']['suite_name'], 
+            task_name=task_name, 
+            render_device=self.config['render_gpu_id'],
+            horizon=self.config['task']['horizon'],
+            init_state_id=test_time
+        )
+        
+        # Initialize
+        for _ in range(self.config['init_steps']):
+            obs, _, done, _ = env.step(np.zeros(7))
+        
+        roll_out_video = []
+        success = False
+        inference_times = {'video_gen': [], 'ik_model': []}
+        
+        # Try each video sample
+        for video_sample in range(self.config['num_video_samples']):
+            visual_obs, _ = process_obs(obs, extra_state_keys=[], device=self.device)
+            side_view = visual_obs[:,0]
+            
+            # Generate video
+            video_clip, video_clip_np, video_gen_time = self._generate_video(task_prompt, side_view)
+            inference_times['video_gen'].append(video_gen_time)
+            # Execute actions for each frame
+            success, frames, ik_times, obs = self._execute_video_actions(
+                env, obs, video_clip, video_clip_np, self.config['video']['act_horizon']
+            )
+            inference_times['ik_model'].extend(ik_times)
+            roll_out_video.extend(frames)
+            
+            if success:
+                break
+        
+        # Save results
+        status = "success" if success else "fail"
+        self._save_test_results(task_output_dir, test_time, status, roll_out_video)
+        
+        env.close()
+        return success, inference_times
+    
+    def _execute_video_actions(self, env, obs, video_clip, video_clip_np, horizon):
+        """Execute actions for each frame in the video"""
+        success = False
+        frames = []
+        ik_times = []
+        
+        for index in range(min(horizon, len(video_clip))):
+            # Predict goal
+            goal_img = video_clip[index]
+            goal_out, ik_time = self._predict_goal(goal_img)
+            ik_times.append(ik_time)
+            
+            # Run PID control
+            success, new_frames, obs = self._run_pid_control(
+                env, obs, goal_out, video_clip_np[index]
+            )
+            frames.extend(new_frames)
+            
+            if success:
+                break
+                
+            time.sleep(self.config['loop_sleep_time'])
+        
+        return success, frames, ik_times, obs
+    
+    def _run_pid_control(self, env, obs, goal_out, goal_img_np):
+        """Run PID control loop for a single goal"""
+        frames = []
+        proprio_st = self._get_proprio_state(obs)
+        pid_step = 0
+        prev_error = np.zeros(7)
+        integral_error = np.zeros(7)
+        
+        while (np.linalg.norm(proprio_st - goal_out) > self.config['pid']['convergence_threshold'] and 
+               pid_step < self.config['pid_max_steps']):
+            pid_step += 1
+            
+            # Calculate and apply control
+            control_signal, ik_act = self._compute_pid_control(
+                goal_out, proprio_st, prev_error, integral_error)
+            obs, _, done, _ = env.step(control_signal)
+            
+            # Update state and errors
+            proprio_st = self._get_proprio_state(obs)
+            prev_error = ik_act
+            integral_error += ik_act
+            
+            # Save frame
+            frame = np.concatenate([cv2.flip(obs["agentview_image"], 0), goal_img_np], axis=1)
+            frames.append(frame)
+            
+            if done:
+                return True, frames, obs
+            
+            time.sleep(self.config['loop_sleep_time'])
+        
+        return False, frames, obs
+    
+    def _save_test_results(self, task_output_dir, test_time, status, roll_out_video):
+        """Save test results as GIF and log"""
+        # Save GIF
+        video_name = f"test_{test_time:02d}_{status}_steps{len(roll_out_video)}.gif"
+        video_path = os.path.join(task_output_dir, video_name)
+        
+        with imageio.get_writer(video_path, mode='I', duration=self.config['video']['duration']) as writer:
+            for frame in roll_out_video:
+                writer.append_data(frame)
+        
+        # Log result
+        info_path = os.path.join(task_output_dir, "task_info.txt")
+        with open(info_path, "a") as f:
+            f.write(f"Test {test_time}: {'Success' if status == 'success' else 'Fail'}\n")
+    
+    def evaluate_task(self, task_id, task_name):
+        """Evaluate a single task"""
+        print(f"\nEvaluating {task_id}: {task_name}")
+        task_output_dir = os.path.join(self.base_output_dir, task_id)
+        os.makedirs(task_output_dir, exist_ok=True)
+        
+        task_successes = 0
+        task_inference_times = {'video_gen': [], 'ik_model': []}
+        
+        # Run all test cases
+        for test_time in range(self.config['num_test_pr_task']):
+            success, inference_times = self._run_single_test(
+                task_name, test_time, task_output_dir
+            )
+            
+            if success:
+                task_successes += 1
+                
+            # Collect timing data
+            task_inference_times['video_gen'].extend(inference_times['video_gen'])
+            task_inference_times['ik_model'].extend(inference_times['ik_model'])
+        
+        # Calculate and save results
+        task_success_rate = (task_successes / self.config['num_test_pr_task']) * 100
+        self._save_task_summary(task_output_dir, task_name, task_success_rate, 
+                               task_successes, task_inference_times)
+        
+        return {
+            'success_rate': task_success_rate,
+            'successes': task_successes,
+            'timing': task_inference_times
+        }
+        
+    def _save_task_summary(self, task_output_dir, task_name, success_rate, 
+                          successes, inference_times):
+        """Save task summary results"""
+        with open(os.path.join(task_output_dir, "task_results.txt"), "w") as f:
+            f.write(f"Task: {task_name}\n")
+            f.write(f"Success rate: {success_rate:.2f}%\n")
+            f.write(f"Successful attempts: {successes}/{self.config['num_test_pr_task']}\n")
+            f.write(f"PID parameters: kp={self.config['pid']['kp']}, ki={self.config['pid']['ki']}, "
+                   f"kd={self.config['pid']['kd']}\n")
+            f.write("\nInference Times:\n")
+            f.write(f"Video Generator - Avg: {np.mean(inference_times['video_gen'])*1000:.2f}ms, "
+                   f"Std: {np.std(inference_times['video_gen'])*1000:.2f}ms\n")
+            f.write(f"IK Model - Avg: {np.mean(inference_times['ik_model'])*1000:.2f}ms, "
+                   f"Std: {np.std(inference_times['ik_model'])*1000:.2f}ms\n")
+    
+    def run_evaluation(self):
+        """Run evaluation in parallel using process pool"""
+        print("Starting parallel evaluation...")
+        
+        # Prepare task list
+        tasks = list(self.selected_tasks.items())
+        
+        # Create output directories for each task
+        for task_id, _ in tasks:
+            task_output_dir = os.path.join(self.base_output_dir, task_id)
+            os.makedirs(task_output_dir, exist_ok=True)
+        
+        # Set number of processes, keep it low to avoid resource contention
+        num_processes = len(tasks)
+        print(f"Using {num_processes} processes for parallel evaluation")
+        
+        # Use process pool for parallel execution
+        with mp.Pool(processes=num_processes) as pool:
+            # Execute tasks in parallel
+            results = pool.starmap(self._evaluate_task_wrapper, tasks)
+        
+        # Process results
+        all_task_results = {}
+        inference_times = defaultdict(list)
+        
+        for (task_id, _), result in zip(tasks, results):
+            all_task_results[task_id] = result['success_rate']
+            inference_times[task_id] = result['timing']
+        
+        # Save overall results
+        self._save_overall_results(all_task_results, inference_times)
+        
+        return all_task_results
+    
+    def _evaluate_task_wrapper(self, task_id, task_name):
+        """Wrapper function for task evaluation in multiprocessing"""
+        print(f"\nProcess {os.getpid()} starting evaluation of {task_id}: {task_name}")
+        
+        # Set environment variables to avoid rendering conflicts
+        os.environ['MUJOCO_GL'] = 'osmesa'
+        
+        # Create output directory for this task
+        task_output_dir = os.path.join(self.base_output_dir, task_id)
+        
+        try:
+            # Run all test cases
+            task_successes = 0
+            task_inference_times = {'video_gen': [], 'ik_model': []}
+            
+            for test_time in range(self.config['num_test_pr_task']):
+                print(f"Process {os.getpid()}: {task_id} test {test_time+1}/{self.config['num_test_pr_task']}")
+                
+                success, inference_times = self._run_single_test(
+                    task_name, test_time, task_output_dir
+                )
+                
+                if success:
+                    task_successes += 1
+                    
+                # Collect timing data
+                task_inference_times['video_gen'].extend(inference_times['video_gen'])
+                task_inference_times['ik_model'].extend(inference_times['ik_model'])
+            
+            # Calculate and save results
+            task_success_rate = (task_successes / self.config['num_test_pr_task']) * 100
+            self._save_task_summary(task_output_dir, task_name, task_success_rate, 
+                                  task_successes, task_inference_times)
+            
+            print(f"Process {os.getpid()} completed task {task_id}")
+            
+            return {
+                'success_rate': task_success_rate,
+                'successes': task_successes,
+                'timing': task_inference_times
+            }
+            
+        except Exception as e:
+            print(f"Process {os.getpid()} encountered error while evaluating task {task_id}: {e}")
+            import traceback
+            traceback.print_exc()
+            
+            return {
+                'success_rate': 0,
+                'successes': 0,
+                'timing': {'video_gen': [], 'ik_model': []}
+            }
+
+    def _save_overall_results(self, all_task_results, inference_times):
+        """Save overall evaluation results"""
+        overall_success_rate = sum(all_task_results.values()) / len(all_task_results)
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+        
+        with open(os.path.join(self.base_output_dir, "overall_results.txt"), "w") as f:
+            f.write(f"Experiment Timestamp: {timestamp}\n")
+            if self.config.get('use_seed', False):
+                f.write(f"Random Seed: {self.config['seed']}\n")
+            f.write(f"Overall success rate across all tasks: {overall_success_rate:.2f}%\n\n")
+            
+            # Calculate and write overall inference times
+            all_video_gen_times = [time for task_times in inference_times.values() 
+                                  for time in task_times['video_gen']]
+            all_ik_times = [time for task_times in inference_times.values() 
+                            for time in task_times['ik_model']]
+            
+            f.write("Overall Inference Times:\n")
+            f.write(f"Video Generator - Avg: {np.mean(all_video_gen_times)*1000:.2f}ms, "
+                    f"Std: {np.std(all_video_gen_times)*1000:.2f}ms\n")
+            f.write(f"IK Model - Avg: {np.mean(all_ik_times)*1000:.2f}ms, "
+                    f"Std: {np.std(all_ik_times)*1000:.2f}ms\n\n")
+            
+            f.write("Individual Task Results:\n")
+            for task_id, success_rate in all_task_results.items():
+                f.write(f"{task_id}: {success_rate:.2f}%\n")
+            f.write(f"\nPID parameters: kp={self.config['pid']['kp']}, ki={self.config['pid']['ki']}, kd={self.config['pid']['kd']}\n")
 
 
 def main():
-    # Load config
-    with open("conf/eval_ik.yaml", 'r') as f:
-        config = yaml.safe_load(f)
-    
-    # Only set seed if use_seed is true
-    if config.get('use_seed', False):
-        seed_everything(config['seed'], workers=True)
-        exp_name = f"seed-{config['seed']}_experiment"
-    else:
-        exp_name = "seed-None_experiment"
-    
-    timestamp = time.strftime("%Y%m%d_%H%M%S")
-    base_output_dir = f"./results/ik_policy/{timestamp}_{exp_name}"
-    os.makedirs(base_output_dir, exist_ok=True)
-    
-    torch.multiprocessing.set_sharing_strategy('file_system')
-    device = torch.device(f"cuda:{config['gpu_id']}")
-    
-    # Get tasks from LIBERO benchmark
-    benchmark_dict = benchmark.get_benchmark_dict()
-    suite = benchmark_dict[config['task']['suite_name']]()
-    available_tasks = suite.get_task_names()
-    
-    # Filter tasks if specific ones are selected in config
-    if config['task']['selected_tasks']:
-        selected_tasks = {f"task{i+1}": task_name 
-                         for i, task_name in enumerate(available_tasks) 
-                         if f"task{i+1}" in config['task']['selected_tasks']}
-    else:
-        # Use all available tasks if none specified
-        selected_tasks = {f"task{i+1}": task_name 
-                         for i, task_name in enumerate(available_tasks)}
-    
-    transform = transforms.Compose(
-        [   
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-        ]
-    )
+    # Create evaluator and run evaluation
+    evaluator = IKEvaluator("conf/eval_ik.yaml")
+    results = evaluator.run_evaluation()
+    print("Evaluation completed, results:", results)
 
 
-    video_generator = prepare_video_generator(
-        unet_path=config['video_generator_path'], 
-        device=device, 
-        sample_timestep=config['video']['sample_timestep'],
-        latent=config['video']['latent'],
-    )
-    for param in video_generator.parameters():
-        param.requires_grad = False
-    # ik_model = ResNet50MLP(out_size=8).to(device)
-    # Initialize IK model based on config
-    if config['model']['type'] == 'vit':
-        ik_model = ViTMLP(
-            out_size=config['model']['out_size'], 
-            pretrained=config['model']['pretrained']
-            
-        ).to(device)
-    elif config['model']['type'] == 'resnet50':
-        ik_model = ResNet50MLP(
-            out_size=config['model']['out_size']
-        ).to(device)
-    elif config['model']['type'] == 'cnn':
-        ik_model = CNNMLP(
-            out_size=config['model']['out_size']
-        ).to(device)
-    elif config['model']['type'] == 'resnet18':
-        ik_model = ResNet18MLP(
-            out_size=config['model']['out_size']
-        ).to(device)
-    else:
-        raise ValueError(f"Unknown model type: {config['model']['type']}")
-        
-    ik_model.load_state_dict(torch.load(config['ik_model_path']))
-    ik_model.eval()
-
-    all_task_results = {}
-    inference_times = defaultdict(list)  # To store inference times
-    
-    for task_id, task_name in selected_tasks.items():
-        print(f"\nEvaluating {task_id}: {task_name}")
-        task_output_dir = os.path.join(base_output_dir, task_id)
-        os.makedirs(task_output_dir, exist_ok=True)
-        
-        
-        task_successes = 0
-        task_inference_times = {
-            'video_gen': [],
-            'ik_model': []
-        }
-
-        for test_time in range(config['num_test_pr_task']):
-            print("---"*5)
-            print(f"Test {test_time} of {config['num_test_pr_task']} Start!")
-            # obs = env.reset()
-            env, task_prompt = set_up_libero_envs(
-                suite_name=config['task']['suite_name'], 
-                task_name=task_name, 
-                render_device=config['render_gpu_id'],
-                horizon=config['task']['horizon'],
-                init_state_id=test_time
-            )
-            for _ in range(config['init_steps']):
-                obs, _, done, _ = env.step(np.zeros(7))
-
-            roll_out_video = []
-            for video_sample in range(config['num_video_samples']):
-                t_before_gen = timer.perf_counter()
-
-                visual_obs, _ = process_obs(obs, extra_state_keys=[], device=device)
-                side_view = visual_obs[:,0]
-                # print("##########################")
-                # print(side_view.shape)
-                # # print side view type
-                # print(type(side_view))
-                # print(side_view.dtype)
-                # 
-                print(f"Video sample {video_sample} of {config['num_video_samples']} Start!")
-
-                video_clip = video_generator(task_prompt, side_view)
-                video_clip = rearrange(video_clip, "b (f c) h w -> (b f) c h w", c=3) # [::2]
-                video_clip = F.interpolate(video_clip, size=(128, 128), mode='bicubic')
-                video_clip_np = (video_clip.permute(0, 2, 3, 1).detach().cpu().numpy()*255).astype(np.uint8)
-
-                video_gen_time = timer.perf_counter() - t_before_gen
-                task_inference_times['video_gen'].append(video_gen_time)
-
-                # t_after_gen = timer.perf_counter()
-                
-                vhrz = config['video']['act_horizon']
-                assert len(video_clip) > vhrz, "Video clip length must be greater than act_horizon"
-                
-                for index in range(vhrz):
-                    goal_img = video_clip[index]
-                    t_before_ik = timer.perf_counter()
-                    goal_img = transform(goal_img.to(device)).unsqueeze(0)
-                    with torch.no_grad():
-                        goal_out = ik_model(goal_img)
-                    goal_out = goal_out.squeeze().cpu().numpy()
-                    
-                    ik_time = timer.perf_counter() - t_before_ik
-                    task_inference_times['ik_model'].append(ik_time)
-                    
-                    # Predicted proprioceptive state
-                    img_st = obs["agentview_image"]
-                    img_st = torch.from_numpy(np.flip(img_st, 0).copy()).to(device).permute(2, 0, 1) / 255.0
-                    img_st = transform(img_st).unsqueeze(0)
-
-                    # with torch.no_grad():
-                    #     st_out = ik_model(img_st)
-                    # st_out = st_out.squeeze().cpu().numpy()
-                    # st_out = correct_orientation(st_out)
-                    
-                    # Get proprioceptive state
-                    # proprio_st = np.concatenate([obs["robot0_eef_pos"].reshape(3,), obs["robot0_eef_quat"].reshape(4,), obs["robot0_gripper_qpos"][:, 0].reshape(1,)], axis=0)
-                    # self.true_now = np.concatenate([self.obs["robot0_eef_pos"].reshape(3,), self.obs["robot0_eef_quat"].reshape(4,), self.obs["robot0_gripper_qpos"][:, 0].reshape(1,)], axis=0)
-                    try:
-                        gripper_pos = obs["robot0_gripper_qpos"]
-                        if isinstance(gripper_pos, np.ndarray):
-                            gripper_value = gripper_pos.flatten()[0:1]
-                        else:
-                            gripper_value = np.array([float(gripper_pos)]).reshape(1,)
-                            
-                        proprio_st = np.concatenate([
-                            obs["robot0_eef_pos"].reshape(3,),
-                            obs["robot0_eef_quat"].reshape(4,),
-                            gripper_value
-                        ], axis=0)
-                    except Exception as e:
-                        print("Error processing gripper position:", e)
-                        print("Gripper position data:", obs["robot0_gripper_qpos"])
-                        raise
-                    
-
-                    pid_step = 0
-                    prev_error = np.zeros(7)
-                    integral_error = np.zeros(7)
-                            
-                    while np.linalg.norm(proprio_st - goal_out) > config['pid']['convergence_threshold'] and pid_step < config['pid_max_steps']:
-                        pid_step += 1
-
-                        time.sleep(config['loop_sleep_time'])
-                        
-                        control_trans = goal_out[:3] - proprio_st[:3]
-                        control_quat = (st.Rotation.from_quat(goal_out[3:7])* st.Rotation.from_quat(proprio_st[3:7]).inv())
-                        control_rot = control_quat.as_euler("xyz", degrees=False)
-
-                        gripper_goal = goal_out[7] if goal_out[7] > config['pid']['grip_threshold'] else 0.00
-                        control_gripper = (gripper_goal - proprio_st[7]) * 0.04
-
-                        ik_act = np.zeros(7)
-                        ik_act[:3] = config['pid']['pos_scale'] * control_trans
-                        ik_act[3:6] = config['pid']['rot_scale'] * control_rot
-                        ik_act[6] = config['pid']['grip_scale'] * control_gripper
-                        ik_act = ik_act.astype(np.float32)
-                        
-                        prev_error = ik_act
-                        integral_error += ik_act
-                        control_signal = (config['pid']['kp'] * ik_act + 
-                                        config['pid']['ki'] * integral_error + 
-                                        config['pid']['kd'] * (ik_act - prev_error))
-                        
-                        obs, _, done, _ = env.step(control_signal)
-                        
-                        img_st = obs["agentview_image"]
-                        img_st = torch.from_numpy(np.flip(img_st, 0).copy()).to(device).permute(2, 0, 1) / 255.0
-                        img_st = transform(img_st).unsqueeze(0)
-                        # with torch.no_grad():
-                        #     st_out = ik_model(img_st)
-                        # st_out = st_out.squeeze().cpu().numpy()
-                        # # st_out = correct_orientation(st_out)
-                        try:
-                            gripper_pos = obs["robot0_gripper_qpos"]
-                            if isinstance(gripper_pos, np.ndarray):
-                                gripper_value = gripper_pos.flatten()[0:1]
-                            else:
-                                gripper_value = np.array([float(gripper_pos)]).reshape(1,)
-                                
-                            proprio_st = np.concatenate([
-                                obs["robot0_eef_pos"].reshape(3,),
-                                obs["robot0_eef_quat"].reshape(4,),
-                                gripper_value
-                            ], axis=0)
-                        except Exception as e:
-                            print("Error processing gripper position:", e)
-                            print("Gripper position data:", obs["robot0_gripper_qpos"])
-                            raise
-                        
-                        
-                        frame = np.concatenate([cv2.flip(obs["agentview_image"], 0), video_clip_np[index]], axis=1)
-                        # cv2.putText(frame, "Current", (10, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-                        # cv2.putText(frame, "Goal", (frame.shape[1]//2 + 10, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-                        roll_out_video.append(frame)
-                        
-                        if done:
-                            print("Done!!!")
-                            break
-                    
-                    # print(f"if done: {done}")
-
-                    if done:
-                        # print("Done!!!")
-                        break
-
-                    # print(f"frame {index} of {vhrz} in sample {video_sample} End!")
-                    time.sleep(config['loop_sleep_time'])
-                if done:
-                    # print("Done!!!")
-                    break
-            if done:
-                print(f"Test {test_time}: Success!")
-                status = "success"
-                task_successes += 1
-            else:
-                print(f"Test {test_time}: Fail!")
-                status = "fail"
-
-            time.sleep(config['loop_sleep_time'])
-                
-            # Save as GIF instead of MP4
-            video_name = f"test_{test_time:02d}_{status}_steps{len(roll_out_video)}.gif"
-            video_path = os.path.join(task_output_dir, video_name)
-            
-            with imageio.get_writer(video_path, mode='I', duration=config['video']['duration']) as writer:
-                for frame in roll_out_video:
-                    writer.append_data(frame)
-            
-            # Log individual test result
-            info_path = os.path.join(task_output_dir, "task_info.txt")
-            with open(info_path, "a") as f:
-                f.write(f"Test {test_time}: {'Success' if done else 'Fail'}\n")
-
-            env.close()
-        
-        # Calculate and save task-specific results
-        task_success_rate = (task_successes / config['num_test_pr_task']) * 100
-        all_task_results[task_id] = task_success_rate
-        
-        with open(os.path.join(task_output_dir, "task_results.txt"), "w") as f:
-            f.write(f"Task: {task_name}\n")
-            f.write(f"Success rate: {task_success_rate:.2f}%\n")
-            f.write(f"Successful attempts: {task_successes}/{config['num_test_pr_task']}\n")
-            f.write(f"PID params: kp={config['pid']['kp']}, ki={config['pid']['ki']}, kd={config['pid']['kd']}\n")
-            f.write("\nInference Times:\n")
-            f.write(f"Video Generator - Avg: {np.mean(task_inference_times['video_gen'])*1000:.2f}ms, "
-                    f"Std: {np.std(task_inference_times['video_gen'])*1000:.2f}ms\n")
-            f.write(f"IK Model - Avg: {np.mean(task_inference_times['ik_model'])*1000:.2f}ms, "
-                    f"Std: {np.std(task_inference_times['ik_model'])*1000:.2f}ms\n")
-
-        # Store timing info for overall results
-        inference_times[task_id] = task_inference_times
-
-    # Save overall results
-    overall_success_rate = sum(all_task_results.values()) / len(all_task_results)
-    with open(os.path.join(base_output_dir, "overall_results.txt"), "w") as f:
-        f.write(f"Experiment Timestamp: {timestamp}\n")
-        if config.get('use_seed', False):
-            f.write(f"Random Seed: {config['seed']}\n")
-        f.write(f"Overall success rate across all tasks: {overall_success_rate:.2f}%\n\n")
-        
-        # Calculate and write overall inference times
-        all_video_gen_times = [time for task_times in inference_times.values() 
-                              for time in task_times['video_gen']]
-        all_ik_times = [time for task_times in inference_times.values() 
-                        for time in task_times['ik_model']]
-        
-        f.write("Overall Inference Times:\n")
-        f.write(f"Video Generator - Avg: {np.mean(all_video_gen_times)*1000:.2f}ms, "
-                f"Std: {np.std(all_video_gen_times)*1000:.2f}ms\n")
-        f.write(f"IK Model - Avg: {np.mean(all_ik_times)*1000:.2f}ms, "
-                f"Std: {np.std(all_ik_times)*1000:.2f}ms\n\n")
-        
-        f.write("Individual Task Results:\n")
-        for task_id, success_rate in all_task_results.items():
-            f.write(f"{task_id}: {success_rate:.2f}%\n")
-        f.write(f"\nPID params: kp={config['pid']['kp']}, ki={config['pid']['ki']}, kd={config['pid']['kd']}\n")
-
-main()
+if __name__ == "__main__":
+    # 设置多进程启动方法为spawn，避免fork导致的问题
+    mp.set_start_method('spawn', force=True)
+    main()

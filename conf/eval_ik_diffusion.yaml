@@ -49,7 +49,7 @@ video:
 
 # Image processing settings
 image:
-  resize: 128  # Image resize dimension
+  resize: 224  # Image resize dimension
 
 # Model settings
 model:
