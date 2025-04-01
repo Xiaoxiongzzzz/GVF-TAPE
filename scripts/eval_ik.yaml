@@ -35,7 +35,8 @@ video_generator_path: "/mnt/data0/xiaoxiong/single_view_goal_diffusion/results/R
 # ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.30/03.34.53_train_libero_object_play_data_train_vit/checkpoints/train_vit_ViTMLP_best.pth"
 # ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.02.22/14.10.09_train_libero_goal_play_data_train_vit/checkpoints/train_vit_ViTMLP_best.pth"
 # ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.02.28/14.54.00_train_libero_goal_play_data_train_vit/checkpoints/train_vit_ViTMLP_best.pth"
-ik_model_path: "/home/ZhangChuye/Documents/vik_module/log/outputs/2025.03.11/17.46.02_train_libero_goal_play_data_train_vit/checkpoints/train_vit_ViTMLP_best.pth"
+# ik_model_path: "/home/ZhangChuye/Documents/vik_module/log/outputs/2025.03.11/17.46.02_train_libero_goal_play_data_train_vit/checkpoints/train_vit_ViTMLP_best.pth"
+ik_model_path: "/home/ZhangChuye/Documents/vik_module/log/outputs/2025.03.23/22.22.30_train_libero_goal_play_data_train_vit/checkpoints/train_vit_ViTMLP_best.pth" # panwei new dataset 
 # ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.10/11.27.58_train_libero_spatial_ik_vit_train_libero_spatial_ik_vit/checkpoints/train_libero_spatial_ik_vit_ViTMLP_epoch_30.pth"
 # ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.11/01.41.59_train_libero_spatial_ik_cnn_train_libero_spatial_ik_cnn/checkpoints/train_libero_spatial_ik_cnn_CNNMLP_best.pth"
 # ik_model_path: "/mnt/home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.11/13.15.05_train_libero_spatial_ik_train_libero_spatial_ResNet/checkpoints/train_libero_spatial_ResNet_ResNet18MLP_best.pth"
@@ -65,7 +66,7 @@ pid:
 video:
   duration: 50  # gif duration
   sample_timestep: 8  # video generator sample timestep
-  act_horizon: 6
+  act_horizon: 4
 
 # Image processing settings
 image:
