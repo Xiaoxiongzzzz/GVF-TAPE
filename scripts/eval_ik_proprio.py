@@ -45,6 +45,7 @@ from model.cross_depth_vit_mlp import CrossDepthViTMLP
 from torchvision.utils import save_image
 from einops import rearrange
 from tqdm import tqdm
+import h5py
 import numpy as np
 import os
 import cv2
@@ -63,9 +64,10 @@ import shutil
 
 
 class IKEvaluator:
-    def __init__(self, config_path="conf/eval_depth_encoder.yaml"):
+    def __init__(self, config_path="conf/eval_ik.yaml", processes=5):
         # Store config path
         self.config_path = config_path
+        self.processes = processes
         
         # Load configuration
         with open(config_path, 'r') as f:
@@ -107,13 +109,11 @@ class IKEvaluator:
             "/mnt/data0/xiaoxiong/single_view_goal_diffusion/libero_results")
         exp_name = self.config.get('output', {}).get('exp_name', "default_experiment")
         
-        # Get current timestamp
-        timestamp = time.strftime("%Y%m%d_%H%M")
-        
+
         # Create output directory with timestamp and seed
         self.base_output_dir = os.path.join(
             base_dir,
-            f"{exp_name}_{timestamp}_{seed_suffix}"
+            f"{exp_name}_{seed_suffix}"
         )
         os.makedirs(self.base_output_dir, exist_ok=True)
         
@@ -235,11 +235,6 @@ class IKEvaluator:
         ik_act = ik_act.astype(np.float32)
         
         # Apply PID control
-        # pid_config = self.config['pid']
-        # control_signal = (pid_config['kp'] * ik_act + 
-        #                  pid_config['ki'] * integral_error + 
-        #                  pid_config['kd'] * (ik_act - prev_error))
-        # Calculate PID control signals for translation, rotation and gripper
         control_signal_trans = (self.config['pid']['kp_trans'] * ik_act[:3] + 
                         self.config['pid']['ki_trans'] * integral_error[:3] + 
                         self.config['pid']['kd_trans'] * (ik_act[:3] - prev_error[:3]))
@@ -259,11 +254,11 @@ class IKEvaluator:
         
         return control_signal, ik_act
     
-    def _generate_video(self, task_prompt, side_view):
+    def _generate_video(self, task_embedding, side_view):
         """Generate video prediction"""
         t_before_gen = timer.perf_counter()
         
-        video_clip = self.video_generator(task_prompt, side_view)
+        video_clip = self.video_generator(task_embedding, side_view)
         video_clip = rearrange(video_clip, "b (f c) h w -> (b f) c h w", c=4)
         video_clip_np = (video_clip[:, :3, :, :].permute(0, 2, 3, 1).detach().cpu().numpy()*255).astype(np.uint8)
         
@@ -284,12 +279,12 @@ class IKEvaluator:
         
         return goal_out, ik_time
     
-    def _run_single_test(self, task_name, test_time, task_output_dir):
+    def _run_single_test(self, task_name, test_time, task_output_dir, task_embedding):
         """Run a single test case and return results"""
         print(f"Test {test_time+1}/{self.config['num_test_pr_task']} Start!")
         
         # Setup environment
-        env, task_prompt = set_up_libero_envs(
+        env, _ = set_up_libero_envs(
             suite_name=self.config['task']['suite_name'], 
             task_name=task_name, 
             render_device=self.config['render_gpu_id'],
@@ -311,7 +306,7 @@ class IKEvaluator:
             side_view = visual_obs[:,0]
             
             # Generate video
-            video_clip, video_clip_np, video_gen_time = self._generate_video(task_prompt, side_view)
+            video_clip, video_clip_np, video_gen_time = self._generate_video(task_embedding, side_view)
             inference_times['video_gen'].append(video_gen_time)
             # Execute actions for each frame
             success, frames, ik_times, obs = self._execute_video_actions(
@@ -412,10 +407,12 @@ class IKEvaluator:
         task_successes = 0
         task_inference_times = {'video_gen': [], 'ik_model': []}
         
+        with h5py.File(f"./cache/{self.config['task']['suite_name']}_embedding.hdf5") as f:
+            task_embedding = torch.Tensor(f['embeddings'][f'{task_name}'][:])
         # Run all test cases
         for test_time in range(self.config['num_test_pr_task']):
             success, inference_times = self._run_single_test(
-                task_name, test_time, task_output_dir
+                task_name, test_time, task_output_dir, task_embedding
             )
             
             if success:
@@ -468,7 +465,7 @@ class IKEvaluator:
             os.makedirs(task_output_dir, exist_ok=True)
         
         # Set number of processes, keep it low to avoid resource contention
-        num_processes = len(tasks)
+        num_processes = self.processes
         print(f"Using {num_processes} processes for parallel evaluation")
         
         # Use process pool for parallel execution
@@ -498,7 +495,9 @@ class IKEvaluator:
         
         # Create output directory for this task
         task_output_dir = os.path.join(self.base_output_dir, task_id)
-        
+
+        with h5py.File(f"./cache/{self.config['task']['suite_name']}_embedding.hdf5") as f:
+            task_embedding = torch.Tensor(f['embeddings'][f'{task_name}'][:])
         try:
             # Run all test cases
             task_successes = 0
@@ -508,7 +507,7 @@ class IKEvaluator:
                 print(f"Process {os.getpid()}: {task_id} test {test_time+1}/{self.config['num_test_pr_task']}")
                 
                 success, inference_times = self._run_single_test(
-                    task_name, test_time, task_output_dir
+                    task_name, test_time, task_output_dir, task_embedding
                 )
                 
                 if success:
@@ -568,12 +567,12 @@ class IKEvaluator:
             f.write("Individual Task Results:\n")
             for task_id, success_rate in all_task_results.items():
                 f.write(f"{task_id}: {success_rate:.2f}%\n")
-            f.write(f"\nPID parameters: kp={self.config['pid']['kp']}, ki={self.config['pid']['ki']}, kd={self.config['pid']['kd']}\n")
+           
 
 
 def main():
     # Create evaluator and run evaluation
-    evaluator = IKEvaluator("conf/eval_depth_encoder.yaml")
+    evaluator = IKEvaluator("conf/eval_ik.yaml", processes=5)
     results = evaluator.run_evaluation()
     print("Evaluation completed, results:", results)
 

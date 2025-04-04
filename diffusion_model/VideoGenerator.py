@@ -62,21 +62,32 @@ class PixelVideoGenerator(nn.Module):
         self.depth = depth
         self.channel = 3 if not depth else 4
         self.f = 6
-    def forward(self, batch_text, x_cond: torch.Tensor):
+    def forward(self, batch_text_or_embed, x_cond: torch.Tensor):
         """
         Input:
-            batch_text: str or list of str
+            batch_text_or_embed: str/list of str, or tensor of shape [b, n, embed_dim]
             x_cond: shape = [b, c(3), h, w]
         Output:
             x: shape = [b, (f, c), h, w]
         """
         B = x_cond.shape[0]
         x_cond = x_cond/255.
-        task_embed = self.encode_batch_text(batch_text)
-        # task_embed = task_embed.repeat_interleave(10, dim=0)
-        h, w = x_cond.shape[2], x_cond.shape[3]
+        
+        # Handle different types of input
+        if isinstance(batch_text_or_embed, (str, list)):
+            # If input is text, encode it
+            task_embed = self.encode_batch_text(batch_text_or_embed)
+        else:
+            # If input is already encoded embedding
+            task_embed = batch_text_or_embed
+            if len(task_embed.shape) == 3:
+                # Ensure the embedding is on the correct device
+                task_embed = task_embed.to(self.device)
+            else:
+                raise ValueError("Text embedding should be a 3D tensor of shape [batch_size, n, embed_dim]")
 
-        noise = torch.randn((B, (self.channel*self.f), h, w), device = self.device)
+        h, w = x_cond.shape[2], x_cond.shape[3]
+        noise = torch.randn((B, (self.channel*self.f), h, w), device=self.device)
         x = self.rectified_flow.sample(self.model, noise, x_cond, task_embed)
 
         return x
