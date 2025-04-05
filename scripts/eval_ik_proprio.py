@@ -41,7 +41,7 @@ from model.cnn_mlp import CNNMLP
 from model.vit_mlp import ViTMLP
 from model.depth_vit_mlp import DepthViTMLP
 from model.cross_depth_vit_mlp import CrossDepthViTMLP
-
+from model.all_cross_depth_vit_mlp import AllCrossDepthViTMLP
 from torchvision.utils import save_image
 from einops import rearrange
 from tqdm import tqdm
@@ -63,7 +63,7 @@ import shutil
 
 
 class IKEvaluator:
-    def __init__(self, config_path="conf/eval_depth_encoder.yaml"):
+    def __init__(self, config_path="conf/eval_depth_encoder_single.yaml"):
         # Store config path
         self.config_path = config_path
         
@@ -74,6 +74,8 @@ class IKEvaluator:
         # Set basic parameters
         self.device = torch.device(f"cuda:{self.config['gpu_id']}")
         torch.multiprocessing.set_sharing_strategy('file_system')
+        
+        self.num_processes = self.config['num_processes']
         
         # Set up experiment environment
         self._setup_experiment()
@@ -140,6 +142,14 @@ class IKEvaluator:
         
         if model_type == 'vit':
             self.ik_model = ViTMLP(
+                out_size=out_size, 
+                pretrained=self.config['model'].get('pretrained', True),
+                img_height=self.config['image']['resize'],
+                img_width=self.config['image']['resize'],
+                model_name=self.config['model']['encoder_type']
+            ).to(self.device)
+        elif model_type == 'all_cross_depth_vit':
+            self.ik_model = AllCrossDepthViTMLP(
                 out_size=out_size, 
                 pretrained=self.config['model'].get('pretrained', True),
                 img_height=self.config['image']['resize'],
@@ -468,7 +478,7 @@ class IKEvaluator:
             os.makedirs(task_output_dir, exist_ok=True)
         
         # Set number of processes, keep it low to avoid resource contention
-        num_processes = len(tasks)
+        num_processes = self.num_processes
         print(f"Using {num_processes} processes for parallel evaluation")
         
         # Use process pool for parallel execution
@@ -568,12 +578,12 @@ class IKEvaluator:
             f.write("Individual Task Results:\n")
             for task_id, success_rate in all_task_results.items():
                 f.write(f"{task_id}: {success_rate:.2f}%\n")
-            f.write(f"\nPID parameters: kp={self.config['pid']['kp']}, ki={self.config['pid']['ki']}, kd={self.config['pid']['kd']}\n")
+            # f.write(f"\nPID parameters: kp={self.config['pid']['kp']}, ki={self.config['pid']['ki']}, kd={self.config['pid']['kd']}\n")
 
 
 def main():
     # Create evaluator and run evaluation
-    evaluator = IKEvaluator("conf/eval_depth_encoder.yaml")
+    evaluator = IKEvaluator("conf/eval_play_cross_depth_encoder.yaml")
     results = evaluator.run_evaluation()
     print("Evaluation completed, results:", results)
 
