@@ -42,6 +42,7 @@ from model.vit_mlp import ViTMLP
 from model.depth_vit_mlp import DepthViTMLP
 from model.cross_depth_vit_mlp import CrossDepthViTMLP
 from model.all_cross_depth_vit_mlp import AllCrossDepthViTMLP
+from model.cls_depth_vit_mlp import CLSDepthViTMLP
 from torchvision.utils import save_image
 from einops import rearrange
 from tqdm import tqdm
@@ -61,9 +62,12 @@ import time as timer
 import multiprocessing as mp
 import shutil
 
+# CONFIG_PATH = "conf/eval_rgb_ik.yaml"
+CONFIG_PATH = "conf/test_eval.yaml"
+
 
 class IKEvaluator:
-    def __init__(self, config_path="conf/eval_depth_encoder_single.yaml"):
+    def __init__(self, config_path=CONFIG_PATH):
         # Store config path
         self.config_path = config_path
         
@@ -76,6 +80,10 @@ class IKEvaluator:
         torch.multiprocessing.set_sharing_strategy('file_system')
         
         self.num_processes = self.config['num_processes']
+        if self.config['video']['depth']:
+            self.channel_num = 4
+        else:
+            self.channel_num = 3
         
         # Set up experiment environment
         self._setup_experiment()
@@ -84,13 +92,22 @@ class IKEvaluator:
         self._setup_models()
         
         # Set up image transformation
-        self.transform = transforms.Compose([
-            transforms.Resize(
-                (self.config['image']['resize'], self.config['image']['resize']), 
-                antialias=True  # Explicitly set antialias parameter
-            ),
-            transforms.Normalize((0.5, 0.5, 0.5, 0.5), (0.5, 0.5, 0.5, 0.5)),
-        ])
+        if self.config['video']['depth']:
+            self.transform = transforms.Compose([
+                transforms.Resize(
+                    (self.config['image']['resize'], self.config['image']['resize']), 
+                    antialias=True  # Explicitly set antialias parameter
+                ),
+                transforms.Normalize((0.5, 0.5, 0.5, 0.5), (0.5, 0.5, 0.5, 0.5)),
+            ])
+        else:
+            self.transform = transforms.Compose([
+                transforms.Resize(
+                    (self.config['image']['resize'], self.config['image']['resize']), 
+                    antialias=True  # Explicitly set antialias parameter
+                ),
+                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+            ])
         
         # Get task list
         self._setup_tasks()
@@ -142,6 +159,15 @@ class IKEvaluator:
         
         if model_type == 'vit':
             self.ik_model = ViTMLP(
+                out_size=out_size, 
+                pretrained=self.config['model'].get('pretrained', True),
+                img_height=self.config['image']['resize'],
+                img_width=self.config['image']['resize'],
+                model_name=self.config['model']['encoder_type'],
+                in_channel=self.config['model']['in_channel']
+            ).to(self.device)
+        elif model_type == "cls_vit":
+            self.ik_model = CLSDepthViTMLP(
                 out_size=out_size, 
                 pretrained=self.config['model'].get('pretrained', True),
                 img_height=self.config['image']['resize'],
@@ -244,12 +270,7 @@ class IKEvaluator:
         ik_act[6] = self.config['pid']['grip_scale'] * control_gripper
         ik_act = ik_act.astype(np.float32)
         
-        # Apply PID control
-        # pid_config = self.config['pid']
-        # control_signal = (pid_config['kp'] * ik_act + 
-        #                  pid_config['ki'] * integral_error + 
-        #                  pid_config['kd'] * (ik_act - prev_error))
-        # Calculate PID control signals for translation, rotation and gripper
+        # Apply PID control separately
         control_signal_trans = (self.config['pid']['kp_trans'] * ik_act[:3] + 
                         self.config['pid']['ki_trans'] * integral_error[:3] + 
                         self.config['pid']['kd_trans'] * (ik_act[:3] - prev_error[:3]))
@@ -260,12 +281,9 @@ class IKEvaluator:
                         self.config['pid']['ki_grip'] * integral_error[6] + 
                         self.config['pid']['kd_grip'] * (ik_act[6] - prev_error[6]))])
         
-        # Ensure all signals have same dimensionality before concatenating
         control_signal = np.concatenate([control_signal_trans.reshape(-1), 
                                         control_signal_rot.reshape(-1),
                                         control_signal_grip.reshape(-1)])
-                        
-        
         
         return control_signal, ik_act
     
@@ -274,7 +292,7 @@ class IKEvaluator:
         t_before_gen = timer.perf_counter()
         
         video_clip = self.video_generator(task_prompt, side_view)
-        video_clip = rearrange(video_clip, "b (f c) h w -> (b f) c h w", c=4)
+        video_clip = rearrange(video_clip, "b (f c) h w -> (b f) c h w", c=self.channel_num)
         video_clip_np = (video_clip[:, :3, :, :].permute(0, 2, 3, 1).detach().cpu().numpy()*255).astype(np.uint8)
         
         video_gen_time = timer.perf_counter() - t_before_gen
@@ -578,17 +596,23 @@ class IKEvaluator:
             f.write("Individual Task Results:\n")
             for task_id, success_rate in all_task_results.items():
                 f.write(f"{task_id}: {success_rate:.2f}%\n")
-            # f.write(f"\nPID parameters: kp={self.config['pid']['kp']}, ki={self.config['pid']['ki']}, kd={self.config['pid']['kd']}\n")
+                
+            f.write("\n")
+            f.write(f"Model: {self.config['model']['type']}\n")
+            f.write(f"Model path: {self.config['ik_model_path']}\n")
+            f.write(f"Video generator path: {self.config['video_generator_path']}\n")
+            f.write(f"Video action horizon: {self.config['video']['act_horizon']}\n")
+            f.write(f"Video latent: {self.config['video']['latent']}\n")
+            f.write(f"Video depth: {self.config['video']['depth']}\n")
+            f.write(f"Experience name: {self.config['output']['exp_name']}\n")
 
 
 def main():
-    # Create evaluator and run evaluation
-    evaluator = IKEvaluator("conf/eval_play_cross_depth_encoder.yaml")
+    evaluator = IKEvaluator()
     results = evaluator.run_evaluation()
     print("Evaluation completed, results:", results)
 
 
 if __name__ == "__main__":
-    # 设置多进程启动方法为spawn，避免fork导致的问题
     mp.set_start_method('spawn', force=True)
     main()

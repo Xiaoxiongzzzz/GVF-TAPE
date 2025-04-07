@@ -6,7 +6,6 @@ seed: 2  # Global random seed for reproducibility, only used if use_seed is true
 gpu_id: 0  # Main GPU for computation
 render_gpu_id: 0  # GPU for rendering
 num_processes: 10
-
 # Test settings
 num_test_pr_task: 25
 init_steps: 10  # number of initial steps with zero action
@@ -19,10 +18,10 @@ loop_sleep_time: 0.01  # sleep time for each loop
 
 
 # Model paths
-video_generator_path: "/mnt/data0/xiaoxiong/single_view_goal_diffusion/results/libero_goal/RFlow_libero_goal_depth/ckpt/model_95000.pt"
+video_generator_path: "/mnt/data0/xiaoxiong/single_view_goal_diffusion/results/libero_goal/RFlow_libero_goal/ckpt/model_95000.pt"
 
-ik_model_path: "/home/ZhangChuye/Documents/vik_module/log/outputs/2025.04.05/17.18.50_train_libero_goal_expert_data_train_vit/checkpoints/train_vit_AllCrossDepthViTMLP_best.pth"
-# /home/ZhangChuye/Documents/vik_module/log/outputs/2025.04.06/13.18.14_train_libero_goal_expert_data_train_vit/checkpoints/train_vit_CLSDepthViTMLP_best.pth
+# play without depth
+ik_model_path: "/home/ZhangChuye/Documents/vik_module/log/outputs/2025.04.06/12.59.38_train_libero_goal_play_data_train_vit/checkpoints/train_vit_ViTMLP_best.pth"
 
 # PID Control parameters
 pid:
@@ -33,6 +32,7 @@ pid:
   kd_rot: 1.0
   ki_rot: 0.1
   kp_rot: 2.0
+
 
   kd_trans: 0.05
   ki_trans: 0.01
@@ -50,18 +50,18 @@ video:
   sample_timestep: 3  # video generator sample timestep
   act_horizon: 6
   latent: False
-  depth: True
+  depth: False
 # Image processing settings
 image:
   resize: 224  # Image resize dimension
 
 # Model settings
 model:
-  type: "all_cross_depth_vit"  # Options: "vit", "resnet50", "cnn"
+  type: "vit"  # Options: "vit", "resnet50", "cnn"
   out_size: 8
   pretrained: false
-  # encoder_type: "vit_base_patch16_224" # Options: "vit_base_patch16_224", "vit_small_patch16_224" 
-  encoder_type: "vit_base_patch16_224" # Options: "vit_base_patch16_224", "vit_small_patch16_224" 
+  encoder_type: "vit_base_patch16_224" # Options: "base", "small" 
+  in_channel: 3
 
 # Task settings
 task:
@@ -72,5 +72,4 @@ task:
 # Output settings
 output:
   base_dir: "/home/ZhangChuye/Documents/VideoGeneration/results/depth_ablation_results"
-  # Base + Two Encoders + Single Modality Attention
-  exp_name: "depth_base_all_cross_attention"
+  exp_name: "libero_goal_rgb_only"

@@ -19,7 +19,7 @@ loop_sleep_time: 0.01  # sleep time for each loop
 # Model paths
 video_generator_path: "/mnt/data0/xiaoxiong/single_view_goal_diffusion/results/libero_goal/RFlow_libero_goal_depth/ckpt/model_95000.pt"
 
-ik_model_path: "/home/ZhangChuye/Documents/vik_module/log/outputs/2025.04.05/16.54.30_train_libero_goal_play_data_train_vit/checkpoints/train_vit_CrossDepthViTMLP_best.pth"
+ik_model_path: "/home/ZhangChuye/Documents/vik_module/log/outputs/2025.04.06/01.30.36_train_libero_goal_play_data_train_vit/checkpoints/train_vit_CrossDepthViTMLP_best.pth"
 # PID Control parameters
 pid:
   kd_grip: 0.04
