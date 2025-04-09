@@ -3,8 +3,8 @@ use_seed: true  # Whether to use fixed seed
 seed: 0 # Global random seed for reproducibility, only used if use_seed is true
 
 # GPU settings
-gpu_id: 1  # Main GPU for computation
-render_gpu_id: 1  # GPU for rendering
+gpu_id: 3  # Main GPU for computation
+render_gpu_id: 3  # GPU for rendering
 num_processes: 2
 
 # Test settings
@@ -53,7 +53,7 @@ image:
 
 # Model settings
 model:
-  type: "rgb_x_depth"  # Options: "plain_rgbd", "rgb_x_depth", "depth_x_rgb", "rgb_x_depth + depth_x_rgb"
+  type: "depth_x_rgb"  # Options: "plain_rgbd", "rgb_x_depth", "depth_x_rgb", "rgb_x_depth + depth_x_rgb"
   out_size: 8
   pretrained: false
   encoder_type: "vit_base_patch16_224" # Options: "vit_base_patch16_224", "vit_small_patch16_224" 
