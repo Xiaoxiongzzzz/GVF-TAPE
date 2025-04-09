@@ -43,6 +43,7 @@ from model.depth_vit_mlp import DepthViTMLP
 from model.cross_depth_vit_mlp import CrossDepthViTMLP
 from model.all_cross_depth_vit_mlp import AllCrossDepthViTMLP
 from model.cls_depth_vit_mlp import CLSDepthViTMLP
+from model.depth_cross_rgb_vit_mlp import DepthCrossRGBViTMLP
 from torchvision.utils import save_image
 from einops import rearrange
 from tqdm import tqdm
@@ -61,9 +62,11 @@ from collections import defaultdict
 import time as timer
 import multiprocessing as mp
 import shutil
+import torchvision
 
 # CONFIG_PATH = "conf/eval_rgb_ik.yaml"
-CONFIG_PATH = "conf/test_eval.yaml"
+# CONFIG_PATH = "conf/eval_play_cross_depth_encoder.yaml"
+CONFIG_PATH = "conf/eval_depth_cross_rgb.yaml"
 
 
 class IKEvaluator:
@@ -91,24 +94,25 @@ class IKEvaluator:
         # Load models
         self._setup_models()
         
-        # Set up image transformation
-        if self.config['video']['depth']:
-            self.transform = transforms.Compose([
+        self.depth_transform = None
+        
+        self.transform = transforms.Compose([
                 transforms.Resize(
                     (self.config['image']['resize'], self.config['image']['resize']), 
-                    antialias=True  # Explicitly set antialias parameter
-                ),
-                transforms.Normalize((0.5, 0.5, 0.5, 0.5), (0.5, 0.5, 0.5, 0.5)),
-            ])
-        else:
-            self.transform = transforms.Compose([
-                transforms.Resize(
-                    (self.config['image']['resize'], self.config['image']['resize']), 
-                    antialias=True  # Explicitly set antialias parameter
+                    antialias=True,
                 ),
                 transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
             ])
         
+        if self.config['video']['depth']:
+            self.depth_transform = transforms.Compose([
+                transforms.Resize(
+                    (self.config['image']['resize'], self.config['image']['resize']), 
+                    antialias=True,
+                ),
+                transforms.Normalize((0.5,), (0.5,)),
+            ])
+            
         # Get task list
         self._setup_tasks()
         
@@ -174,7 +178,7 @@ class IKEvaluator:
                 img_width=self.config['image']['resize'],
                 model_name=self.config['model']['encoder_type']
             ).to(self.device)
-        elif model_type == 'all_cross_depth_vit':
+        elif model_type == 'depth_x_rgb + rgb_x_depth':
             self.ik_model = AllCrossDepthViTMLP(
                 out_size=out_size, 
                 pretrained=self.config['model'].get('pretrained', True),
@@ -190,8 +194,16 @@ class IKEvaluator:
                 img_width=self.config['image']['resize'],
                 model_name=self.config['model']['encoder_type']
             ).to(self.device)
-        elif model_type == 'cross_depth_vit':
+        elif model_type == 'rgb_x_depth':
             self.ik_model = CrossDepthViTMLP(
+                out_size=out_size, 
+                pretrained=self.config['model'].get('pretrained', True),
+                img_height=self.config['image']['resize'],
+                img_width=self.config['image']['resize'],
+                model_name=self.config['model']['encoder_type']
+            ).to(self.device)
+        elif model_type == 'depth_x_rgb':
+            self.ik_model = DepthCrossRGBViTMLP(
                 out_size=out_size, 
                 pretrained=self.config['model'].get('pretrained', True),
                 img_height=self.config['image']['resize'],
@@ -303,7 +315,15 @@ class IKEvaluator:
         """Predict goal state using IK model"""
         t_before_ik = timer.perf_counter()
         
-        goal_img = self.transform(goal_img.to(self.device)).unsqueeze(0)
+        if self.depth_transform is not None:
+            goal_img_depth = goal_img[3:, :, :]
+            goal_img_rgb = goal_img[:3, :, :]
+            goal_img_depth = self.depth_transform(goal_img_depth.to(self.device)).to(self.device).unsqueeze(0)
+            goal_img_rgb = self.transform(goal_img_rgb.to(self.device)).unsqueeze(0)
+            goal_img = torch.cat([goal_img_rgb, goal_img_depth], dim=1)
+        else:
+            goal_img = self.transform(goal_img.to(self.device)).unsqueeze(0)
+        
         with torch.no_grad():
             goal_out = self.ik_model(goal_img)
         goal_out = goal_out.squeeze().cpu().numpy()
