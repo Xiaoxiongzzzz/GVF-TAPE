@@ -3,8 +3,8 @@ use_seed: true  # Whether to use fixed seed
 seed: 1 # Global random seed for reproducibility, only used if use_seed is true
 
 # GPU settings
-gpu_id: 0  # Main GPU for computation
-render_gpu_id: 0  # GPU for rendering
+gpu_id: 7  # Main GPU for computation
+render_gpu_id: 7  # GPU for rendering
 num_processes: 10
 
 # Test settings
@@ -18,7 +18,7 @@ loop_sleep_time: 0.01  # sleep time for each loop
 # Model paths
 video_generator_path: "/mnt/data0/xiaoxiong/single_view_goal_diffusion/results/libero_goal/RFlow_libero_goal_depth/ckpt/model_95000.pt"
 
-ik_model_path: "/home/ZhangChuye/Documents/vik_module/log/outputs/2025.04.09/19.41.02_train_libero_goal_expert_data_depth_cross_rgb/checkpoints/depth_cross_rgb_DepthCrossRGBViTMLP_best.pth"
+ik_model_path: "/home/ZhangChuye/Documents/vik_module/log/outputs/2025.04.09/19.40.36_train_libero_goal_play_data_depth_cross_rgb/checkpoints/depth_cross_rgb_DepthCrossRGBViTMLP_best.pth"
 
 # PID Control parameters
 pid:
@@ -66,5 +66,5 @@ task:
 
 # Output settings
 output:
-  base_dir: "/home/ZhangChuye/Documents/VideoGeneration/results/depth_debug"
+  base_dir: "/home/ZhangChuye/Documents/VideoGeneration/results/play_depth"
   exp_name: "depth_x_rgb"

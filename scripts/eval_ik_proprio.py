@@ -64,9 +64,13 @@ import multiprocessing as mp
 import shutil
 import torchvision
 
+# torch.cuda.empty_cache()
+
 # CONFIG_PATH = "conf/eval_rgb_ik.yaml"
 # CONFIG_PATH = "conf/eval_play_cross_depth_encoder.yaml"
-CONFIG_PATH = "conf/eval_depth_cross_rgb.yaml"
+# CONFIG_PATH = "conf/eval_depth_cross_rgb.yaml"
+# CONFIG_PATH = "conf/eval_play_depth_cross_rgb.yaml"
+CONFIG_PATH = "conf/eval_rgb_expert_ik.yaml"
 
 
 class IKEvaluator:
@@ -79,7 +83,10 @@ class IKEvaluator:
             self.config = yaml.safe_load(f)
         
         # Set basic parameters
-        self.device = torch.device(f"cuda:{self.config['gpu_id']}")
+        # self.device = torch.device(f"cuda:{self.config['gpu_id']}")
+        self.device = torch.device(f"cuda:0")
+        print(f"Using Computing GPU: {self.device}")
+        
         torch.multiprocessing.set_sharing_strategy('file_system')
         
         self.num_processes = self.config['num_processes']
@@ -89,6 +96,7 @@ class IKEvaluator:
             self.channel_num = 3
         
         # Set up experiment environment
+        # torch.cuda.empty_cache()
         self._setup_experiment()
         
         # Load models
@@ -337,6 +345,7 @@ class IKEvaluator:
         print(f"Test {test_time+1}/{self.config['num_test_pr_task']} Start!")
         
         # Setup environment
+        print(f"Using Rendering GPU: {self.config['render_gpu_id']}")
         env, task_prompt = set_up_libero_envs(
             suite_name=self.config['task']['suite_name'], 
             task_name=task_name, 

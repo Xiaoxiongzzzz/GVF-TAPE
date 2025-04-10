@@ -22,6 +22,7 @@ video_generator_path: "/mnt/data0/xiaoxiong/single_view_goal_diffusion/results/l
 
 # play without depth
 ik_model_path: "/home/ZhangChuye/Documents/vik_module/log/outputs/2025.04.06/12.59.38_train_libero_goal_play_data_train_vit/checkpoints/train_vit_ViTMLP_best.pth"
+# /home/ZhangChuye/Documents/vik_module/log/outputs/2025.01.29/21.15.08_train_libero_goal_play_data_train_vit/checkpoints/train_vit_ViTMLP_best.pth
 
 # PID Control parameters
 pid:

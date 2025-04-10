@@ -88,8 +88,12 @@ class PixelVideoGenerator(nn.Module):
         return batch_text_embed
 
 def prepare_video_generator(unet_path, device, sample_timestep=10, latent=False, depth=False):
+    print(f"Using GPU: {device}")
+    # torch.cuda.empty_cache()
     unet = UnetLatent().to(device) if latent else UnetMW(depth).to(device) 
+    # torch.cuda.empty_cache()
     unet.load_state_dict(torch.load(unet_path)["model"])
+    # torch.cuda.empty_cache()
     unet.eval().requires_grad_(False)
 
     # Language Model
