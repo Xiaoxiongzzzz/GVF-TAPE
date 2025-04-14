@@ -72,15 +72,13 @@ import torchvision
 # CONFIG_PATH = "conf/eval_depth_cross_rgb.yaml"
 # CONFIG_PATH = "conf/eval_play_depth_cross_rgb.yaml"
 # CONFIG_PATH = "conf/eval_rgb_ik.yaml"
-CONFIG_PATH = "conf/eval_rgbd_ik.yaml"
+CONFIG_PATH = "conf/test_eval.yaml"
 
 
 class IKEvaluator:
     def __init__(self, config_path=CONFIG_PATH):
         # Store config path
-        self.config_path = config_path
-        self.processes = processes
-        
+        self.config_path = config_path        
         # Load configuration
         with open(config_path, 'r') as f:
             self.config = yaml.safe_load(f)
