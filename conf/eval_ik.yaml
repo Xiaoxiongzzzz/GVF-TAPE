@@ -14,14 +14,11 @@ pid_max_steps: 8  # maximum steps for PID control
 
 loop_sleep_time: 0.01  # sleep time for each loop
 
-# Task settings
-
-
 # Model paths
-video_generator_path: "/mnt/data0/xiaoxiong/single_view_goal_diffusion/results/libero_goal/RFlow_libero_goal_50%_depth/ckpt/model_100000.pt"
+video_generator_path: "/mnt/data0/xiaoxiong/single_view_goal_diffusion/results/libero_long/RFlow_libero_long_depth/ckpt/model_100000.pt"
 
-ik_model_path: "/mnt/data2/ZhangChuye/Documents/vik_module/log/outputs/2025.03.15/02.09.58_train_libero_goal_expert_data_train_vit/checkpoints/train_vit_ViTMLP_best.pth"
-# ik_model_path: "/mnt/data2/ZhangChuye/Documents/vik_module/log/outputs/2025.03.25/21.01.42_train_libero_goal_expert_data_train_vit/checkpoints/train_vit_ViTMLP_best.pth"
+# ik_model_path: "/mnt/data2/ZhangChuye/Documents/vik_module/log/outputs/2025.03.15/02.09.58_train_libero_goal_expert_data_train_vit/checkpoints/train_vit_ViTMLP_best.pth"
+ik_model_path: "/home/ZhangChuye/Documents/vik_module/log/outputs/2025.04.09/19.39.50_train_libero_long_expert_data_train_plain_depth/checkpoints/train_plain_depth_ViTMLP_best.pth"
 
 # PID Control parameters
 pid:
@@ -41,7 +38,7 @@ pid:
   pos_scale: 100  # scale factor for position control (ik_act[:3])
   rot_scale: 1    # scale factor for rotation control (ik_act[3:6])
   grip_scale: -10 # scale factor for gripper control (ik_act[6])
-  grip_threshold: 0.7  # threshold for binary gripper control
+  grip_threshold: 0.75  # threshold for binary gripper control
   convergence_threshold: 0.001  # threshold for PID control convergence
 
 # Video settings
@@ -65,10 +62,10 @@ model:
 # Task settings
 task:
   horizon: 2000
-  suite_name: "libero_goal"  # Options: "libero_spatial", "libero_90", etc.
+  suite_name: "libero_10"  # Options: "libero_spatial", "libero_90", etc.
   selected_tasks: []  # Empty list means use all tasks, or specify like ["task1", "task3"]
 
 # Output settings
 output:
-  base_dir: "/mnt/data0/xiaoxiong/single_view_goal_diffusion/libero_results"
-  exp_name: "libero_goal_scratch_50%_100k_expert"
+  base_dir: "/mnt/data0/xiaoxiong/single_view_goal_diffusion/libero_results/libero_long"
+  exp_name: "libero_long_scratch_100%_expert"

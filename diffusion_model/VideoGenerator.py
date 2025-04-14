@@ -104,11 +104,13 @@ def prepare_video_generator(unet_path, device, sample_timestep=10, latent=False,
     unet.eval().requires_grad_(False)
 
     # Language Model
-    pretrained_model = "openai/clip-vit-base-patch32"
-    tokenizer = CLIPTokenizer.from_pretrained(pretrained_model)
-    text_encoder = CLIPTextModel.from_pretrained(pretrained_model).to(device)
-    text_encoder.requires_grad_(False)
-    text_encoder.eval()
+    # pretrained_model = "openai/clip-vit-base-patch32"
+    # tokenizer = CLIPTokenizer.from_pretrained(pretrained_model)
+    # text_encoder = CLIPTextModel.from_pretrained(pretrained_model).to(device)
+    # text_encoder.requires_grad_(False)
+    # text_encoder.eval()
+    tokenizer = None
+    text_encoder = None
 
     rectified_flow = RectifiedFlow(sample_timestep=sample_timestep)
 

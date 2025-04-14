@@ -572,7 +572,7 @@ class IKEvaluator:
 
 def main():
     # Create evaluator and run evaluation
-    evaluator = IKEvaluator("conf/eval_ik.yaml", processes=5)
+    evaluator = IKEvaluator("conf/eval_ik.yaml", processes=10)
     results = evaluator.run_evaluation()
     print("Evaluation completed, results:", results)
 
