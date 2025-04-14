@@ -23,6 +23,7 @@ video_generator_path: "/mnt/data0/xiaoxiong/single_view_goal_diffusion/results/l
 
 ik_model_path: "/home/ZhangChuye/Documents/vik_module/log/outputs/2025.04.05/17.18.50_train_libero_goal_expert_data_train_vit/checkpoints/train_vit_AllCrossDepthViTMLP_best.pth"
 # /home/ZhangChuye/Documents/vik_module/log/outputs/2025.04.06/13.18.14_train_libero_goal_expert_data_train_vit/checkpoints/train_vit_CLSDepthViTMLP_best.pth
+# /home/ZhangChuye/Documents/vik_module/log/outputs/2025.04.10/02.03.25_train_libero_goal_expert_data_train_vit/checkpoints/train_vit_AllCrossDepthViTMLP_best.pth
 
 # PID Control parameters
 pid:

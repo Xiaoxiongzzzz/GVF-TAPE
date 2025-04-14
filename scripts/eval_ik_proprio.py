@@ -70,7 +70,8 @@ import torchvision
 # CONFIG_PATH = "conf/eval_play_cross_depth_encoder.yaml"
 # CONFIG_PATH = "conf/eval_depth_cross_rgb.yaml"
 # CONFIG_PATH = "conf/eval_play_depth_cross_rgb.yaml"
-CONFIG_PATH = "conf/eval_rgb_expert_ik.yaml"
+# CONFIG_PATH = "conf/eval_rgb_ik.yaml"
+CONFIG_PATH = "conf/eval_rgbd_ik.yaml"
 
 
 class IKEvaluator:
