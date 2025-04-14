@@ -41,7 +41,9 @@ from model.cnn_mlp import CNNMLP
 from model.vit_mlp import ViTMLP
 from model.depth_vit_mlp import DepthViTMLP
 from model.cross_depth_vit_mlp import CrossDepthViTMLP
-
+from model.all_cross_depth_vit_mlp import AllCrossDepthViTMLP
+from model.cls_depth_vit_mlp import CLSDepthViTMLP
+from model.depth_cross_rgb_vit_mlp import DepthCrossRGBViTMLP
 from torchvision.utils import save_image
 from einops import rearrange
 from tqdm import tqdm
@@ -61,10 +63,20 @@ from collections import defaultdict
 import time as timer
 import multiprocessing as mp
 import shutil
+import torchvision
+
+# torch.cuda.empty_cache()
+
+# CONFIG_PATH = "conf/eval_rgb_ik.yaml"
+# CONFIG_PATH = "conf/eval_play_cross_depth_encoder.yaml"
+# CONFIG_PATH = "conf/eval_depth_cross_rgb.yaml"
+# CONFIG_PATH = "conf/eval_play_depth_cross_rgb.yaml"
+# CONFIG_PATH = "conf/eval_rgb_ik.yaml"
+CONFIG_PATH = "conf/eval_rgbd_ik.yaml"
 
 
 class IKEvaluator:
-    def __init__(self, config_path="conf/eval_ik.yaml", processes=5):
+    def __init__(self, config_path=CONFIG_PATH):
         # Store config path
         self.config_path = config_path
         self.processes = processes
@@ -74,24 +86,44 @@ class IKEvaluator:
             self.config = yaml.safe_load(f)
         
         # Set basic parameters
-        self.device = torch.device(f"cuda:{self.config['gpu_id']}")
+        # self.device = torch.device(f"cuda:{self.config['gpu_id']}")
+        self.device = torch.device(f"cuda:0")
+        print(f"Using Computing GPU: {self.device}")
+        
         torch.multiprocessing.set_sharing_strategy('file_system')
         
+        self.num_processes = self.config['num_processes']
+        if self.config['video']['depth']:
+            self.channel_num = 4
+        else:
+            self.channel_num = 3
+        
         # Set up experiment environment
+        # torch.cuda.empty_cache()
         self._setup_experiment()
         
         # Load models
         self._setup_models()
         
-        # Set up image transformation
-        self.transform = transforms.Compose([
-            transforms.Resize(
-                (self.config['image']['resize'], self.config['image']['resize']), 
-                antialias=True  # Explicitly set antialias parameter
-            ),
-            transforms.Normalize((0.5, 0.5, 0.5, 0.5), (0.5, 0.5, 0.5, 0.5)),
-        ])
+        self.depth_transform = None
         
+        self.transform = transforms.Compose([
+                transforms.Resize(
+                    (self.config['image']['resize'], self.config['image']['resize']), 
+                    antialias=True,
+                ),
+                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+            ])
+        
+        if self.config['video']['depth']:
+            self.depth_transform = transforms.Compose([
+                transforms.Resize(
+                    (self.config['image']['resize'], self.config['image']['resize']), 
+                    antialias=True,
+                ),
+                transforms.Normalize((0.5,), (0.5,)),
+            ])
+            
         # Get task list
         self._setup_tasks()
         
@@ -144,6 +176,23 @@ class IKEvaluator:
                 pretrained=self.config['model'].get('pretrained', True),
                 img_height=self.config['image']['resize'],
                 img_width=self.config['image']['resize'],
+                model_name=self.config['model']['encoder_type'],
+                in_channel=self.config['model']['in_channel']
+            ).to(self.device)
+        elif model_type == "cls_vit":
+            self.ik_model = CLSDepthViTMLP(
+                out_size=out_size, 
+                pretrained=self.config['model'].get('pretrained', True),
+                img_height=self.config['image']['resize'],
+                img_width=self.config['image']['resize'],
+                model_name=self.config['model']['encoder_type']
+            ).to(self.device)
+        elif model_type == 'depth_x_rgb + rgb_x_depth':
+            self.ik_model = AllCrossDepthViTMLP(
+                out_size=out_size, 
+                pretrained=self.config['model'].get('pretrained', True),
+                img_height=self.config['image']['resize'],
+                img_width=self.config['image']['resize'],
                 model_name=self.config['model']['encoder_type']
             ).to(self.device)
         elif model_type == 'depth_vit':
@@ -154,8 +203,16 @@ class IKEvaluator:
                 img_width=self.config['image']['resize'],
                 model_name=self.config['model']['encoder_type']
             ).to(self.device)
-        elif model_type == 'cross_depth_vit':
+        elif model_type == 'rgb_x_depth':
             self.ik_model = CrossDepthViTMLP(
+                out_size=out_size, 
+                pretrained=self.config['model'].get('pretrained', True),
+                img_height=self.config['image']['resize'],
+                img_width=self.config['image']['resize'],
+                model_name=self.config['model']['encoder_type']
+            ).to(self.device)
+        elif model_type == 'depth_x_rgb':
+            self.ik_model = DepthCrossRGBViTMLP(
                 out_size=out_size, 
                 pretrained=self.config['model'].get('pretrained', True),
                 img_height=self.config['image']['resize'],
@@ -234,7 +291,7 @@ class IKEvaluator:
         ik_act[6] = self.config['pid']['grip_scale'] * control_gripper
         ik_act = ik_act.astype(np.float32)
         
-        # Apply PID control
+        # Apply PID control separately
         control_signal_trans = (self.config['pid']['kp_trans'] * ik_act[:3] + 
                         self.config['pid']['ki_trans'] * integral_error[:3] + 
                         self.config['pid']['kd_trans'] * (ik_act[:3] - prev_error[:3]))
@@ -245,12 +302,9 @@ class IKEvaluator:
                         self.config['pid']['ki_grip'] * integral_error[6] + 
                         self.config['pid']['kd_grip'] * (ik_act[6] - prev_error[6]))])
         
-        # Ensure all signals have same dimensionality before concatenating
         control_signal = np.concatenate([control_signal_trans.reshape(-1), 
                                         control_signal_rot.reshape(-1),
                                         control_signal_grip.reshape(-1)])
-                        
-        
         
         return control_signal, ik_act
     
@@ -259,7 +313,7 @@ class IKEvaluator:
         t_before_gen = timer.perf_counter()
         
         video_clip = self.video_generator(task_embedding, side_view)
-        video_clip = rearrange(video_clip, "b (f c) h w -> (b f) c h w", c=4)
+        video_clip = rearrange(video_clip, "b (f c) h w -> (b f) c h w", c=self.channel_num)
         video_clip_np = (video_clip[:, :3, :, :].permute(0, 2, 3, 1).detach().cpu().numpy()*255).astype(np.uint8)
         
         video_gen_time = timer.perf_counter() - t_before_gen
@@ -270,7 +324,15 @@ class IKEvaluator:
         """Predict goal state using IK model"""
         t_before_ik = timer.perf_counter()
         
-        goal_img = self.transform(goal_img.to(self.device)).unsqueeze(0)
+        if self.depth_transform is not None:
+            goal_img_depth = goal_img[3:, :, :]
+            goal_img_rgb = goal_img[:3, :, :]
+            goal_img_depth = self.depth_transform(goal_img_depth.to(self.device)).to(self.device).unsqueeze(0)
+            goal_img_rgb = self.transform(goal_img_rgb.to(self.device)).unsqueeze(0)
+            goal_img = torch.cat([goal_img_rgb, goal_img_depth], dim=1)
+        else:
+            goal_img = self.transform(goal_img.to(self.device)).unsqueeze(0)
+        
         with torch.no_grad():
             goal_out = self.ik_model(goal_img)
         goal_out = goal_out.squeeze().cpu().numpy()
@@ -284,7 +346,8 @@ class IKEvaluator:
         print(f"Test {test_time+1}/{self.config['num_test_pr_task']} Start!")
         
         # Setup environment
-        env, _ = set_up_libero_envs(
+        print(f"Using Rendering GPU: {self.config['render_gpu_id']}")
+        env, task_prompt = set_up_libero_envs(
             suite_name=self.config['task']['suite_name'], 
             task_name=task_name, 
             render_device=self.config['render_gpu_id'],
@@ -465,7 +528,7 @@ class IKEvaluator:
             os.makedirs(task_output_dir, exist_ok=True)
         
         # Set number of processes, keep it low to avoid resource contention
-        num_processes = self.processes
+        num_processes = self.num_processes
         print(f"Using {num_processes} processes for parallel evaluation")
         
         # Use process pool for parallel execution
@@ -567,17 +630,23 @@ class IKEvaluator:
             f.write("Individual Task Results:\n")
             for task_id, success_rate in all_task_results.items():
                 f.write(f"{task_id}: {success_rate:.2f}%\n")
-           
+                
+            f.write("\n")
+            f.write(f"Model: {self.config['model']['type']}\n")
+            f.write(f"Model path: {self.config['ik_model_path']}\n")
+            f.write(f"Video generator path: {self.config['video_generator_path']}\n")
+            f.write(f"Video action horizon: {self.config['video']['act_horizon']}\n")
+            f.write(f"Video latent: {self.config['video']['latent']}\n")
+            f.write(f"Video depth: {self.config['video']['depth']}\n")
+            f.write(f"Experience name: {self.config['output']['exp_name']}\n")
 
 
 def main():
-    # Create evaluator and run evaluation
-    evaluator = IKEvaluator("conf/eval_ik.yaml", processes=10)
+    evaluator = IKEvaluator()
     results = evaluator.run_evaluation()
     print("Evaluation completed, results:", results)
 
 
 if __name__ == "__main__":
-    # 设置多进程启动方法为spawn，避免fork导致的问题
     mp.set_start_method('spawn', force=True)
     main()

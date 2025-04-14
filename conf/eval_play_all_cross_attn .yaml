@@ -4,7 +4,8 @@ seed: 2  # Global random seed for reproducibility, only used if use_seed is true
 
 # GPU settings
 render_gpu_id: 1  # GPU for rendering
-num_processes: 2
+num_processes: 10
+
 # Test settings
 num_test_pr_task: 25
 init_steps: 10  # number of initial steps with zero action
@@ -13,11 +14,13 @@ pid_max_steps: 8  # maximum steps for PID control
 
 loop_sleep_time: 0.01  # sleep time for each loop
 
-# Model paths
-video_generator_path: "/mnt/data0/xiaoxiong/single_view_goal_diffusion/results/libero_long/RFlow_libero_long_depth/ckpt/model_100000.pt"
+# Task settings
 
-# ik_model_path: "/mnt/data2/ZhangChuye/Documents/vik_module/log/outputs/2025.03.15/02.09.58_train_libero_goal_expert_data_train_vit/checkpoints/train_vit_ViTMLP_best.pth"
-ik_model_path: "/home/ZhangChuye/Documents/vik_module/log/outputs/2025.04.09/19.39.50_train_libero_long_expert_data_train_plain_depth/checkpoints/train_plain_depth_ViTMLP_best.pth"
+
+# Model paths
+video_generator_path: "/mnt/data0/xiaoxiong/single_view_goal_diffusion/results/libero_goal/RFlow_libero_goal_depth/ckpt/model_95000.pt"
+
+ik_model_path: "/home/ZhangChuye/Documents/vik_module/log/outputs/2025.04.10/02.03.25_train_libero_goal_expert_data_train_vit/checkpoints/train_vit_AllCrossDepthViTMLP_best.pth"
 
 # PID Control parameters
 pid:
@@ -29,7 +32,6 @@ pid:
   ki_rot: 0.1
   kp_rot: 2.0
 
-
   kd_trans: 0.05
   ki_trans: 0.01
   kp_trans: 0.2
@@ -37,7 +39,7 @@ pid:
   pos_scale: 100  # scale factor for position control (ik_act[:3])
   rot_scale: 1    # scale factor for rotation control (ik_act[3:6])
   grip_scale: -10 # scale factor for gripper control (ik_act[6])
-  grip_threshold: 0.75  # threshold for binary gripper control
+  grip_threshold: 0.7  # threshold for binary gripper control
   convergence_threshold: 0.001  # threshold for PID control convergence
 
 # Video settings
@@ -53,18 +55,20 @@ image:
 
 # Model settings
 model:
-  type: "vit"  # Options: "vit", "resnet50", "cnn"
+  type: "depth_x_rgb + rgb_x_depth"  # Options: "vit", "resnet50", "cnn"
   out_size: 8
   pretrained: false
+  # encoder_type: "vit_base_patch16_224" # Options: "vit_base_patch16_224", "vit_small_patch16_224" 
   encoder_type: "vit_base_patch16_224" # Options: "vit_base_patch16_224", "vit_small_patch16_224" 
 
 # Task settings
 task:
   horizon: 2000
-  suite_name: "libero_10"  # Options: "libero_spatial", "libero_90", etc.
+  suite_name: "libero_goal"  # Options: "libero_spatial", "libero_90", etc.
   selected_tasks: []  # Empty list means use all tasks, or specify like ["task1", "task3"]
 
 # Output settings
 output:
-  base_dir: "/mnt/data0/xiaoxiong/single_view_goal_diffusion/libero_results/libero_long"
-  exp_name: "libero_long_scratch_100%_expert"
+  base_dir: "/home/ZhangChuye/Documents/VideoGeneration/results/depth_ablation_results"
+  # Base + Two Encoders + Single Modality Attention
+  exp_name: "depth_base_all_cross_attention"

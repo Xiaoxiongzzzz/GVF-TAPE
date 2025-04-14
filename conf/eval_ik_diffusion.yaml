@@ -5,6 +5,7 @@ seed: 0  # Global random seed for reproducibility, only used if use_seed is true
 # GPU settings
 gpu_id: 1  # Main GPU for computation
 render_gpu_id: 0  # GPU for rendering
+num_processes: 2
 
 # Test settings
 num_test_pr_task: 1
