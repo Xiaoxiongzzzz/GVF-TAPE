@@ -51,8 +51,8 @@ def extract_and_combine_embeddings(input_dir, output_file):
 
 def main():
     # Configure paths
-    input_dir = "/mnt/data0/xiaoxiong/atm_libero/libero_long"  # 修改为你的输入目录
-    output_file = "./cache/libero_long_embedding.hdf5"  # 修改为你想要保存的位置
+    input_dir = "/mnt/data0/xiaoxiong/atm_libero/libero_object"  # 修改为你的输入目录
+    output_file = "./cache/libero_object_embedding.hdf5"  # 修改为你想要保存的位置
     
     # Extract and combine embeddings
     extract_and_combine_embeddings(input_dir, output_file)

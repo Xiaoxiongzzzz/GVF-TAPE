@@ -72,7 +72,7 @@ import torchvision
 # CONFIG_PATH = "conf/eval_depth_cross_rgb.yaml"
 # CONFIG_PATH = "conf/eval_play_depth_cross_rgb.yaml"
 # CONFIG_PATH = "conf/eval_rgb_ik.yaml"
-CONFIG_PATH = "conf/test_eval.yaml"
+CONFIG_PATH = "conf/eval_object_depth_cross_rgb.yaml"
 
 
 class IKEvaluator:
@@ -140,11 +140,15 @@ class IKEvaluator:
         exp_name = self.config.get('output', {}).get('exp_name', "default_experiment")
         
 
+        # Get current timestamp
+        timestamp = time.strftime("%Y%m%d_%H%M")
+        
         # Create output directory with timestamp and seed
         self.base_output_dir = os.path.join(
             base_dir,
-            f"{exp_name}_{seed_suffix}"
+            f"{exp_name}_{timestamp}_{seed_suffix}"
         )
+        
         os.makedirs(self.base_output_dir, exist_ok=True)
         
         # Copy config file to output directory
