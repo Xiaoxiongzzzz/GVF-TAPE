@@ -320,44 +320,53 @@ class IKEvaluator:
         return control_signal, ik_act
     
     def _generate_video(self, task_embedding, side_view):
-        """Generate video prediction"""
+        """Generate video prediction with memory management"""
         t_before_gen = timer.perf_counter()
         
-        # video_clip = 
-        video_clip = rearrange(self.video_generator(task_embedding, side_view), "b (f c) h w -> (b f) c h w", c=self.channel_num)
-        video_clip_np = (video_clip[:, :3, :, :].permute(0, 2, 3, 1).detach().cpu().numpy()*255).astype(np.uint8)
-        if self.use_depth:
-            video_clip_depth = (video_clip[:, 3:, :, :].permute(0, 2, 3, 1).detach().cpu().numpy()*255).astype(np.uint8)
-        else:
-            video_clip_depth = None
+        with torch.cuda.amp.autocast():  # Optional: Use mixed precision
+            video_clip = rearrange(self.video_generator(task_embedding, side_view), 
+                                 "b (f c) h w -> (b f) c h w", c=self.channel_num)
+            
+            # Process RGB
+            video_clip_np = (video_clip[:, :3, :, :].permute(0, 2, 3, 1).detach().cpu().numpy()*255).astype(np.uint8)
+            
+            # Process depth if needed
+            if self.use_depth:
+                video_clip_depth = (video_clip[:, 3:, :, :].permute(0, 2, 3, 1).detach().cpu().numpy()*255).astype(np.uint8)
+            else:
+                video_clip_depth = None
+        
+        # Explicit cleanup
+        torch.cuda.empty_cache()
         
         video_gen_time = timer.perf_counter() - t_before_gen
-        
         return video_clip, video_clip_np, video_gen_time, video_clip_depth
     
     def _predict_goal(self, goal_img):
-        """Predict goal state using IK model"""
+        """Predict goal state with memory management"""
         t_before_ik = timer.perf_counter()
         
-        if self.depth_transform is not None and self.use_depth:
-            goal_img_depth = goal_img[3:, :, :]
-            goal_img_rgb = goal_img[:3, :, :]
-            goal_img_depth = self.depth_transform(goal_img_depth.to(self.device)).to(self.device).unsqueeze(0)
-            goal_img_rgb = self.transform(goal_img_rgb.to(self.device)).unsqueeze(0)
-            goal_img = torch.cat([goal_img_rgb, goal_img_depth], dim=1)
-            # free goal_img_depth from memory
-            del goal_img_depth
-            del goal_img_rgb
-            torch.cuda.empty_cache()
-        else:
-            goal_img = self.transform(goal_img[:3, :, :].to(self.device)).unsqueeze(0)
+        with torch.cuda.amp.autocast():  # Optional: Use mixed precision
+            if self.depth_transform is not None and self.use_depth:
+                # Process depth and RGB separately
+                goal_img_depth = self.depth_transform(goal_img[3:, :, :].to(self.device)).unsqueeze(0)
+                goal_img_rgb = self.transform(goal_img[:3, :, :].to(self.device)).unsqueeze(0)
+                goal_img = torch.cat([goal_img_rgb, goal_img_depth], dim=1)
+                
+                # Cleanup intermediate tensors
+                del goal_img_depth
+                del goal_img_rgb
+            else:
+                goal_img = self.transform(goal_img[:3, :, :].to(self.device)).unsqueeze(0)
+            
+            with torch.no_grad():
+                goal_out = self.ik_model(goal_img).squeeze().cpu().numpy()
         
-        with torch.no_grad():
-            goal_out = self.ik_model(goal_img)
-        goal_out = goal_out.squeeze().cpu().numpy()
+        # Cleanup
+        del goal_img
+        torch.cuda.empty_cache()
         
         ik_time = timer.perf_counter() - t_before_ik
-        
         return goal_out, ik_time
     
     def _run_single_test(self, task_name, test_time, task_output_dir, task_embedding):
@@ -421,13 +430,13 @@ class IKEvaluator:
         return success, inference_times
     
     def _execute_video_actions(self, env, obs, video_clip, video_clip_np, video_clip_depth, horizon):
-        """Execute actions for each frame in the video"""
+        """Execute actions with memory management"""
         success = False
         frames = []
         ik_times = []
         
         for index in range(min(horizon, len(video_clip))):
-            # Predict goal
+            # Process one frame at a time
             goal_img = video_clip[index]
             goal_out, ik_time = self._predict_goal(goal_img)
             ik_times.append(ik_time)
@@ -443,6 +452,10 @@ class IKEvaluator:
                 )
             
             frames.extend(new_frames)
+            
+            # Cleanup
+            del new_frames
+            torch.cuda.empty_cache()
             
             if success:
                 break
