@@ -1,11 +1,11 @@
 # Global settings
 use_seed: true  # Whether to use fixed seed
-seed: 2  # Global random seed for reproducibility, only used if use_seed is true
+seed: 0 # Global random seed for reproducibility, only used if use_seed is true
 
 # GPU settings
-gpu_id: 0  # Main GPU for computation
-render_gpu_id: 0  # GPU for rendering
-num_processes: 10
+# gpu_id: 0  # GPU for inference
+render_gpu_id: 2  # GPU for rendering
+num_processes: 5
 
 # Test settings
 num_test_pr_task: 25
@@ -15,13 +15,10 @@ pid_max_steps: 8  # maximum steps for PID control
 
 loop_sleep_time: 0.01  # sleep time for each loop
 
-# Task settings
-
-
 # Model paths
-video_generator_path: "/mnt/data0/xiaoxiong/single_view_goal_diffusion/results/libero_goal/RFlow_libero_goal_depth/ckpt/model_95000.pt"
+video_generator_path: "/data/zhangchuye/Data/ckpts/lb_goal/expert/scratch/model_95000.pt"
 
-ik_model_path: "/home/ZhangChuye/Documents/vik_module/log/outputs/2025.04.06/13.18.14_train_libero_goal_expert_data_train_vit/checkpoints/train_vit_CLSDepthViTMLP_best.pth"
+ik_model_path: "/data/zhangchuye/Documents/vik_module/log/outputs/2025.04.16/13.39.55_train_libero_object_expert_data_depth_cross_rgb_object/checkpoints/depth_cross_rgb_object_DepthCrossRGBViTMLP_best.pth"
 
 # PID Control parameters
 pid:
@@ -56,20 +53,18 @@ image:
 
 # Model settings
 model:
-  type: "cls_vit"  # Options: "vit", "resnet50", "cnn"
+  type: "depth_x_rgb"  # Options: "plain_rgbd", "rgb_x_depth", "depth_x_rgb", "rgb_x_depth + depth_x_rgb"
   out_size: 8
   pretrained: false
-  # encoder_type: "vit_base_patch16_224" # Options: "vit_base_patch16_224", "vit_small_patch16_224" 
   encoder_type: "vit_base_patch16_224" # Options: "vit_base_patch16_224", "vit_small_patch16_224" 
 
 # Task settings
 task:
   horizon: 2000
-  suite_name: "libero_goal"  # Options: "libero_spatial", "libero_90", etc.
+  suite_name: "libero_object"  # Options: "libero_spatial", "libero_90", etc.
   selected_tasks: []  # Empty list means use all tasks, or specify like ["task1", "task3"]
 
 # Output settings
 output:
-  base_dir: "/home/ZhangChuye/Documents/VideoGeneration/results/depth_ablation_results"
-  # Base + Two Encoders + Single Modality Attention
-  exp_name: "depth_base_all_cls"
+  base_dir: "/data/zhangchuye/Data/results-SC"
+  exp_name: "lb_object_scratch_dxr_expert"

@@ -1,10 +1,12 @@
 # Global settings
 use_seed: true  # Whether to use fixed seed
-seed: 2  # Global random seed for reproducibility, only used if use_seed is true
+seed: 0 # Global random seed for reproducibility, only used if use_seed is true
 
 # GPU settings
-render_gpu_id: 4  # GPU for rendering
-num_processes: 10
+gpu_id: 2  # GPU for inference
+render_gpu_id: 0  # GPU for rendering
+num_processes: 1
+
 # Test settings
 num_test_pr_task: 25
 init_steps: 10  # number of initial steps with zero action
@@ -13,14 +15,10 @@ pid_max_steps: 8  # maximum steps for PID control
 
 loop_sleep_time: 0.01  # sleep time for each loop
 
-# Task settings
-
-
 # Model paths
-video_generator_path: "/mnt/data0/xiaoxiong/single_view_goal_diffusion/results/libero_goal/RFlow_libero_goal/ckpt/model_95000.pt"
+video_generator_path: "/data/zhangchuye/Data/ckpts/lb_goal/expert/scratch/model_95000.pt"
 
-# play without depth
-ik_model_path: "/home/ZhangChuye/Documents/vik_module/log/outputs/2025.04.12/23.18.09_train_libero_goal_play_data_train_vit/checkpoints/train_vit_ViTMLP_best.pth"
+ik_model_path: "/data/zhangchuye/Data/ckpts/lb_goal/rand_exp/depth_cross_rgb_DepthCrossRGBViTMLP_best.pth"
 
 # PID Control parameters
 pid:
@@ -31,7 +29,6 @@ pid:
   kd_rot: 1.0
   ki_rot: 0.1
   kp_rot: 2.0
-
 
   kd_trans: 0.05
   ki_trans: 0.01
@@ -49,18 +46,17 @@ video:
   sample_timestep: 3  # video generator sample timestep
   act_horizon: 6
   latent: False
-  depth: False
+  depth: True
 # Image processing settings
 image:
   resize: 224  # Image resize dimension
 
 # Model settings
 model:
-  type: "vit"  # Options: "vit", "resnet50", "cnn"
+  type: "depth_x_rgb"  # Options: "plain_rgbd", "rgb_x_depth", "depth_x_rgb", "rgb_x_depth + depth_x_rgb"
   out_size: 8
   pretrained: false
-  encoder_type: "vit_base_patch16_224" # Options: "base", "small" 
-  in_channel: 3
+  encoder_type: "vit_base_patch16_224" # Options: "vit_base_patch16_224", "vit_small_patch16_224" 
 
 # Task settings
 task:
@@ -70,5 +66,5 @@ task:
 
 # Output settings
 output:
-  base_dir: "/home/ZhangChuye/Documents/VideoGeneration/results/depth_debug"
-  exp_name: "pd_libero_goal_rgb_only"
+  base_dir: "/data/zhangchuye/Data/results-SC"
+  exp_name: "lb_goal_scratch_dxr_play"

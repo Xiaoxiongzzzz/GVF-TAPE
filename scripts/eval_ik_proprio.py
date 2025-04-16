@@ -72,7 +72,7 @@ import torchvision
 # CONFIG_PATH = "conf/eval_depth_cross_rgb.yaml"
 # CONFIG_PATH = "conf/eval_play_depth_cross_rgb.yaml"
 # CONFIG_PATH = "conf/eval_rgb_ik.yaml"
-CONFIG_PATH = "conf/eval_rgb_object_expert.yaml"
+CONFIG_PATH = "conf/eval_goal_scratch_dxr_play.yaml"
 
 
 class IKEvaluator:
@@ -85,7 +85,8 @@ class IKEvaluator:
         
         # Set basic parameters
         # self.device = torch.device(f"cuda:{self.config['gpu_id']}")
-        self.device = torch.device(f"cuda:0")
+        # self.device = torch.device(f"cuda:0")
+        self.device = torch.device("cuda:" + str(self.config['gpu_id']))
         print(f"Using Computing GPU: {self.device}")
         
         torch.multiprocessing.set_sharing_strategy('file_system')
@@ -237,6 +238,10 @@ class IKEvaluator:
         self.ik_model.load_state_dict(torch.load(self.config['ik_model_path']))
         self.ik_model.eval()
         
+        for param in self.ik_model.parameters():
+            param.requires_grad = False
+        
+        
     def _setup_tasks(self):
         """Get list of tasks to evaluate"""
         benchmark_dict = benchmark.get_benchmark_dict()
@@ -318,8 +323,8 @@ class IKEvaluator:
         """Generate video prediction"""
         t_before_gen = timer.perf_counter()
         
-        video_clip = self.video_generator(task_embedding, side_view)
-        video_clip = rearrange(video_clip, "b (f c) h w -> (b f) c h w", c=self.channel_num)
+        # video_clip = 
+        video_clip = rearrange(self.video_generator(task_embedding, side_view), "b (f c) h w -> (b f) c h w", c=self.channel_num)
         video_clip_np = (video_clip[:, :3, :, :].permute(0, 2, 3, 1).detach().cpu().numpy()*255).astype(np.uint8)
         if self.use_depth:
             video_clip_depth = (video_clip[:, 3:, :, :].permute(0, 2, 3, 1).detach().cpu().numpy()*255).astype(np.uint8)
@@ -340,6 +345,10 @@ class IKEvaluator:
             goal_img_depth = self.depth_transform(goal_img_depth.to(self.device)).to(self.device).unsqueeze(0)
             goal_img_rgb = self.transform(goal_img_rgb.to(self.device)).unsqueeze(0)
             goal_img = torch.cat([goal_img_rgb, goal_img_depth], dim=1)
+            # free goal_img_depth from memory
+            del goal_img_depth
+            del goal_img_rgb
+            torch.cuda.empty_cache()
         else:
             goal_img = self.transform(goal_img[:3, :, :].to(self.device)).unsqueeze(0)
         
@@ -377,6 +386,9 @@ class IKEvaluator:
         for video_sample in range(self.config['num_video_samples']):
             visual_obs, _ = process_obs(obs, extra_state_keys=[], device=self.device)
             side_view = visual_obs[:,0]
+            # free visual_obs from memory
+            del visual_obs
+            torch.cuda.empty_cache()
             
             # Generate video
             video_clip, video_clip_np, video_gen_time, video_clip_depth = self._generate_video(task_embedding, side_view)
@@ -386,7 +398,17 @@ class IKEvaluator:
                 env, obs, video_clip, video_clip_np, video_clip_depth, self.config['video']['act_horizon']
             )
             inference_times['ik_model'].extend(ik_times)
+            # free video_clip, video_clip_np, video_clip_depth from memory
+            del video_clip
+            del video_clip_np
+            del video_clip_depth
+            torch.cuda.empty_cache()
+            
             roll_out_video.extend(frames)
+            
+            # free frames from memory
+            del frames
+            torch.cuda.empty_cache()
             
             if success:
                 break

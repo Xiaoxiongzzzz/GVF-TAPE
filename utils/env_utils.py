@@ -29,7 +29,7 @@ def set_up_libero_envs(suite_name: str, task_name: str, render_device: int, hori
     task = task_suite.get_task(task_id)
     task_prompt = task.language
 
-    bddl_files_path = '/home/ZhangXiaoxiong/Document/VideoGeneration/third_party/LIBERO/libero/libero/bddl_files'
+    bddl_files_path = '/data/zhangchuye/Documents/VideoGeneration/third_party/LIBERO/LIBERO/libero/libero/bddl_files'
     task_bddl_file = os.path.join(bddl_files_path, task.problem_folder, task.bddl_file)
 
     env_args ={
@@ -68,6 +68,10 @@ def process_obs(obs, extra_state_keys, device):
     eye_in_hand = torch.flip(torch.from_numpy(obs['robot0_eye_in_hand_image']).to(device), dims=(0,))  #[height, width, channel]
     visual_obs = torch.stack([agent_view, eye_in_hand], dim=0).unsqueeze(0)      # [batch, view, height, width, channel]
     visual_obs = visual_obs.permute(0, 1, 4, 2, 3)      #[batch, view, channel, height, width]
+    # free agent_view and eye_in_hand from memory
+    del agent_view
+    del eye_in_hand
+    torch.cuda.empty_cache()
 
     extra_states = {k: obs[states_key_mapping[k]] for k in extra_state_keys}       #{k: [dims,]}
     extra_states = {k: torch.from_numpy(v).unsqueeze(0) for k, v in extra_states.items()}   #{k: [batch, dims,]}

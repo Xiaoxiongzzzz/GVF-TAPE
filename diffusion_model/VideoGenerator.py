@@ -3,7 +3,7 @@ from torch import nn
 from einops import rearrange
 from diffusion_model.UNets import UnetLatent, UnetMW
 from diffusion_model.RectifiedFlow import RectifiedFlow
-from diffusers.models import AutoencoderKL
+# from diffusers.models import AutoencoderKL
 from transformers import CLIPTextModel, CLIPTokenizer
 from diffusion_model.GoalDiffusion import GoalGaussianDiffusion
 from ema_pytorch import EMA
