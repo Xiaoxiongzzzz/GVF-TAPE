@@ -72,7 +72,7 @@ import torchvision
 # CONFIG_PATH = "conf/eval_depth_cross_rgb.yaml"
 # CONFIG_PATH = "conf/eval_play_depth_cross_rgb.yaml"
 # CONFIG_PATH = "conf/eval_rgb_ik.yaml"
-CONFIG_PATH = "conf/eval_object_depth_cross_rgb.yaml"
+CONFIG_PATH = "conf/eval_rgb_object_expert.yaml"
 
 
 class IKEvaluator:
@@ -103,8 +103,6 @@ class IKEvaluator:
         # Load models
         self._setup_models()
         
-        self.depth_transform = None
-        
         self.transform = transforms.Compose([
                 transforms.Resize(
                     (self.config['image']['resize'], self.config['image']['resize']), 
@@ -113,7 +111,13 @@ class IKEvaluator:
                 transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
             ])
         
-        if self.config['video']['depth']:
+        self.use_depth = self.config['video']['depth']
+        if 'deploy_depth' in self.config:
+            self.use_depth = self.config['deploy_depth']
+        
+        self.depth_transform = None
+        
+        if self.use_depth:
             self.depth_transform = transforms.Compose([
                 transforms.Resize(
                     (self.config['image']['resize'], self.config['image']['resize']), 
@@ -317,23 +321,27 @@ class IKEvaluator:
         video_clip = self.video_generator(task_embedding, side_view)
         video_clip = rearrange(video_clip, "b (f c) h w -> (b f) c h w", c=self.channel_num)
         video_clip_np = (video_clip[:, :3, :, :].permute(0, 2, 3, 1).detach().cpu().numpy()*255).astype(np.uint8)
+        if self.use_depth:
+            video_clip_depth = (video_clip[:, 3:, :, :].permute(0, 2, 3, 1).detach().cpu().numpy()*255).astype(np.uint8)
+        else:
+            video_clip_depth = None
         
         video_gen_time = timer.perf_counter() - t_before_gen
         
-        return video_clip, video_clip_np, video_gen_time
+        return video_clip, video_clip_np, video_gen_time, video_clip_depth
     
     def _predict_goal(self, goal_img):
         """Predict goal state using IK model"""
         t_before_ik = timer.perf_counter()
         
-        if self.depth_transform is not None:
+        if self.depth_transform is not None and self.use_depth:
             goal_img_depth = goal_img[3:, :, :]
             goal_img_rgb = goal_img[:3, :, :]
             goal_img_depth = self.depth_transform(goal_img_depth.to(self.device)).to(self.device).unsqueeze(0)
             goal_img_rgb = self.transform(goal_img_rgb.to(self.device)).unsqueeze(0)
             goal_img = torch.cat([goal_img_rgb, goal_img_depth], dim=1)
         else:
-            goal_img = self.transform(goal_img.to(self.device)).unsqueeze(0)
+            goal_img = self.transform(goal_img[:3, :, :].to(self.device)).unsqueeze(0)
         
         with torch.no_grad():
             goal_out = self.ik_model(goal_img)
@@ -371,11 +379,11 @@ class IKEvaluator:
             side_view = visual_obs[:,0]
             
             # Generate video
-            video_clip, video_clip_np, video_gen_time = self._generate_video(task_embedding, side_view)
+            video_clip, video_clip_np, video_gen_time, video_clip_depth = self._generate_video(task_embedding, side_view)
             inference_times['video_gen'].append(video_gen_time)
             # Execute actions for each frame
             success, frames, ik_times, obs = self._execute_video_actions(
-                env, obs, video_clip, video_clip_np, self.config['video']['act_horizon']
+                env, obs, video_clip, video_clip_np, video_clip_depth, self.config['video']['act_horizon']
             )
             inference_times['ik_model'].extend(ik_times)
             roll_out_video.extend(frames)
@@ -390,7 +398,7 @@ class IKEvaluator:
         env.close()
         return success, inference_times
     
-    def _execute_video_actions(self, env, obs, video_clip, video_clip_np, horizon):
+    def _execute_video_actions(self, env, obs, video_clip, video_clip_np, video_clip_depth, horizon):
         """Execute actions for each frame in the video"""
         success = False
         frames = []
@@ -403,9 +411,15 @@ class IKEvaluator:
             ik_times.append(ik_time)
             
             # Run PID control
-            success, new_frames, obs = self._run_pid_control(
-                env, obs, goal_out, video_clip_np[index]
-            )
+            if self.use_depth:
+                success, new_frames, obs = self._run_pid_control(
+                    env, obs, goal_out, video_clip_np[index], video_clip_depth[index]
+                )
+            else:
+                success, new_frames, obs = self._run_pid_control(
+                    env, obs, goal_out, video_clip_np[index]
+                )
+            
             frames.extend(new_frames)
             
             if success:
@@ -415,7 +429,7 @@ class IKEvaluator:
         
         return success, frames, ik_times, obs
     
-    def _run_pid_control(self, env, obs, goal_out, goal_img_np):
+    def _run_pid_control(self, env, obs, goal_out, goal_img_np, goal_img_depth=None):
         """Run PID control loop for a single goal"""
         frames = []
         proprio_st = self._get_proprio_state(obs)
@@ -437,8 +451,14 @@ class IKEvaluator:
             prev_error = ik_act
             integral_error += ik_act
             
-            # Save frame
+            # rgb rollout and rgb goal
             frame = np.concatenate([cv2.flip(obs["agentview_image"], 0), goal_img_np], axis=1)
+            # concate depth with properate color map
+            # depth image is goal_img_depth and goal_img_depth is 1 channel
+            if goal_img_depth is not None:
+                goal_depth_colored = cv2.applyColorMap(goal_img_depth.squeeze(), cv2.COLORMAP_VIRIDIS)
+                frame = np.concatenate([frame, goal_depth_colored], axis=1)
+            
             frames.append(frame)
             
             if done:

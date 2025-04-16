@@ -15,9 +15,9 @@ pid_max_steps: 8  # maximum steps for PID control
 loop_sleep_time: 0.01  # sleep time for each loop
 
 # Model paths
-video_generator_path: "/mnt/data0/xiaoxiong/single_view_goal_diffusion/results/libero_object/RFlow_libero_object_depth/ckpt/model_95000.pt"
+video_generator_path: "/mnt/data0/xiaoxiong/single_view_goal_diffusion/results/libero_spatial/RFlow_libero_spatial_depth/ckpt/model_95000.pt"
 
-ik_model_path: "/home/ZhangChuye/Documents/vik_module/log/outputs/2025.04.15/17.19.43_train_libero_object_expert_data_depth_cross_rgb_object/checkpoints/depth_cross_rgb_object_DepthCrossRGBViTMLP_best.pth"
+ik_model_path: "/home/ZhangChuye/Documents/vik_module/log/outputs/2025.04.15/11.03.18_train_libero_spatial_expert_data_depth_cross_rgb_spatial/checkpoints/depth_cross_rgb_spatial_DepthCrossRGBViTMLP_best.pth"
 
 # PID Control parameters
 pid:
@@ -60,10 +60,10 @@ model:
 # Task settings
 task:
   horizon: 2000
-  suite_name: "libero_object"  # Options: "libero_spatial", "libero_90", etc.
+  suite_name: "libero_spatial"  # Options: "libero_spatial", "libero_90", etc.
   selected_tasks: []  # Empty list means use all tasks, or specify like ["task1", "task3"]
 
 # Output settings
 output:
-  base_dir: "/home/ZhangChuye/Documents/VideoGeneration/results/lb_object"
+  base_dir: "/home/ZhangChuye/Documents/VideoGeneration/results/lb_spatial"
   exp_name: "expert_depth_x_rgb"
