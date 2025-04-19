@@ -72,7 +72,15 @@ import torchvision
 # CONFIG_PATH = "conf/eval_depth_cross_rgb.yaml"
 # CONFIG_PATH = "conf/eval_play_depth_cross_rgb.yaml"
 # CONFIG_PATH = "conf/eval_rgb_ik.yaml"
-CONFIG_PATH = "conf/eval_goal_scratch_dxr_play.yaml"
+# CONFIG_PATH = "conf/eval_object_scratch_dxr_expert.yaml"
+# CONFIG_PATH = "conf/eval_goal_scratch_dxr_play.yaml"
+# CONFIG_PATH = "conf/eval_spatial_scratch_dxr_expert.yaml"
+# CONFIG_PATH = "conf/eval_object_scratch_dxr_expert.yaml"
+# CONFIG_PATH = "conf/eval_goal_scratch_dxr_expert.yaml"
+# CONFIG_PATH = "conf/eval_long_scratch_dxr_expert.yaml"
+# CONFIG_PATH = "conf/object_dxr_play.yaml"
+# CONFIG_PATH = "conf/eval_object_scratch_dxr_play.yaml"
+CONFIG_PATH = "conf/eval_spatial_scratch_dxr_play.yaml"
 
 
 class IKEvaluator:
