@@ -7,11 +7,11 @@ class ViTMLP(nn.Module):
     def __init__(self, 
                  out_size=8,
                  pretrained=True,
-                 in_channel=4,
                  model_name='vit_base_patch16_224',  # or 'vit_large_patch16_224'
                  mlp_size=256,
-                 img_height=224,
-                 img_width=224
+                 img_height=128,
+                 img_width=128,
+                 channels=4
                  ):
         super().__init__()
         
@@ -20,7 +20,7 @@ class ViTMLP(nn.Module):
             model_name,
             pretrained=pretrained,
             img_size=(img_height, img_width),
-            in_chans=in_channel
+            in_chans=channels
         )
         
         # Get embedding dimension from the model

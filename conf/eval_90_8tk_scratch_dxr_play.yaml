@@ -1,14 +1,14 @@
 # Global settings
 use_seed: true  # Whether to use fixed seed
-seed: 2 # Global random seed for reproducibility, only used if use_seed is true
+seed: 0 # Global random seed for reproducibility, only used if use_seed is true
 
 # GPU settings
-# gpu_id: 3  # GPU for inference
-render_gpu_id: 5  # GPU for rendering
-num_processes: 4
+gpu_id: 2  # GPU for inference
+render_gpu_id: 7  # GPU for rendering
+num_processes: 1
 
 # Test settings
-num_test_pr_task: 20
+num_test_pr_task: 25
 init_steps: 10  # number of initial steps with zero action
 num_video_samples: 13  # number of video samples to generate
 pid_max_steps: 8  # maximum steps for PID control
@@ -16,9 +16,9 @@ pid_max_steps: 8  # maximum steps for PID control
 loop_sleep_time: 0.01  # sleep time for each loop
 
 # Model paths
-video_generator_path: "/data/zhangchuye/Data/ckpts/lb_goal/expert/rgbd/scratch/model_100000.pt"
+video_generator_path: "/data/zhangchuye/Data/ckpts/lb_90_8tk/expert/rgbd/model_95000.pt"
 
-ik_model_path: "/data/zhangchuye/Data/ckpts/lb_goal/rand_exp/succes/depth_cross_rgb_DepthCrossRGBViTMLP_best.pth"
+ik_model_path: "/data/zhangchuye/Data/ckpts/lb_90_8tk/rand_exp/ckpt2/depth_cross_rgb_8tk_DepthCrossRGBViTMLP_best.pth"
 
 # PID Control parameters
 pid:
@@ -61,10 +61,10 @@ model:
 # Task settings
 task:
   horizon: 2000
-  suite_name: "libero_goal"  # Options: "libero_spatial", "libero_90", etc.
-  selected_tasks: []  # Empty list means use all tasks, or specify like ["task1", "task3"]
+  suite_name: "libero_90"  # Options: "libero_spatial", "libero_90", etc.
+  selected_tasks: ["task66", "task67", "task68", "task69", "task70", "task71", "task72", "task73"]  # Empty list means use all tasks, or specify like ["task1", "task3"]
 
 # Output settings
 output:
-  base_dir: "/data/zhangchuye/Data/results-SC/baseline"
-  exp_name: "lb_goal_scratch_dxr_play"
+  base_dir: "/data/zhangchuye/Data/results-SC/v2a"
+  exp_name: "lb_90_8tk_scratch_dxr_play"

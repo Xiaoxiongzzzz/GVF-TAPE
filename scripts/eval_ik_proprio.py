@@ -73,14 +73,20 @@ import torchvision
 # CONFIG_PATH = "conf/eval_play_depth_cross_rgb.yaml"
 # CONFIG_PATH = "conf/eval_rgb_ik.yaml"
 # CONFIG_PATH = "conf/eval_object_scratch_dxr_expert.yaml"
+# CONFIG_PATH = "conf/eval_goal_scratch_r_play.yaml"
 # CONFIG_PATH = "conf/eval_goal_scratch_dxr_play.yaml"
 # CONFIG_PATH = "conf/eval_spatial_scratch_dxr_expert.yaml"
 # CONFIG_PATH = "conf/eval_object_scratch_dxr_expert.yaml"
 # CONFIG_PATH = "conf/eval_goal_scratch_dxr_expert.yaml"
 # CONFIG_PATH = "conf/eval_long_scratch_dxr_expert.yaml"
-# CONFIG_PATH = "conf/object_dxr_play.yaml"
+# CONFIG_PATH = "conf/eval_long_scratch_dxr_play.yaml"
 # CONFIG_PATH = "conf/eval_object_scratch_dxr_play.yaml"
+# CONFIG_PATH = "conf/eval_object_scratch_r_play.yaml"
 CONFIG_PATH = "conf/eval_spatial_scratch_dxr_play.yaml"
+# CONFIG_PATH = "conf/eval_90_8tk_scratch_dxr_play.yaml"
+# CONFIG_PATH = "conf/eval_spatial_scratch_r_play.yaml"
+# CONFIG_PATH = "conf/eval_object_scratch_r_play.yaml"
+# CONFIG_PATH = "conf/eval_goal_scratch_r_play.yaml"
 
 
 class IKEvaluator:
@@ -93,8 +99,8 @@ class IKEvaluator:
         
         # Set basic parameters
         # self.device = torch.device(f"cuda:{self.config['gpu_id']}")
-        # self.device = torch.device(f"cuda:0")
-        self.device = torch.device("cuda:" + str(self.config['gpu_id']))
+        self.device = torch.device(f"cuda:0")
+        # self.device = torch.device("cuda:" + str(self.config['gpu_id']))
         print(f"Using Computing GPU: {self.device}")
         
         torch.multiprocessing.set_sharing_strategy('file_system')
@@ -192,7 +198,7 @@ class IKEvaluator:
                 img_height=self.config['image']['resize'],
                 img_width=self.config['image']['resize'],
                 model_name=self.config['model']['encoder_type'],
-                in_channel=self.config['model']['in_channel']
+                channels=self.config['model']['in_channel']
             ).to(self.device)
         elif model_type == "cls_vit":
             self.ik_model = CLSDepthViTMLP(
@@ -382,7 +388,7 @@ class IKEvaluator:
         print(f"Test {test_time+1}/{self.config['num_test_pr_task']} Start!")
         
         # Setup environment
-        print(f"Using Rendering GPU: {self.config['render_gpu_id']}")
+        # print(f"Using Rendering GPU: {self.config['render_gpu_id']}")
         env, task_prompt = set_up_libero_envs(
             suite_name=self.config['task']['suite_name'], 
             task_name=task_name, 

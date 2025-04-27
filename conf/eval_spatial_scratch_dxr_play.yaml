@@ -1,11 +1,11 @@
 # Global settings
 use_seed: true  # Whether to use fixed seed
-seed: 0 # Global random seed for reproducibility, only used if use_seed is true
+seed: 2 # Global random seed for reproducibility, only used if use_seed is true
 
 # GPU settings
 gpu_id: 0  # GPU for inference
-render_gpu_id: 0  # GPU for rendering
-num_processes: 5
+render_gpu_id: 3  # GPU for rendering
+num_processes: 6
 
 # Test settings
 num_test_pr_task: 20
@@ -16,9 +16,9 @@ pid_max_steps: 8  # maximum steps for PID control
 loop_sleep_time: 0.01  # sleep time for each loop
 
 # Model paths
-video_generator_path: "/data/zhangchuye/Data/ckpts/lb_spatial/expert/scratch/model_100000.pt"
+video_generator_path: "/data/zhangchuye/Data/ckpts/lb_spatial/expert/scratch/rgbd/model_100000.pt"
 
-ik_model_path: "/data/zhangchuye/Data/ckpts/lb_spatial/rand_exp/depth_cross_rgb_spatial_DepthCrossRGBViTMLP_best.pth"
+ik_model_path: "/data/zhangchuye/Documents/vik_module/log/outputs/2025.04.27/01.02.38_train_libero_spatial_expert_data_depth_cross_rgb_spatial/checkpoints/depth_cross_rgb_spatial_DepthCrossRGBViTMLP_best.pth"
 
 # PID Control parameters
 pid:

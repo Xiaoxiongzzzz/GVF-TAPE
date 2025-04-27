@@ -3,7 +3,7 @@ use_seed: true  # Whether to use fixed seed
 seed: 2 # Global random seed for reproducibility, only used if use_seed is true
 
 # GPU settings
-# gpu_id: 3  # GPU for inference
+gpu_id: 0  # GPU for inference
 render_gpu_id: 5  # GPU for rendering
 num_processes: 4
 
@@ -16,9 +16,10 @@ pid_max_steps: 8  # maximum steps for PID control
 loop_sleep_time: 0.01  # sleep time for each loop
 
 # Model paths
-video_generator_path: "/data/zhangchuye/Data/ckpts/lb_goal/expert/rgbd/scratch/model_100000.pt"
+video_generator_path: "/data/zhangchuye/Data/ckpts/lb_goal/expert/rgb/model_95000.pt"
 
-ik_model_path: "/data/zhangchuye/Data/ckpts/lb_goal/rand_exp/succes/depth_cross_rgb_DepthCrossRGBViTMLP_best.pth"
+ik_model_path: "/data/zhangchuye/Data/ckpts/lb_goal/rand_exp/succes/train_vit_ViTMLP_best.pth"
+
 
 # PID Control parameters
 pid:
@@ -46,17 +47,18 @@ video:
   sample_timestep: 3  # video generator sample timestep
   act_horizon: 6
   latent: False
-  depth: True
+  depth: False
 # Image processing settings
 image:
   resize: 224  # Image resize dimension
 
 # Model settings
 model:
-  type: "depth_x_rgb"  # Options: "plain_rgbd", "rgb_x_depth", "depth_x_rgb", "rgb_x_depth + depth_x_rgb"
+  type: "vit"  # Options: "plain_rgbd", "rgb_x_depth", "depth_x_rgb", "rgb_x_depth + depth_x_rgb"
   out_size: 8
   pretrained: false
   encoder_type: "vit_base_patch16_224" # Options: "vit_base_patch16_224", "vit_small_patch16_224" 
+  in_channel: 3
 
 # Task settings
 task:
@@ -66,5 +68,5 @@ task:
 
 # Output settings
 output:
-  base_dir: "/data/zhangchuye/Data/results-SC/baseline"
-  exp_name: "lb_goal_scratch_dxr_play"
+  base_dir: "/data/zhangchuye/Data/results-SC/ablation_depth"
+  exp_name: "lb_goal_scratch_r_play"
