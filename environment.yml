@@ -1,4 +1,4 @@
-name: videogeneration
+name: gvftape
 channels:
   - conda-forge
   - defaults
