@@ -289,4 +289,6 @@ dependencies:
       - wrapt==1.16.0
       - yarl==1.14.0
       - zipp==3.20.2
-prefix: /mnt/home/ZhangXiaoxiong/.conda/envs/videogeneration
+      - -e ./third_party/LIBERO
+      - -e ./third_party/robomimic
+      - -e ./third_party/robosuite
