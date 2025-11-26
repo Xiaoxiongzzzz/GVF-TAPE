@@ -53,7 +53,9 @@ min_ratio = 1.10
 
 # Define arguments for this test
 parser = argparse.ArgumentParser()
-parser.add_argument("--render", action="store_true", help="Whether to render tests or run headless")
+parser.add_argument(
+    "--render", action="store_true", help="Whether to render tests or run headless"
+)
 args = parser.parse_args()
 
 # Setup printing options for numbers
@@ -140,19 +142,36 @@ def test_linear_interpolator():
 
                 # Keep track of state of robot eef (pos, ori (euler)) and torques
                 current_torques = np.zeros(7)
-                initial_state = [env.robots[0]._hand_pos, T.mat2quat(env.robots[0]._hand_orn)]
+                initial_state = [
+                    env.robots[0]._hand_pos,
+                    T.mat2quat(env.robots[0]._hand_orn),
+                ]
                 dstate = [
                     env.robots[0]._hand_pos - initial_state[0],
-                    T.mat2euler(T.quat2mat(T.quat_distance(T.mat2quat(env.robots[0]._hand_orn), initial_state[1]))),
+                    T.mat2euler(
+                        T.quat2mat(
+                            T.quat_distance(
+                                T.mat2quat(env.robots[0]._hand_orn), initial_state[1]
+                            )
+                        )
+                    ),
                 ]
 
                 # Define the uniform trajectory action
                 if traj == "pos":
-                    pos_act = pos_action_ik if controller_name == "IK_POSE" else pos_action_osc
+                    pos_act = (
+                        pos_action_ik
+                        if controller_name == "IK_POSE"
+                        else pos_action_osc
+                    )
                     rot_act = np.zeros(3)
                 else:
                     pos_act = np.zeros(3)
-                    rot_act = rot_action_ik if controller_name == "IK_POSE" else rot_action_osc
+                    rot_act = (
+                        rot_action_ik
+                        if controller_name == "IK_POSE"
+                        else rot_action_osc
+                    )
 
                 # Compose the action
                 action = np.concatenate([pos_act, rot_act, [0]])
@@ -163,7 +182,9 @@ def test_linear_interpolator():
 
                 # Run trajectory until the threshold condition is met
                 while abs(dstate[k][indexes[k]]) < abs(thresholds[k]):
-                    _, summed_torques, current_torques = step(env, action, current_torques)
+                    _, summed_torques, current_torques = step(
+                        env, action, current_torques
+                    )
                     if args.render:
                         env.render()
 
@@ -172,7 +193,14 @@ def test_linear_interpolator():
                     timesteps[j] += 1
                     dstate = [
                         env.robots[0]._hand_pos - initial_state[0],
-                        T.mat2euler(T.quat2mat(T.quat_distance(T.mat2quat(env.robots[0]._hand_orn), initial_state[1]))),
+                        T.mat2euler(
+                            T.quat2mat(
+                                T.quat_distance(
+                                    T.mat2quat(env.robots[0]._hand_orn),
+                                    initial_state[1],
+                                )
+                            )
+                        ),
                     ]
 
                 # When finished, print out the timestep results

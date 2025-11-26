@@ -53,7 +53,7 @@ class ExtraModalityTokens(nn.Module):
             self.proprio_mlp = nn.Sequential(*layers)
             self.extra_encoders[modality_name] = {"encoder": self.proprio_mlp}
 
-        for (proprio_dim, use_modality, modality_name) in [
+        for proprio_dim, use_modality, modality_name in [
             (joint_states_dim, self.use_joint, "joint_states"),
             (gripper_states_dim, self.use_gripper, "gripper_states"),
             (ee_dim, self.use_ee, "ee_states"),
@@ -77,7 +77,7 @@ class ExtraModalityTokens(nn.Module):
         """
         tensor_list = []
 
-        for (use_modality, modality_name) in [
+        for use_modality, modality_name in [
             (self.use_joint, "joint_states"),
             (self.use_gripper, "gripper_states"),
             (self.use_ee, "ee_states"),

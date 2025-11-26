@@ -1,7 +1,11 @@
 import numpy as np
 
 from robosuite.models.arenas import Arena
-from robosuite.utils.mjcf_utils import array_to_string, string_to_array, xml_path_completion
+from robosuite.utils.mjcf_utils import (
+    array_to_string,
+    string_to_array,
+    xml_path_completion,
+)
 
 
 class TableArena(Arena):
@@ -32,7 +36,11 @@ class TableArena(Arena):
         self.table_half_size = self.table_full_size / 2
         self.table_friction = table_friction
         self.table_offset = table_offset
-        self.center_pos = self.bottom_pos + np.array([0, 0, -self.table_half_size[2]]) + self.table_offset
+        self.center_pos = (
+            self.bottom_pos
+            + np.array([0, 0, -self.table_half_size[2]])
+            + self.table_offset
+        )
 
         self.table_body = self.worldbody.find("./body[@name='table']")
         self.table_collision = self.table_body.find("./geom[@name='table_collision']")
@@ -58,7 +66,9 @@ class TableArena(Arena):
         self.table_collision.set("friction", array_to_string(self.table_friction))
         self.table_visual.set("size", array_to_string(self.table_half_size))
 
-        self.table_top.set("pos", array_to_string(np.array([0, 0, self.table_half_size[2]])))
+        self.table_top.set(
+            "pos", array_to_string(np.array([0, 0, self.table_half_size[2]]))
+        )
 
         # If we're not using legs, set their size to 0
         if not self.has_legs:

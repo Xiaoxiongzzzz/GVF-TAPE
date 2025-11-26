@@ -13,7 +13,9 @@ def video_pad_time(videos):
     return np.array(padded)
 
 
-def make_grid_video_from_numpy(video_array, ncol, output_name='./output.mp4', speedup=1, padding=5, **kwargs):
+def make_grid_video_from_numpy(
+    video_array, ncol, output_name="./output.mp4", speedup=1, padding=5, **kwargs
+):
     videos = []
     for video in video_array:
         if speedup != 1:

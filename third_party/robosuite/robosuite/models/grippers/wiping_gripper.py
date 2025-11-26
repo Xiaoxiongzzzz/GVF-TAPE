@@ -1,6 +1,7 @@
 """
 Gripper without fingers to wipe a surface
 """
+
 from robosuite.models.grippers.gripper_model import GripperModel
 from robosuite.utils.mjcf_utils import xml_path_completion
 
@@ -30,5 +31,10 @@ class WipingGripper(GripperModel):
             "right_finger": [],
             "left_fingerpad": [],
             "right_fingerpad": [],
-            "corners": ["wiping_corner1", "wiping_corner2", "wiping_corner3", "wiping_corner4"],
+            "corners": [
+                "wiping_corner1",
+                "wiping_corner2",
+                "wiping_corner3",
+                "wiping_corner4",
+            ],
         }

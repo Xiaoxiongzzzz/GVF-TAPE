@@ -53,7 +53,9 @@ def create_initialized_egl_device_display(device_id=0):
             if device_id == -1:
                 device_idx = device_inds[0]
             else:
-                assert device_id in device_inds, "specified device id is not made visible in environment variables."
+                assert (
+                    device_id in device_inds
+                ), "specified device id is not made visible in environment variables."
                 device_idx = device_id
         else:
             device_idx = int(selected_device)
@@ -64,7 +66,9 @@ def create_initialized_egl_device_display(device_id=0):
             )
     candidates = all_devices[device_idx : device_idx + 1]
     for device in candidates:
-        display = EGL.eglGetPlatformDisplayEXT(EGL.EGL_PLATFORM_DEVICE_EXT, device, None)
+        display = EGL.eglGetPlatformDisplayEXT(
+            EGL.EGL_PLATFORM_DEVICE_EXT, device, None
+        )
         if display != EGL.EGL_NO_DISPLAY and EGL.eglGetError() == EGL.EGL_SUCCESS:
             # `eglInitialize` may or may not raise an exception on failure depending
             # on how PyOpenGL is configured. We therefore catch a `GLError` and also
@@ -126,19 +130,25 @@ class EGLGLContext:
                     "required for creating a headless rendering context."
                 )
             atexit.register(EGL.eglTerminate, EGL_DISPLAY)
-        EGL.eglChooseConfig(EGL_DISPLAY, EGL_ATTRIBUTES, ctypes.byref(config), config_size, num_configs)
+        EGL.eglChooseConfig(
+            EGL_DISPLAY, EGL_ATTRIBUTES, ctypes.byref(config), config_size, num_configs
+        )
         if num_configs.value < 1:
             raise RuntimeError(
                 "EGL failed to find a framebuffer configuration that matches the "
                 "desired attributes: {}".format(EGL_ATTRIBUTES)
             )
         EGL.eglBindAPI(EGL.EGL_OPENGL_API)
-        self._context = EGL.eglCreateContext(EGL_DISPLAY, config, EGL.EGL_NO_CONTEXT, None)
+        self._context = EGL.eglCreateContext(
+            EGL_DISPLAY, config, EGL.EGL_NO_CONTEXT, None
+        )
         if not self._context:
             raise RuntimeError("Cannot create an EGL context.")
 
     def make_current(self):
-        if not EGL.eglMakeCurrent(EGL_DISPLAY, EGL.EGL_NO_SURFACE, EGL.EGL_NO_SURFACE, self._context):
+        if not EGL.eglMakeCurrent(
+            EGL_DISPLAY, EGL.EGL_NO_SURFACE, EGL.EGL_NO_SURFACE, self._context
+        ):
             raise RuntimeError("Failed to make the EGL context current.")
 
     def free(self):
@@ -146,7 +156,12 @@ class EGLGLContext:
         if self._context:
             current_context = EGL.eglGetCurrentContext()
             if current_context and self._context.address == current_context.address:
-                EGL.eglMakeCurrent(EGL_DISPLAY, EGL.EGL_NO_SURFACE, EGL.EGL_NO_SURFACE, EGL.EGL_NO_CONTEXT)
+                EGL.eglMakeCurrent(
+                    EGL_DISPLAY,
+                    EGL.EGL_NO_SURFACE,
+                    EGL.EGL_NO_SURFACE,
+                    EGL.EGL_NO_CONTEXT,
+                )
             EGL.eglDestroyContext(EGL_DISPLAY, self._context)
             EGL.eglReleaseThread()
         self._context = None

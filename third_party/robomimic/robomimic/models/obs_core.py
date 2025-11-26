@@ -30,10 +30,13 @@ from robomimic.macros import VISUALIZE_RANDOMIZER
 Encoder Core Networks (Abstract class)
 ================================================
 """
+
+
 class EncoderCore(BaseNets.Module):
     """
     Abstract class used to categorize all cores used to encode observations
     """
+
     def __init__(self, input_shape):
         self.input_shape = input_shape
         super(EncoderCore, self).__init__()
@@ -58,11 +61,14 @@ class EncoderCore(BaseNets.Module):
 Visual Core Networks (Backbone + Pool)
 ================================================
 """
+
+
 class VisualCore(EncoderCore, BaseNets.ConvBase):
     """
     A network block that combines a visual backbone network with optional pooling
     and linear layers.
     """
+
     def __init__(
         self,
         input_shape,
@@ -97,7 +103,9 @@ class VisualCore(EncoderCore, BaseNets.ConvBase):
         backbone_kwargs["input_channel"] = input_shape[0]
 
         # extract only relevant kwargs for this specific backbone
-        backbone_kwargs = extract_class_init_kwargs_from_dict(cls=eval(backbone_class), dic=backbone_kwargs, copy=True)
+        backbone_kwargs = extract_class_init_kwargs_from_dict(
+            cls=eval(backbone_class), dic=backbone_kwargs, copy=True
+        )
 
         # visual backbone
         assert isinstance(backbone_class, str)
@@ -116,7 +124,9 @@ class VisualCore(EncoderCore, BaseNets.ConvBase):
                 pool_kwargs = dict()
             # extract only relevant kwargs for this specific backbone
             pool_kwargs["input_shape"] = feat_shape
-            pool_kwargs = extract_class_init_kwargs_from_dict(cls=eval(pool_class), dic=pool_kwargs, copy=True)
+            pool_kwargs = extract_class_init_kwargs_from_dict(
+                cls=eval(pool_class), dic=pool_kwargs, copy=True
+            )
             self.pool = eval(pool_class)(**pool_kwargs)
             assert isinstance(self.pool, BaseNets.Module)
 
@@ -140,11 +150,11 @@ class VisualCore(EncoderCore, BaseNets.ConvBase):
 
     def output_shape(self, input_shape):
         """
-        Function to compute output shape from inputs to this module. 
+        Function to compute output shape from inputs to this module.
 
         Args:
             input_shape (iterable of int): shape of input. Does not include batch dimension.
-                Some modules may not need this argument, if their output does not depend 
+                Some modules may not need this argument, if their output does not depend
                 on the size of the input, or if they assume fixed size input.
 
         Returns:
@@ -173,14 +183,18 @@ class VisualCore(EncoderCore, BaseNets.ConvBase):
 
     def __repr__(self):
         """Pretty print network."""
-        header = '{}'.format(str(self.__class__.__name__))
-        msg = ''
-        indent = ' ' * 2
+        header = "{}".format(str(self.__class__.__name__))
+        msg = ""
+        indent = " " * 2
         msg += textwrap.indent(
-            "\ninput_shape={}\noutput_shape={}".format(self.input_shape, self.output_shape(self.input_shape)), indent)
+            "\ninput_shape={}\noutput_shape={}".format(
+                self.input_shape, self.output_shape(self.input_shape)
+            ),
+            indent,
+        )
         msg += textwrap.indent("\nbackbone_net={}".format(self.backbone), indent)
         msg += textwrap.indent("\npool_net={}".format(self.pool), indent)
-        msg = header + '(' + msg + '\n)'
+        msg = header + "(" + msg + "\n)"
         return msg
 
 
@@ -189,11 +203,14 @@ class VisualCore(EncoderCore, BaseNets.ConvBase):
 Scan Core Networks (Conv1D Sequential + Pool)
 ================================================
 """
+
+
 class ScanCore(EncoderCore, BaseNets.ConvBase):
     """
     A network block that combines a Conv1D backbone network with optional pooling
     and linear layers.
     """
+
     def __init__(
         self,
         input_shape,
@@ -301,14 +318,18 @@ class ScanCore(EncoderCore, BaseNets.ConvBase):
 
     def __repr__(self):
         """Pretty print network."""
-        header = '{}'.format(str(self.__class__.__name__))
-        msg = ''
-        indent = ' ' * 2
+        header = "{}".format(str(self.__class__.__name__))
+        msg = ""
+        indent = " " * 2
         msg += textwrap.indent(
-            "\ninput_shape={}\noutput_shape={}".format(self.input_shape, self.output_shape(self.input_shape)), indent)
+            "\ninput_shape={}\noutput_shape={}".format(
+                self.input_shape, self.output_shape(self.input_shape)
+            ),
+            indent,
+        )
         msg += textwrap.indent("\nbackbone_net={}".format(self.backbone), indent)
         msg += textwrap.indent("\npool_net={}".format(self.pool), indent)
-        msg = header + '(' + msg + '\n)'
+        msg = header + "(" + msg + "\n)"
         return msg
 
 
@@ -317,6 +338,8 @@ class ScanCore(EncoderCore, BaseNets.ConvBase):
 Observation Randomizer Networks
 ================================================
 """
+
+
 class Randomizer(BaseNets.Module):
     """
     Base class for randomizer networks. Each randomizer should implement the @output_shape_in,
@@ -325,6 +348,7 @@ class Randomizer(BaseNets.Module):
     (usually processed by a @VisualCore instance). Note that the self.training property
     can be used to change the randomizer's behavior at train vs. test time.
     """
+
     def __init__(self):
         super(Randomizer, self).__init__()
 
@@ -390,7 +414,11 @@ class Randomizer(BaseNets.Module):
             randomized_inputs = self._forward_in(inputs=inputs)
             if VISUALIZE_RANDOMIZER:
                 num_samples_to_visualize = min(4, inputs.shape[0])
-                self._visualize(inputs, randomized_inputs, num_samples_to_visualize=num_samples_to_visualize)
+                self._visualize(
+                    inputs,
+                    randomized_inputs,
+                    num_samples_to_visualize=num_samples_to_visualize,
+                )
             return randomized_inputs
         else:
             return self._forward_in_eval(inputs)
@@ -431,7 +459,9 @@ class Randomizer(BaseNets.Module):
         return inputs
 
     @abc.abstractmethod
-    def _visualize(self, pre_random_input, randomized_input, num_samples_to_visualize=2):
+    def _visualize(
+        self, pre_random_input, randomized_input, num_samples_to_visualize=2
+    ):
         """
         Visualize the original input and the randomized input for _forward_in for debugging purposes.
         """
@@ -442,6 +472,7 @@ class CropRandomizer(Randomizer):
     """
     Randomly sample crops at input, and then average across crop features at output.
     """
+
     def __init__(
         self,
         input_shape,
@@ -461,7 +492,7 @@ class CropRandomizer(Randomizer):
         """
         super(CropRandomizer, self).__init__()
 
-        assert len(input_shape) == 3 # (C, H, W)
+        assert len(input_shape) == 3  # (C, H, W)
         assert crop_height < input_shape[1]
         assert crop_width < input_shape[2]
 
@@ -517,7 +548,7 @@ class CropRandomizer(Randomizer):
         Samples N random crops for each input in the batch, and then reshapes
         inputs to [B * N, ...].
         """
-        assert len(inputs.shape) >= 3 # must have at least (C, H, W) dimensions
+        assert len(inputs.shape) >= 3  # must have at least (C, H, W) dimensions
         out, _ = ObsUtils.sample_random_image_crops(
             images=inputs,
             crop_height=self.crop_height,
@@ -532,10 +563,17 @@ class CropRandomizer(Randomizer):
         """
         Do center crops during eval
         """
-        assert len(inputs.shape) >= 3 # must have at least (C, H, W) dimensions
-        inputs = inputs.permute(*range(inputs.dim()-3), inputs.dim()-2, inputs.dim()-1, inputs.dim()-3)
+        assert len(inputs.shape) >= 3  # must have at least (C, H, W) dimensions
+        inputs = inputs.permute(
+            *range(inputs.dim() - 3),
+            inputs.dim() - 2,
+            inputs.dim() - 1,
+            inputs.dim() - 3,
+        )
         out = ObsUtils.center_crop(inputs, self.crop_height, self.crop_width)
-        out = out.permute(*range(out.dim()-3), out.dim()-1, out.dim()-3, out.dim()-2)
+        out = out.permute(
+            *range(out.dim() - 3), out.dim() - 1, out.dim() - 3, out.dim() - 2
+        )
         return out
 
     def _forward_out(self, inputs):
@@ -544,37 +582,47 @@ class CropRandomizer(Randomizer):
         to result in shape [B, ...] to make sure the network output is consistent with
         what would have happened if there were no randomization.
         """
-        batch_size = (inputs.shape[0] // self.num_crops)
-        out = TensorUtils.reshape_dimensions(inputs, begin_axis=0, end_axis=0,
-                                             target_dims=(batch_size, self.num_crops))
+        batch_size = inputs.shape[0] // self.num_crops
+        out = TensorUtils.reshape_dimensions(
+            inputs, begin_axis=0, end_axis=0, target_dims=(batch_size, self.num_crops)
+        )
         return out.mean(dim=1)
 
-    def _visualize(self, pre_random_input, randomized_input, num_samples_to_visualize=2):
+    def _visualize(
+        self, pre_random_input, randomized_input, num_samples_to_visualize=2
+    ):
         batch_size = pre_random_input.shape[0]
-        random_sample_inds = torch.randint(0, batch_size, size=(num_samples_to_visualize,))
+        random_sample_inds = torch.randint(
+            0, batch_size, size=(num_samples_to_visualize,)
+        )
         pre_random_input_np = TensorUtils.to_numpy(pre_random_input)[random_sample_inds]
         randomized_input = TensorUtils.reshape_dimensions(
             randomized_input,
             begin_axis=0,
             end_axis=0,
-            target_dims=(batch_size, self.num_crops)
+            target_dims=(batch_size, self.num_crops),
         )  # [B * N, ...] -> [B, N, ...]
         randomized_input_np = TensorUtils.to_numpy(randomized_input[random_sample_inds])
 
-        pre_random_input_np = pre_random_input_np.transpose((0, 2, 3, 1))  # [B, C, H, W] -> [B, H, W, C]
-        randomized_input_np = randomized_input_np.transpose((0, 1, 3, 4, 2))  # [B, N, C, H, W] -> [B, N, H, W, C]
+        pre_random_input_np = pre_random_input_np.transpose(
+            (0, 2, 3, 1)
+        )  # [B, C, H, W] -> [B, H, W, C]
+        randomized_input_np = randomized_input_np.transpose(
+            (0, 1, 3, 4, 2)
+        )  # [B, N, C, H, W] -> [B, N, H, W, C]
 
         visualize_image_randomizer(
             pre_random_input_np,
             randomized_input_np,
-            randomizer_name='{}'.format(str(self.__class__.__name__))
+            randomizer_name="{}".format(str(self.__class__.__name__)),
         )
 
     def __repr__(self):
         """Pretty print network."""
-        header = '{}'.format(str(self.__class__.__name__))
+        header = "{}".format(str(self.__class__.__name__))
         msg = header + "(input_shape={}, crop_size=[{}, {}], num_crops={})".format(
-            self.input_shape, self.crop_height, self.crop_width, self.num_crops)
+            self.input_shape, self.crop_height, self.crop_width, self.num_crops
+        )
         return msg
 
 
@@ -582,6 +630,7 @@ class ColorRandomizer(Randomizer):
     """
     Randomly sample color jitter at input, and then average across color jtters at output.
     """
+
     def __init__(
         self,
         input_shape,
@@ -609,12 +658,24 @@ class ColorRandomizer(Randomizer):
         """
         super(ColorRandomizer, self).__init__()
 
-        assert len(input_shape) == 3 # (C, H, W)
+        assert len(input_shape) == 3  # (C, H, W)
 
         self.input_shape = input_shape
-        self.brightness = [max(0, 1 - brightness), 1 + brightness] if type(brightness) in {float, int} else brightness
-        self.contrast = [max(0, 1 - contrast), 1 + contrast] if type(contrast) in {float, int} else contrast
-        self.saturation = [max(0, 1 - saturation), 1 + saturation] if type(saturation) in {float, int} else saturation
+        self.brightness = (
+            [max(0, 1 - brightness), 1 + brightness]
+            if type(brightness) in {float, int}
+            else brightness
+        )
+        self.contrast = (
+            [max(0, 1 - contrast), 1 + contrast]
+            if type(contrast) in {float, int}
+            else contrast
+        )
+        self.saturation = (
+            [max(0, 1 - saturation), 1 + saturation]
+            if type(saturation) in {float, int}
+            else saturation
+        )
         self.hue = [-hue, hue] if type(hue) in {float, int} else hue
         self.num_samples = num_samples
 
@@ -635,15 +696,21 @@ class ColorRandomizer(Randomizer):
 
         if self.brightness is not None:
             brightness_factor = random.uniform(self.brightness[0], self.brightness[1])
-            transforms.append(Lambda(lambda img: TVF.adjust_brightness(img, brightness_factor)))
+            transforms.append(
+                Lambda(lambda img: TVF.adjust_brightness(img, brightness_factor))
+            )
 
         if self.contrast is not None:
             contrast_factor = random.uniform(self.contrast[0], self.contrast[1])
-            transforms.append(Lambda(lambda img: TVF.adjust_contrast(img, contrast_factor)))
+            transforms.append(
+                Lambda(lambda img: TVF.adjust_contrast(img, contrast_factor))
+            )
 
         if self.saturation is not None:
             saturation_factor = random.uniform(self.saturation[0], self.saturation[1])
-            transforms.append(Lambda(lambda img: TVF.adjust_saturation(img, saturation_factor)))
+            transforms.append(
+                Lambda(lambda img: TVF.adjust_saturation(img, saturation_factor))
+            )
 
         if self.hue is not None:
             hue_factor = random.uniform(self.hue[0], self.hue[1])
@@ -667,7 +734,11 @@ class ColorRandomizer(Randomizer):
                 each sub-set of samples along batch dimension, assumed to be the FIRST dimension in the inputted tensor
                 Note: This function will MULTIPLY the first dimension by N
         """
-        return Lambda(lambda x: torch.stack([self.get_transform()(x_) for x_ in x for _ in range(N)]))
+        return Lambda(
+            lambda x: torch.stack(
+                [self.get_transform()(x_) for x_ in x for _ in range(N)]
+            )
+        )
 
     def output_shape_in(self, input_shape=None):
         # outputs are same shape as inputs
@@ -684,7 +755,7 @@ class ColorRandomizer(Randomizer):
         Samples N random color jitters for each input in the batch, and then reshapes
         inputs to [B * N, ...].
         """
-        assert len(inputs.shape) >= 3 # must have at least (C, H, W) dimensions
+        assert len(inputs.shape) >= 3  # must have at least (C, H, W) dimensions
 
         # Make sure shape is exactly 4
         if len(inputs.shape) == 3:
@@ -701,37 +772,49 @@ class ColorRandomizer(Randomizer):
         to result in shape [B, ...] to make sure the network output is consistent with
         what would have happened if there were no randomization.
         """
-        batch_size = (inputs.shape[0] // self.num_samples)
-        out = TensorUtils.reshape_dimensions(inputs, begin_axis=0, end_axis=0,
-                                             target_dims=(batch_size, self.num_samples))
+        batch_size = inputs.shape[0] // self.num_samples
+        out = TensorUtils.reshape_dimensions(
+            inputs, begin_axis=0, end_axis=0, target_dims=(batch_size, self.num_samples)
+        )
         return out.mean(dim=1)
 
-    def _visualize(self, pre_random_input, randomized_input, num_samples_to_visualize=2):
+    def _visualize(
+        self, pre_random_input, randomized_input, num_samples_to_visualize=2
+    ):
         batch_size = pre_random_input.shape[0]
-        random_sample_inds = torch.randint(0, batch_size, size=(num_samples_to_visualize,))
+        random_sample_inds = torch.randint(
+            0, batch_size, size=(num_samples_to_visualize,)
+        )
         pre_random_input_np = TensorUtils.to_numpy(pre_random_input)[random_sample_inds]
         randomized_input = TensorUtils.reshape_dimensions(
             randomized_input,
             begin_axis=0,
             end_axis=0,
-            target_dims=(batch_size, self.num_samples)
+            target_dims=(batch_size, self.num_samples),
         )  # [B * N, ...] -> [B, N, ...]
         randomized_input_np = TensorUtils.to_numpy(randomized_input[random_sample_inds])
 
-        pre_random_input_np = pre_random_input_np.transpose((0, 2, 3, 1))  # [B, C, H, W] -> [B, H, W, C]
-        randomized_input_np = randomized_input_np.transpose((0, 1, 3, 4, 2))  # [B, N, C, H, W] -> [B, N, H, W, C]
+        pre_random_input_np = pre_random_input_np.transpose(
+            (0, 2, 3, 1)
+        )  # [B, C, H, W] -> [B, H, W, C]
+        randomized_input_np = randomized_input_np.transpose(
+            (0, 1, 3, 4, 2)
+        )  # [B, N, C, H, W] -> [B, N, H, W, C]
 
         visualize_image_randomizer(
             pre_random_input_np,
             randomized_input_np,
-            randomizer_name='{}'.format(str(self.__class__.__name__))
+            randomizer_name="{}".format(str(self.__class__.__name__)),
         )
 
     def __repr__(self):
         """Pretty print network."""
-        header = '{}'.format(str(self.__class__.__name__))
-        msg = header + f"(input_shape={self.input_shape}, brightness={self.brightness}, contrast={self.contrast}, " \
-                       f"saturation={self.saturation}, hue={self.hue}, num_samples={self.num_samples})"
+        header = "{}".format(str(self.__class__.__name__))
+        msg = (
+            header
+            + f"(input_shape={self.input_shape}, brightness={self.brightness}, contrast={self.contrast}, "
+            f"saturation={self.saturation}, hue={self.hue}, num_samples={self.num_samples})"
+        )
         return msg
 
 
@@ -739,6 +822,7 @@ class GaussianNoiseRandomizer(Randomizer):
     """
     Randomly sample gaussian noise at input, and then average across noises at output.
     """
+
     def __init__(
         self,
         input_shape,
@@ -781,7 +865,11 @@ class GaussianNoiseRandomizer(Randomizer):
         out = TensorUtils.repeat_by_expand_at(inputs, repeats=self.num_samples, dim=0)
 
         # Sample noise across all samples
-        out = torch.rand(size=out.shape).to(inputs.device) * self.noise_std + self.noise_mean + out
+        out = (
+            torch.rand(size=out.shape).to(inputs.device) * self.noise_std
+            + self.noise_mean
+            + out
+        )
 
         # Possibly clamp
         if self.limits is not None:
@@ -795,35 +883,47 @@ class GaussianNoiseRandomizer(Randomizer):
         to result in shape [B, ...] to make sure the network output is consistent with
         what would have happened if there were no randomization.
         """
-        batch_size = (inputs.shape[0] // self.num_samples)
-        out = TensorUtils.reshape_dimensions(inputs, begin_axis=0, end_axis=0,
-                                             target_dims=(batch_size, self.num_samples))
+        batch_size = inputs.shape[0] // self.num_samples
+        out = TensorUtils.reshape_dimensions(
+            inputs, begin_axis=0, end_axis=0, target_dims=(batch_size, self.num_samples)
+        )
         return out.mean(dim=1)
 
-    def _visualize(self, pre_random_input, randomized_input, num_samples_to_visualize=2):
+    def _visualize(
+        self, pre_random_input, randomized_input, num_samples_to_visualize=2
+    ):
         batch_size = pre_random_input.shape[0]
-        random_sample_inds = torch.randint(0, batch_size, size=(num_samples_to_visualize,))
+        random_sample_inds = torch.randint(
+            0, batch_size, size=(num_samples_to_visualize,)
+        )
         pre_random_input_np = TensorUtils.to_numpy(pre_random_input)[random_sample_inds]
         randomized_input = TensorUtils.reshape_dimensions(
             randomized_input,
             begin_axis=0,
             end_axis=0,
-            target_dims=(batch_size, self.num_samples)
+            target_dims=(batch_size, self.num_samples),
         )  # [B * N, ...] -> [B, N, ...]
         randomized_input_np = TensorUtils.to_numpy(randomized_input[random_sample_inds])
 
-        pre_random_input_np = pre_random_input_np.transpose((0, 2, 3, 1))  # [B, C, H, W] -> [B, H, W, C]
-        randomized_input_np = randomized_input_np.transpose((0, 1, 3, 4, 2))  # [B, N, C, H, W] -> [B, N, H, W, C]
+        pre_random_input_np = pre_random_input_np.transpose(
+            (0, 2, 3, 1)
+        )  # [B, C, H, W] -> [B, H, W, C]
+        randomized_input_np = randomized_input_np.transpose(
+            (0, 1, 3, 4, 2)
+        )  # [B, N, C, H, W] -> [B, N, H, W, C]
 
         visualize_image_randomizer(
             pre_random_input_np,
             randomized_input_np,
-            randomizer_name='{}'.format(str(self.__class__.__name__))
+            randomizer_name="{}".format(str(self.__class__.__name__)),
         )
 
     def __repr__(self):
         """Pretty print network."""
-        header = '{}'.format(str(self.__class__.__name__))
-        msg = header + f"(input_shape={self.input_shape}, noise_mean={self.noise_mean}, noise_std={self.noise_std}, " \
-                       f"limits={self.limits}, num_samples={self.num_samples})"
+        header = "{}".format(str(self.__class__.__name__))
+        msg = (
+            header
+            + f"(input_shape={self.input_shape}, noise_mean={self.noise_mean}, noise_std={self.noise_std}, "
+            f"limits={self.limits}, num_samples={self.num_samples})"
+        )
         return msg

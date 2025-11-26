@@ -60,6 +60,7 @@ Note that by default, there is no rendering. Rendering can be enabled by setting
 test script.
 
 """
+
 import argparse
 
 import numpy as np
@@ -70,7 +71,11 @@ from robosuite import load_controller_config
 
 # Arguments for this test script
 parser = argparse.ArgumentParser()
-parser.add_argument("--render", action="store_true", help="Whether to render this test or not for visual validation")
+parser.add_argument(
+    "--render",
+    action="store_true",
+    help="Whether to render this test or not for visual validation",
+)
 args = parser.parse_args()
 
 # Define the controllers to use (action_dim, num_test_steps, test_value)
@@ -119,7 +124,9 @@ def test_all_controllers():
         # get action range
         action_min, action_max = env.action_spec
         assert action_min.shape == action_max.shape
-        assert action_min.shape[0] == action_dim, "Expected {}, got {}".format(action_dim, action_min.shape[0])
+        assert action_min.shape[0] == action_dim, "Expected {}, got {}".format(
+            action_dim, action_min.shape[0]
+        )
 
         # Keep track of done variable to know when to break loop
         count = 0

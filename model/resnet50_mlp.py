@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torchvision
 
+
 class ResNet50MLP(nn.Module):
     def __init__(self, out_size=9, pretrain_resnet_dir=None):
         super(ResNet50MLP, self).__init__()
@@ -19,7 +20,7 @@ class ResNet50MLP(nn.Module):
             nn.ReLU(),
             nn.Linear(mlp_size, mlp_size),
             nn.ReLU(),
-            nn.Linear(mlp_size, out_size)  # Predicting two joint angles: q1 and q2
+            nn.Linear(mlp_size, out_size),  # Predicting two joint angles: q1 and q2
         )
 
     def forward(self, x):

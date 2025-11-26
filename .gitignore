@@ -1,4 +1,6 @@
 results/
+ckpts/
+outputs/
 wandb/
 src/
 *.pth

@@ -109,9 +109,15 @@ class HollowCylinderObject(CompositeObject):
         for i in range(n_make):
             # we start with the top-most box object and proceed clockwise (thus an offset of np.pi)
             geom_angle = np.pi - i * angle_step
-            geom_center = np.array([self.int_r * np.cos(geom_angle), self.int_r * np.sin(geom_angle), 0.0])
-            geom_quat = np.array([np.cos(geom_angle / 2.0), 0.0, 0.0, np.sin(geom_angle / 2.0)])
-            geom_size = np.array([self.unit_box_height, self.unit_box_width, self.unit_box_depth])
+            geom_center = np.array(
+                [self.int_r * np.cos(geom_angle), self.int_r * np.sin(geom_angle), 0.0]
+            )
+            geom_quat = np.array(
+                [np.cos(geom_angle / 2.0), 0.0, 0.0, np.sin(geom_angle / 2.0)]
+            )
+            geom_size = np.array(
+                [self.unit_box_height, self.unit_box_width, self.unit_box_depth]
+            )
 
             # note: set geom condim to 4 for consistency with round-nut.xml
             add_to_dict(
@@ -123,7 +129,9 @@ class HollowCylinderObject(CompositeObject):
                 geom_names="hc_{}".format(i),
                 # geom_rgbas=None if self.has_material else self.rgba,
                 geom_rgbas=self.rgba,
-                geom_materials=self.material.mat_attrib["name"] if self.has_material else None,
+                geom_materials=(
+                    self.material.mat_attrib["name"] if self.has_material else None
+                ),
                 geom_frictions=self.friction,
                 geom_condims=4,
             )

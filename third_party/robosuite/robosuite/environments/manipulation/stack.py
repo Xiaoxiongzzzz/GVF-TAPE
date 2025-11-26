@@ -270,7 +270,9 @@ class Stack(SingleArmEnv):
         r_reach = (1 - np.tanh(10.0 * dist)) * 0.25
 
         # grasping reward
-        grasping_cubeA = self._check_grasp(gripper=self.robots[0].gripper, object_geoms=self.cubeA)
+        grasping_cubeA = self._check_grasp(
+            gripper=self.robots[0].gripper, object_geoms=self.cubeA
+        )
         if grasping_cubeA:
             r_reach += 0.25
 
@@ -282,7 +284,9 @@ class Stack(SingleArmEnv):
 
         # Aligning is successful when cubeA is right above cubeB
         if cubeA_lifted:
-            horiz_dist = np.linalg.norm(np.array(cubeA_pos[:2]) - np.array(cubeB_pos[:2]))
+            horiz_dist = np.linalg.norm(
+                np.array(cubeA_pos[:2]) - np.array(cubeB_pos[:2])
+            )
             r_lift += 0.5 * (1 - np.tanh(horiz_dist))
 
         # stacking is successful when the block is lifted and the gripper is not holding the object
@@ -300,7 +304,9 @@ class Stack(SingleArmEnv):
         super()._load_model()
 
         # Adjust base pose accordingly
-        xpos = self.robots[0].robot_model.base_xpos_offset["table"](self.table_full_size[0])
+        xpos = self.robots[0].robot_model.base_xpos_offset["table"](
+            self.table_full_size[0]
+        )
         self.robots[0].robot_model.set_base_xpos(xpos)
 
         # load model for table top workspace
@@ -401,7 +407,10 @@ class Stack(SingleArmEnv):
 
             # Loop through all objects and reset their positions
             for obj_pos, obj_quat, obj in object_placements.values():
-                self.sim.data.set_joint_qpos(obj.joints[0], np.concatenate([np.array(obj_pos), np.array(obj_quat)]))
+                self.sim.data.set_joint_qpos(
+                    obj.joints[0],
+                    np.concatenate([np.array(obj_pos), np.array(obj_quat)]),
+                )
 
     def _setup_observables(self):
         """
@@ -425,7 +434,9 @@ class Stack(SingleArmEnv):
 
             @sensor(modality=modality)
             def cubeA_quat(obs_cache):
-                return convert_quat(np.array(self.sim.data.body_xquat[self.cubeA_body_id]), to="xyzw")
+                return convert_quat(
+                    np.array(self.sim.data.body_xquat[self.cubeA_body_id]), to="xyzw"
+                )
 
             @sensor(modality=modality)
             def cubeB_pos(obs_cache):
@@ -433,7 +444,9 @@ class Stack(SingleArmEnv):
 
             @sensor(modality=modality)
             def cubeB_quat(obs_cache):
-                return convert_quat(np.array(self.sim.data.body_xquat[self.cubeB_body_id]), to="xyzw")
+                return convert_quat(
+                    np.array(self.sim.data.body_xquat[self.cubeB_body_id]), to="xyzw"
+                )
 
             @sensor(modality=modality)
             def gripper_to_cubeA(obs_cache):
@@ -459,7 +472,15 @@ class Stack(SingleArmEnv):
                     else np.zeros(3)
                 )
 
-            sensors = [cubeA_pos, cubeA_quat, cubeB_pos, cubeB_quat, gripper_to_cubeA, gripper_to_cubeB, cubeA_to_cubeB]
+            sensors = [
+                cubeA_pos,
+                cubeA_quat,
+                cubeB_pos,
+                cubeB_quat,
+                gripper_to_cubeA,
+                gripper_to_cubeB,
+                cubeA_to_cubeB,
+            ]
             names = [s.__name__ for s in sensors]
 
             # Create observables
@@ -496,4 +517,6 @@ class Stack(SingleArmEnv):
 
         # Color the gripper visualization site according to its distance to the cube
         if vis_settings["grippers"]:
-            self._visualize_gripper_to_target(gripper=self.robots[0].gripper, target=self.cubeA)
+            self._visualize_gripper_to_target(
+                gripper=self.robots[0].gripper, target=self.cubeA
+            )

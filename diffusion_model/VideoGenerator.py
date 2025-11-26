@@ -1,8 +1,9 @@
-import torch 
+import torch
 from torch import nn
 from einops import rearrange
 from diffusion_model.UNets import UnetLatent, UnetMW
 from diffusion_model.RectifiedFlow import RectifiedFlow
+
 # from diffusers.models import AutoencoderKL
 from transformers import CLIPTextModel, CLIPTokenizer
 from diffusion_model.GoalDiffusion import GoalGaussianDiffusion
@@ -11,7 +12,16 @@ from torchvision import transforms
 
 
 class LatentVideoGenerator(nn.Module):
-    def __init__(self, model, vae, tokenizer, text_encoder, rectified_flow, device, size = (512, 512)):
+    def __init__(
+        self,
+        model,
+        vae,
+        tokenizer,
+        text_encoder,
+        rectified_flow,
+        device,
+        size=(512, 512),
+    ):
         super().__init__()
         self.device = device
         self.model = model
@@ -22,6 +32,7 @@ class LatentVideoGenerator(nn.Module):
         self.resize = transforms.Resize(size)
 
         self.f = 6
+
     def forward(self, batch_text, x_cond: torch.Tensor):
         """
         Input:
@@ -32,27 +43,39 @@ class LatentVideoGenerator(nn.Module):
         """
         B = x_cond.shape[0]
         x_cond = self.resize(x_cond)
-        x_cond = x_cond/255.
+        x_cond = x_cond / 255.0
         task_embed = self.encode_batch_text(batch_text)
-        x_cond_encode = self.vae.encode(x_cond).latent_dist.mean.mul_(self.vae.config.scaling_factor)
+        x_cond_encode = self.vae.encode(x_cond).latent_dist.mean.mul_(
+            self.vae.config.scaling_factor
+        )
         h, w = x_cond_encode.shape[2], x_cond_encode.shape[3]
 
-        noise = torch.randn((B, (4*self.f), h, w), device = self.device)
+        noise = torch.randn((B, (4 * self.f), h, w), device=self.device)
         x = self.rectified_flow.sample(self.model, noise, x_cond_encode, task_embed)
         x = rearrange(x, "b (f c) h w -> (b f) c h w", f=self.f)
-        x = self.vae.decode(x.mul_(1/self.vae.config.scaling_factor)).sample
+        x = self.vae.decode(x.mul_(1 / self.vae.config.scaling_factor)).sample
         x = rearrange(x, "(b f) c h w -> b (f c) h w", f=self.f)
 
         return x
+
     def encode_batch_text(self, batch_text):
-        
-        batch_text_ids = self.tokenizer(batch_text, return_tensors = 'pt', padding = True, truncation = True, max_length = 128).to(self.device)
+
+        batch_text_ids = self.tokenizer(
+            batch_text,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            max_length=128,
+        ).to(self.device)
         batch_text_embed = self.text_encoder(**batch_text_ids).last_hidden_state
 
         return batch_text_embed
 
+
 class PixelVideoGenerator(nn.Module):
-    def __init__(self, model, tokenizer, text_encoder, rectified_flow, device, depth=False):
+    def __init__(
+        self, model, tokenizer, text_encoder, rectified_flow, device, depth=False
+    ):
         super().__init__()
         self.device = device
         self.model = model
@@ -62,6 +85,7 @@ class PixelVideoGenerator(nn.Module):
         self.depth = depth
         self.channel = 3 if not depth else 4
         self.f = 6
+
     def forward(self, batch_text_or_embed, x_cond: torch.Tensor):
         """
         Input:
@@ -71,8 +95,8 @@ class PixelVideoGenerator(nn.Module):
             x: shape = [b, (f, c), h, w]
         """
         B = x_cond.shape[0]
-        x_cond = x_cond/255.
-        
+        x_cond = x_cond / 255.0
+
         # Handle different types of input
         if isinstance(batch_text_or_embed, (str, list)):
             # If input is text, encode it
@@ -84,24 +108,36 @@ class PixelVideoGenerator(nn.Module):
                 # Ensure the embedding is on the correct device
                 task_embed = task_embed.to(self.device)
             else:
-                raise ValueError("Text embedding should be a 3D tensor of shape [batch_size, n, embed_dim]")
+                raise ValueError(
+                    "Text embedding should be a 3D tensor of shape [batch_size, n, embed_dim]"
+                )
 
         h, w = x_cond.shape[2], x_cond.shape[3]
-        noise = torch.randn((B, (self.channel*self.f), h, w), device=self.device)
+        noise = torch.randn((B, (self.channel * self.f), h, w), device=self.device)
         x = self.rectified_flow.sample(self.model, noise, x_cond, task_embed)
 
         return x
+
     def encode_batch_text(self, batch_text):
-        
-        batch_text_ids = self.tokenizer(batch_text, return_tensors = 'pt', padding = True, truncation = True, max_length = 128).to(self.device)
+
+        batch_text_ids = self.tokenizer(
+            batch_text,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            max_length=128,
+        ).to(self.device)
         batch_text_embed = self.text_encoder(**batch_text_ids).last_hidden_state
 
         return batch_text_embed
 
-def prepare_video_generator(unet_path, device, sample_timestep=10, latent=False, depth=False):
+
+def prepare_video_generator(
+    unet_path, device, sample_timestep=10, latent=False, depth=False
+):
     print(f"Using GPU: {device}")
     # torch.cuda.empty_cache()
-    unet = UnetLatent().to(device) if latent else UnetMW(depth).to(device) 
+    unet = UnetLatent().to(device) if latent else UnetMW(depth).to(device)
     # torch.cuda.empty_cache()
     unet.load_state_dict(torch.load(unet_path)["model"])
     # torch.cuda.empty_cache()
@@ -121,11 +157,16 @@ def prepare_video_generator(unet_path, device, sample_timestep=10, latent=False,
     if latent:
         vae = AutoencoderKL.from_pretrained("stabilityai/sdxl-vae").to(device).eval()
         vae.requires_grad_(False)
-        video_generator = LatentVideoGenerator(unet, vae, tokenizer, text_encoder, rectified_flow, device)
+        video_generator = LatentVideoGenerator(
+            unet, vae, tokenizer, text_encoder, rectified_flow, device
+        )
     else:
-        video_generator = PixelVideoGenerator(unet, tokenizer, text_encoder, rectified_flow, device, depth)
+        video_generator = PixelVideoGenerator(
+            unet, tokenizer, text_encoder, rectified_flow, device, depth
+        )
 
     return video_generator
+
 
 class DiffusionVideoGenerator(nn.Module):
     def __init__(self, diffusion_model, tokenizer, text_encoder, device):
@@ -136,41 +177,53 @@ class DiffusionVideoGenerator(nn.Module):
         self.device = device
 
         self.f = 6
+
     def forward(self, batch_text, x_cond):
-        '''
+        """
         Input:
             batch_text: str or list of str
             x_cond: shape = [b, c, h, w]
         Output:
             x: shape = [b, (f, c), h, w]
-        '''
+        """
         B = x_cond.shape[0]
-        x_cond = x_cond/255.
+        x_cond = x_cond / 255.0
         task_embed = self.encode_batch_text(batch_text)
-        x = self.diffusion_model.sample(x_cond, task_embed, batch_size = B)
+        x = self.diffusion_model.sample(x_cond, task_embed, batch_size=B)
 
         return x
 
     def encode_batch_text(self, batch_text):
-        
-        batch_text_ids = self.tokenizer(batch_text, return_tensors = 'pt', padding = True, truncation = True, max_length = 128).to(self.device)
+
+        batch_text_ids = self.tokenizer(
+            batch_text,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            max_length=128,
+        ).to(self.device)
         batch_text_embed = self.text_encoder(**batch_text_ids).last_hidden_state
 
         return batch_text_embed
-    
-def prepare_diffusion_video_generator(diffusion_model_path, device, sample_timestep=10, image_size=(128, 128)):
-    diffusion_model = EMA(GoalGaussianDiffusion(
-        channels=3*(7-1),
-        model=UnetMW(),
-        image_size=image_size,
-        timesteps=100,
-        sampling_timesteps=sample_timestep,
-        loss_type="l2",
-        objective="pred_v",
-        beta_schedule="cosine",
-        min_snr_loss_weight=True,
-    ))
-    diffusion_model.load_state_dict(torch.load(diffusion_model_path)['ema'])
+
+
+def prepare_diffusion_video_generator(
+    diffusion_model_path, device, sample_timestep=10, image_size=(128, 128)
+):
+    diffusion_model = EMA(
+        GoalGaussianDiffusion(
+            channels=3 * (7 - 1),
+            model=UnetMW(),
+            image_size=image_size,
+            timesteps=100,
+            sampling_timesteps=sample_timestep,
+            loss_type="l2",
+            objective="pred_v",
+            beta_schedule="cosine",
+            min_snr_loss_weight=True,
+        )
+    )
+    diffusion_model.load_state_dict(torch.load(diffusion_model_path)["ema"])
     diffusion_model.eval().to(device)
 
     # Language Model
@@ -180,16 +233,18 @@ def prepare_diffusion_video_generator(diffusion_model_path, device, sample_times
     text_encoder.requires_grad_(False)
     text_encoder.eval()
 
-    diffusion_video_generator = DiffusionVideoGenerator(diffusion_model.ema_model,
-                                                    tokenizer, text_encoder, device)
+    diffusion_video_generator = DiffusionVideoGenerator(
+        diffusion_model.ema_model, tokenizer, text_encoder, device
+    )
 
     return diffusion_video_generator
+
 
 # # Test Code
 # if __name__ == "__main__":
 #     text = "open the drawer"
 #     x_cond = torch.randn(1, 3, 128, 128).to(torch.device("cuda"))
-#     video_generator = prepare_video_generator("/mnt/data0/xiaoxiong/single_view_goal_diffusion/results/RFlow_libero_goal_depth/ckpt/model_0.pt", 
+#     video_generator = prepare_video_generator("/mnt/data0/xiaoxiong/single_view_goal_diffusion/results/RFlow_libero_goal_depth/ckpt/model_0.pt",
 #                                                 device=torch.device("cuda"),
 #                                                 sample_timestep=10,
 #                                                 depth=True)

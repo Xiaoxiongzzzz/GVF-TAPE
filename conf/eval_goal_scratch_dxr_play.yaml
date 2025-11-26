@@ -1,11 +1,11 @@
 # Global settings
 use_seed: true  # Whether to use fixed seed
-seed: 2 # Global random seed for reproducibility, only used if use_seed is true
+seed: 0 # Global random seed for reproducibility, only used if use_seed is true
 
 # GPU settings
-# gpu_id: 3  # GPU for inference
-render_gpu_id: 5  # GPU for rendering
-num_processes: 4
+gpu_id: 0  # GPU for inference
+render_gpu_id: 0  # GPU for rendering
+num_processes: 3
 
 # Test settings
 num_test_pr_task: 20
@@ -16,9 +16,9 @@ pid_max_steps: 8  # maximum steps for PID control
 loop_sleep_time: 0.01  # sleep time for each loop
 
 # Model paths
-video_generator_path: "/data/zhangchuye/Data/ckpts/lb_goal/expert/rgbd/scratch/model_100000.pt"
+video_generator_path: "./ckpts/libero_goal/model_100000.pt"
 
-ik_model_path: "/data/zhangchuye/Data/ckpts/lb_goal/rand_exp/succes/depth_cross_rgb_DepthCrossRGBViTMLP_best.pth"
+ik_model_path: "./ckpts/libero_goal/depth_cross_rgb_goal_DepthCrossRGBViTMLP_best.pth"
 
 # PID Control parameters
 pid:
@@ -66,5 +66,5 @@ task:
 
 # Output settings
 output:
-  base_dir: "/data/zhangchuye/Data/results-SC/baseline"
+  base_dir: "./outputs"
   exp_name: "lb_goal_scratch_dxr_play"

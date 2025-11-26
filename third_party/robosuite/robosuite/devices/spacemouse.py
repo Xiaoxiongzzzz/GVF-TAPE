@@ -165,7 +165,9 @@ class SpaceMouse(Device):
         print_command("Left button (hold)", "close gripper")
         print_command("Move mouse laterally", "move arm horizontally in x-y plane")
         print_command("Move mouse vertically", "move arm vertically")
-        print_command("Twist mouse about an axis", "rotate arm about a corresponding axis")
+        print_command(
+            "Twist mouse about an axis", "rotate arm about a corresponding axis"
+        )
         print("")
 
     def _reset_internal_state(self):

@@ -4,6 +4,7 @@ from tqdm import tqdm
 import torch
 import os
 import h5py
+
 device = torch.device("cuda")
 pretrained_model = "openai/clip-vit-base-patch32"
 tokenizer = CLIPTokenizer.from_pretrained(pretrained_model)
@@ -27,7 +28,7 @@ for file_path in tqdm(file_path_list):
             return_tensors="pt",
         ).to(device)
         text_embed = text_encoder(**text_inputs)["pooler_output"]
-        
+
         for demo_name in data.keys():
             demo = data[demo_name]
             if "task_embed" in demo:

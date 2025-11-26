@@ -56,7 +56,10 @@ def load_object(
 
         component = nvisii.entity.create(
             name=geom_name,
-            mesh=nvisii.mesh.create_box(name=geom_name, size=nvisii.vec3(geom_size[0], geom_size[1], geom_size[2])),
+            mesh=nvisii.mesh.create_box(
+                name=geom_name,
+                size=nvisii.vec3(geom_size[0], geom_size[1], geom_size[2]),
+            ),
             transform=nvisii.transform.create(geom_name),
             material=nvisii.material.create(geom_name),
         )
@@ -65,7 +68,9 @@ def load_object(
 
         component = nvisii.entity.create(
             name=geom_name,
-            mesh=nvisii.mesh.create_capped_cylinder(name=geom_name, radius=geom_size[0], size=geom_size[1]),
+            mesh=nvisii.mesh.create_capped_cylinder(
+                name=geom_name, radius=geom_size[0], size=geom_size[1]
+            ),
             transform=nvisii.transform.create(geom_name),
             material=nvisii.material.create(geom_name),
         )
@@ -87,7 +92,9 @@ def load_object(
             file_path=filename,
             position=nvisii.vec3(geom_pos[0], geom_pos[1], geom_pos[2]),
             scale=(geom_scale[0], geom_scale[1], geom_scale[2]),
-            rotation=nvisii.quat(geom_quat[0], geom_quat[1], geom_quat[2], geom_quat[3]),
+            rotation=nvisii.quat(
+                geom_quat[0], geom_quat[1], geom_quat[2], geom_quat[3]
+            ),
         )
 
     entity_ids = []
@@ -98,14 +105,18 @@ def load_object(
         entity_ids.append(component.get_id())
 
     if geom_type in primitive_types:
-        component.get_transform().set_position(nvisii.vec3(float(geom_pos[0]), float(geom_pos[1]), float(geom_pos[2])))
+        component.get_transform().set_position(
+            nvisii.vec3(float(geom_pos[0]), float(geom_pos[1]), float(geom_pos[2]))
+        )
 
     if geom_tex_file is not None and geom_tex_name is not None and geom_type != "mesh":
 
         texture = nvisii.texture.get(geom_tex_name)
 
         if texture is None:
-            texture = nvisii.texture.create_from_file(name=geom_tex_name, path=geom_tex_file)
+            texture = nvisii.texture.create_from_file(
+                name=geom_tex_name, path=geom_tex_file
+            )
 
         component.get_material().set_base_color_texture(texture)
     else:
@@ -113,9 +124,13 @@ def load_object(
             if geom_rgba is not None:
                 if isinstance(component, nvisii.scene):
                     for entity in component.entities:
-                        entity.get_material().set_base_color(nvisii.vec3(geom_rgba[0], geom_rgba[1], geom_rgba[2]))
+                        entity.get_material().set_base_color(
+                            nvisii.vec3(geom_rgba[0], geom_rgba[1], geom_rgba[2])
+                        )
                 else:
-                    component.get_material().set_base_color(nvisii.vec3(geom_rgba[0], geom_rgba[1], geom_rgba[2]))
+                    component.get_material().set_base_color(
+                        nvisii.vec3(geom_rgba[0], geom_rgba[1], geom_rgba[2])
+                    )
             elif "hand_visual" in geom_name:
                 for entity in component.entities:
                     entity.get_material().set_base_color(nvisii.vec3(0.05, 0.05, 0.05))

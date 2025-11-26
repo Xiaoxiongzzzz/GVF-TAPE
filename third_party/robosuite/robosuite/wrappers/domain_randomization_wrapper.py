@@ -2,9 +2,15 @@
 This file implements a wrapper for facilitating domain randomization over
 robosuite environments.
 """
+
 import numpy as np
 
-from robosuite.utils.mjmod import CameraModder, DynamicsModder, LightingModder, TextureModder
+from robosuite.utils.mjmod import (
+    CameraModder,
+    DynamicsModder,
+    LightingModder,
+    TextureModder,
+)
 from robosuite.wrappers import Wrapper
 
 DEFAULT_COLOR_ARGS = {
@@ -13,7 +19,12 @@ DEFAULT_COLOR_ARGS = {
     "randomize_material": True,  # randomize material reflectance / shininess / specular
     "local_rgb_interpolation": 0.2,
     "local_material_interpolation": 0.3,
-    "texture_variations": ["rgb", "checker", "noise", "gradient"],  # all texture variation types
+    "texture_variations": [
+        "rgb",
+        "checker",
+        "noise",
+        "gradient",
+    ],  # all texture variation types
     "randomize_skybox": True,  # by default, randomize skybox too
 }
 
@@ -155,7 +166,9 @@ class DomainRandomizationWrapper(Wrapper):
 
         if self.randomize_color:
             self.tex_modder = TextureModder(
-                sim=self.env.sim, random_state=self.random_state, **self.color_randomization_args
+                sim=self.env.sim,
+                random_state=self.random_state,
+                **self.color_randomization_args,
             )
             self.modders.append(self.tex_modder)
 

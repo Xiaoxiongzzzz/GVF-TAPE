@@ -1,6 +1,7 @@
 """
 Gripper for Kinova's Jaco robot arm (has three fingers).
 """
+
 import numpy as np
 
 from robosuite.models.grippers.gripper_model import GripperModel
@@ -16,7 +17,9 @@ class JacoThreeFingerGripperBase(GripperModel):
     """
 
     def __init__(self, idn=0):
-        super().__init__(xml_path_completion("grippers/jaco_three_finger_gripper.xml"), idn=idn)
+        super().__init__(
+            xml_path_completion("grippers/jaco_three_finger_gripper.xml"), idn=idn
+        )
 
     def format_action(self, action):
         return action
@@ -66,7 +69,9 @@ class JacoThreeFingerGripper(JacoThreeFingerGripperBase):
             AssertionError: [Invalid action dimension size]
         """
         assert len(action) == self.dof
-        self.current_action = np.clip(self.current_action - self.speed * np.sign(action), -1.0, 1.0)
+        self.current_action = np.clip(
+            self.current_action - self.speed * np.sign(action), -1.0, 1.0
+        )
         return self.current_action
 
     @property
@@ -95,7 +100,9 @@ class JacoThreeFingerDexterousGripper(JacoThreeFingerGripperBase):
             AssertionError: [Invalid action dimension size]
         """
         assert len(action) == self.dof
-        self.current_action = np.clip(self.current_action - self.speed * np.sign(action), -1.0, 1.0)
+        self.current_action = np.clip(
+            self.current_action - self.speed * np.sign(action), -1.0, 1.0
+        )
         return self.current_action
 
     @property

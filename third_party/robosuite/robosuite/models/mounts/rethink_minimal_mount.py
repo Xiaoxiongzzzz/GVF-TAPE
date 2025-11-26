@@ -1,6 +1,7 @@
 """
 Rethink's Alternative Mount (Officially used on Baxter).
 """
+
 import numpy as np
 
 from robosuite.models.mounts.mount_model import MountModel
@@ -16,7 +17,9 @@ class RethinkMinimalMount(MountModel):
     """
 
     def __init__(self, idn=0):
-        super().__init__(xml_path_completion("mounts/rethink_minimal_mount.xml"), idn=idn)
+        super().__init__(
+            xml_path_completion("mounts/rethink_minimal_mount.xml"), idn=idn
+        )
 
     @property
     def top_offset(self):

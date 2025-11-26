@@ -249,7 +249,9 @@ class Lift(SingleArmEnv):
             reward += reaching_reward
 
             # grasping reward
-            if self._check_grasp(gripper=self.robots[0].gripper, object_geoms=self.cube):
+            if self._check_grasp(
+                gripper=self.robots[0].gripper, object_geoms=self.cube
+            ):
                 reward += 0.25
 
         # Scale reward if requested
@@ -265,7 +267,9 @@ class Lift(SingleArmEnv):
         super()._load_model()
 
         # Adjust base pose accordingly
-        xpos = self.robots[0].robot_model.base_xpos_offset["table"](self.table_full_size[0])
+        xpos = self.robots[0].robot_model.base_xpos_offset["table"](
+            self.table_full_size[0]
+        )
         self.robots[0].robot_model.set_base_xpos(xpos)
 
         # load model for table top workspace
@@ -359,7 +363,9 @@ class Lift(SingleArmEnv):
 
             @sensor(modality=modality)
             def cube_quat(obs_cache):
-                return convert_quat(np.array(self.sim.data.body_xquat[self.cube_body_id]), to="xyzw")
+                return convert_quat(
+                    np.array(self.sim.data.body_xquat[self.cube_body_id]), to="xyzw"
+                )
 
             @sensor(modality=modality)
             def gripper_to_cube_pos(obs_cache):
@@ -396,7 +402,10 @@ class Lift(SingleArmEnv):
 
             # Loop through all objects and reset their positions
             for obj_pos, obj_quat, obj in object_placements.values():
-                self.sim.data.set_joint_qpos(obj.joints[0], np.concatenate([np.array(obj_pos), np.array(obj_quat)]))
+                self.sim.data.set_joint_qpos(
+                    obj.joints[0],
+                    np.concatenate([np.array(obj_pos), np.array(obj_quat)]),
+                )
 
     def visualize(self, vis_settings):
         """
@@ -412,7 +421,9 @@ class Lift(SingleArmEnv):
 
         # Color the gripper visualization site according to its distance to the cube
         if vis_settings["grippers"]:
-            self._visualize_gripper_to_target(gripper=self.robots[0].gripper, target=self.cube)
+            self._visualize_gripper_to_target(
+                gripper=self.robots[0].gripper, target=self.cube
+            )
 
     def _check_success(self):
         """

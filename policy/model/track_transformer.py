@@ -7,10 +7,14 @@ from timm.models.vision_transformer import PatchEmbed
 from torch import nn
 
 from policy.utils.flow_utils import ImageUnNormalize, tracks_to_video
-from policy.utils.pos_embed_utils import get_1d_sincos_pos_embed, get_2d_sincos_pos_embed
+from policy.utils.pos_embed_utils import (
+    get_1d_sincos_pos_embed,
+    get_2d_sincos_pos_embed,
+)
 from policy.vilt_modules.language_modules import *
 from .track_patch_embed import TrackPatchEmbed
 from .transformer import Transformer
+
 
 class TrackTransformer(nn.Module):
     """
@@ -24,18 +28,21 @@ class TrackTransformer(nn.Module):
     ff_dropout: float, dropout for feedforward layers
     """
 
-    def __init__(self,
-                 transformer_cfg,
-                 track_cfg,
-                 vid_cfg,
-                 language_encoder_cfg,
-                 load_path=None):
+    def __init__(
+        self, transformer_cfg, track_cfg, vid_cfg, language_encoder_cfg, load_path=None
+    ):
         super().__init__()
         self.dim = dim = transformer_cfg.dim
         self.transformer = self._init_transformer(**transformer_cfg)
-        self.track_proj_encoder, self.track_decoder = self._init_track_modules(**track_cfg, dim=dim)
-        self.img_proj_encoder, self.img_decoder = self._init_video_modules(**vid_cfg, dim=dim)
-        self.language_encoder = self._init_language_encoder(output_size=dim, **language_encoder_cfg)
+        self.track_proj_encoder, self.track_decoder = self._init_track_modules(
+            **track_cfg, dim=dim
+        )
+        self.img_proj_encoder, self.img_decoder = self._init_video_modules(
+            **vid_cfg, dim=dim
+        )
+        self.language_encoder = self._init_language_encoder(
+            output_size=dim, **language_encoder_cfg
+        )
         self._init_weights(self.dim, self.num_img_patches)
 
         if load_path is not None:
@@ -49,7 +56,8 @@ class TrackTransformer(nn.Module):
             heads=heads,
             depth=depth,
             attn_dropout=attn_dropout,
-            ff_dropout=ff_dropout)
+            ff_dropout=ff_dropout,
+        )
 
         return self.transformer
 
@@ -63,7 +71,8 @@ class TrackTransformer(nn.Module):
             num_track_ids=num_track_ids,
             patch_size=patch_size,
             in_dim=2,
-            embed_dim=dim)
+            embed_dim=dim,
+        )
         self.num_track_patches = self.track_proj_encoder.num_patches
         self.track_decoder = nn.Linear(dim, 2 * patch_size, bias=True)
         self.num_track_ids = num_track_ids
@@ -71,7 +80,15 @@ class TrackTransformer(nn.Module):
 
         return self.track_proj_encoder, self.track_decoder
 
-    def _init_video_modules(self, dim, img_size, patch_size, frame_stack=1, img_mean=[.5, .5, .5], img_std=[.5, .5, .5]):
+    def _init_video_modules(
+        self,
+        dim,
+        img_size,
+        patch_size,
+        frame_stack=1,
+        img_mean=[0.5, 0.5, 0.5],
+        img_std=[0.5, 0.5, 0.5],
+    ):
         self.img_normalizer = T.Normalize(img_mean, img_std)
         self.img_unnormalizer = ImageUnNormalize(img_mean, img_std)
         if isinstance(img_size, int):
@@ -88,7 +105,9 @@ class TrackTransformer(nn.Module):
             embed_dim=dim,
         )
         self.num_img_patches = self.img_proj_encoder.num_patches
-        self.img_decoder = nn.Linear(dim, 3 * self.frame_stack * patch_size ** 2, bias=True)
+        self.img_decoder = nn.Linear(
+            dim, 3 * self.frame_stack * patch_size**2, bias=True
+        )
 
         return self.img_proj_encoder, self.img_decoder
 
@@ -101,20 +120,29 @@ class TrackTransformer(nn.Module):
         """
         num_track_t = self.num_track_ts // self.track_patch_size
 
-        self.track_embed = nn.Parameter(torch.randn(1, num_track_t, 1, dim), requires_grad=True)
-        self.img_embed = nn.Parameter(torch.randn(1, num_img_patches, dim), requires_grad=False)
+        self.track_embed = nn.Parameter(
+            torch.randn(1, num_track_t, 1, dim), requires_grad=True
+        )
+        self.img_embed = nn.Parameter(
+            torch.randn(1, num_img_patches, dim), requires_grad=False
+        )
         self.mask_token = nn.Parameter(torch.randn(1, 1, dim))
 
         track_embed = get_1d_sincos_pos_embed(dim, num_track_t)
-        track_embed = rearrange(track_embed, 't d -> () t () d')
+        track_embed = rearrange(track_embed, "t d -> () t () d")
         self.track_embed.data.copy_(torch.from_numpy(track_embed))
 
-        num_patches_h, num_patches_w = self.img_size[0] // self.patch_size, self.img_size[1] // self.patch_size
+        num_patches_h, num_patches_w = (
+            self.img_size[0] // self.patch_size,
+            self.img_size[1] // self.patch_size,
+        )
         img_embed = get_2d_sincos_pos_embed(dim, (num_patches_h, num_patches_w))
-        img_embed = rearrange(img_embed, 'n d -> () n d')
+        img_embed = rearrange(img_embed, "n d -> () n d")
         self.img_embed.data.copy_(torch.from_numpy(img_embed))
 
-        print(f"num_track_patches: {self.num_track_patches}, num_img_patches: {num_img_patches}, total: {self.num_track_patches + num_img_patches}")
+        print(
+            f"num_track_patches: {self.num_track_patches}, num_img_patches: {num_img_patches}, total: {self.num_track_patches + num_img_patches}"
+        )
 
     def _preprocess_track(self, track):
         return track
@@ -125,8 +153,8 @@ class TrackTransformer(nn.Module):
     def _preprocess_vid(self, vid):
         assert torch.max(vid) >= 2
 
-        vid = vid[:, -self.frame_stack:]
-        vid = self.img_normalizer(vid / 255.)
+        vid = vid[:, -self.frame_stack :]
+        vid = self.img_normalizer(vid / 255.0)
         return vid
 
     def _encode_track(self, track):
@@ -134,11 +162,13 @@ class TrackTransformer(nn.Module):
         track: (b, t, n, 2)
         """
         b, t, n, _ = track.shape
-        track = self._mask_track_as_first(track)  # b, t, n, d. track embedding is 1, t, 1, d
+        track = self._mask_track_as_first(
+            track
+        )  # b, t, n, d. track embedding is 1, t, 1, d
         track = self.track_proj_encoder(track)
 
         track = track + self.track_embed
-        track = rearrange(track, 'b t n d -> b (t n) d')
+        track = rearrange(track, "b t n d -> b (t n) d")
         return track
 
     def _encode_video(self, vid, p):
@@ -166,7 +196,7 @@ class TrackTransformer(nn.Module):
         """
         mask out all frames to have the same token as the first frame
         """
-        mask_track = track.clone() # b, t, n, d
+        mask_track = track.clone()  # b, t, n, d
         mask_track[:, 1:] = track[:, [0]]
         return mask_track
 
@@ -176,22 +206,32 @@ class TrackTransformer(nn.Module):
         vid: (b, t, c, h, w), which means the past time step t0 - t -> t0
         task_emb, (b, emb_size)
         """
-        assert torch.max(vid) <=1.
+        assert torch.max(vid) <= 1.0
         B, T, _, _ = track.shape
         patches = self._encode_video(vid, p_img)  # (b, n_image, d)
         enc_track = self._encode_track(track)
 
         text_encoded = self.language_encoder(task_emb)  # (b, c)
-        text_encoded = rearrange(text_encoded, 'b c -> b 1 c')
+        text_encoded = rearrange(text_encoded, "b c -> b 1 c")
 
         x = torch.cat([enc_track, patches, text_encoded], dim=1)
         x = self.transformer(x)
 
-        rec_track, rec_patches = x[:, :self.num_track_patches], x[:, self.num_track_patches:-1]
-        rec_patches = self.img_decoder(rec_patches)  # (b, n_image, 3 * t * patch_size ** 2)
+        rec_track, rec_patches = (
+            x[:, : self.num_track_patches],
+            x[:, self.num_track_patches : -1],
+        )
+        rec_patches = self.img_decoder(
+            rec_patches
+        )  # (b, n_image, 3 * t * patch_size ** 2)
         rec_track = self.track_decoder(rec_track)  # (b, (t n), 2 * patch_size)
         num_track_h = self.num_track_ts // self.track_patch_size
-        rec_track = rearrange(rec_track, 'b (t n) (p c) -> b (t p) n c', p=self.track_patch_size, t=num_track_h)
+        rec_track = rearrange(
+            rec_track,
+            "b (t n) (p c) -> b (t p) n c",
+            p=self.track_patch_size,
+            t=num_track_h,
+        )
 
         return rec_track, rec_patches
 
@@ -207,15 +247,17 @@ class TrackTransformer(nn.Module):
         vid = self._preprocess_vid(vid)
         return self.forward(vid, track, task_emb, p_img)
 
-    def forward_loss(self,
-                     vid,
-                     track,
-                     task_emb,
-                     lbd_track,
-                     lbd_img,
-                     p_img,
-                     return_outs=False,
-                     vis=None):
+    def forward_loss(
+        self,
+        vid,
+        track,
+        task_emb,
+        lbd_track,
+        lbd_img,
+        p_img,
+        return_outs=False,
+        vis=None,
+    ):
         """
         track: (b, tl, n, 2), which means current time step t0 -> t0 + tl
         vid: (b, t, c, h, w), which means the past time step t0 - t -> t0
@@ -231,7 +273,7 @@ class TrackTransformer(nn.Module):
         vis = self._preprocess_vis(vis)
 
         rec_track, rec_patches = self.forward(vid, track, task_emb, p_img)
-        vis[vis == 0] = .1
+        vis[vis == 0] = 0.1
         vis = repeat(vis, "b tl n -> b tl n c", c=2)
 
         track_loss = torch.mean((rec_track - track) ** 2 * vis)
@@ -269,10 +311,12 @@ class TrackTransformer(nn.Module):
         rec_image = self._unpatchify(rec_patches)
 
         # place them side by side
-        combined_image = torch.cat([vid[:, -1], rec_image[:, -1]], dim=-1)  # only visualize the current frame
+        combined_image = torch.cat(
+            [vid[:, -1], rec_image[:, -1]], dim=-1
+        )  # only visualize the current frame
         combined_image = self.img_unnormalizer(combined_image) * 255
         combined_image = torch.clamp(combined_image, 0, 255)
-        combined_image = rearrange(combined_image, '1 c h w -> h w c')
+        combined_image = rearrange(combined_image, "1 c h w -> h w c")
 
         track = track.clone()
         rec_track = rec_track.clone()
@@ -283,7 +327,7 @@ class TrackTransformer(nn.Module):
         combined_track_vid = torch.cat([track_vid, rec_track_vid], dim=-1)
 
         _vid = torch.cat([_vid, _vid], dim=-1)
-        combined_track_vid = _vid * .25 + combined_track_vid * .75
+        combined_track_vid = _vid * 0.25 + combined_track_vid * 0.75
 
         ret_dict = {
             "loss": loss.sum().item(),
@@ -321,7 +365,16 @@ class TrackTransformer(nn.Module):
         w = self.img_size[1] // p
         assert h * w == x.shape[1]
 
-        x = rearrange(x, "n (h w) (p q t c) -> n h w p q t c", h=h, w=w, p=p, q=p, t=self.frame_stack, c=3)
+        x = rearrange(
+            x,
+            "n (h w) (p q t c) -> n h w p q t c",
+            h=h,
+            w=w,
+            p=p,
+            q=p,
+            t=self.frame_stack,
+            c=3,
+        )
         x = rearrange(x, "n h w p q t c -> n t c h p w q")
         imgs = rearrange(x, "n t c h p w q -> n t c (h p) (w q)")
         return imgs

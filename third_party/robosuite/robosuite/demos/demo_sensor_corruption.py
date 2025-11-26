@@ -19,28 +19,76 @@ import numpy as np
 import robosuite as suite
 from robosuite import load_controller_config
 from robosuite.utils.input_utils import input2action
-from robosuite.utils.observables import Observable, create_gaussian_noise_corrupter, create_uniform_sampled_delayer
+from robosuite.utils.observables import (
+    Observable,
+    create_gaussian_noise_corrupter,
+    create_uniform_sampled_delayer,
+)
 from robosuite.wrappers import VisualizationWrapper
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--environment", type=str, default="Lift")
-    parser.add_argument("--robots", nargs="+", type=str, default="Panda", help="Which robot(s) to use in the env")
     parser.add_argument(
-        "--config", type=str, default="single-arm-opposed", help="Specified environment configuration if necessary"
+        "--robots",
+        nargs="+",
+        type=str,
+        default="Panda",
+        help="Which robot(s) to use in the env",
     )
-    parser.add_argument("--arm", type=str, default="right", help="Which arm to control (eg bimanual) 'right' or 'left'")
-    parser.add_argument("--switch-on-grasp", action="store_true", help="Switch gripper control on gripper action")
     parser.add_argument(
-        "--toggle-corruption-on-grasp", action="store_true", help="Toggle corruption ON / OFF on gripper action"
+        "--config",
+        type=str,
+        default="single-arm-opposed",
+        help="Specified environment configuration if necessary",
     )
-    parser.add_argument("--controller", type=str, default="osc", help="Choice of controller. Can be 'ik' or 'osc'")
+    parser.add_argument(
+        "--arm",
+        type=str,
+        default="right",
+        help="Which arm to control (eg bimanual) 'right' or 'left'",
+    )
+    parser.add_argument(
+        "--switch-on-grasp",
+        action="store_true",
+        help="Switch gripper control on gripper action",
+    )
+    parser.add_argument(
+        "--toggle-corruption-on-grasp",
+        action="store_true",
+        help="Toggle corruption ON / OFF on gripper action",
+    )
+    parser.add_argument(
+        "--controller",
+        type=str,
+        default="osc",
+        help="Choice of controller. Can be 'ik' or 'osc'",
+    )
     parser.add_argument("--device", type=str, default="keyboard")
-    parser.add_argument("--pos-sensitivity", type=float, default=1.0, help="How much to scale position user inputs")
-    parser.add_argument("--rot-sensitivity", type=float, default=1.0, help="How much to scale rotation user inputs")
-    parser.add_argument("--delay", type=float, default=0.04, help="average delay to use (sec)")
-    parser.add_argument("--corruption", type=float, default=20.0, help="Scale of corruption to use (std dev)")
-    parser.add_argument("--camera", type=str, default="agentview", help="Name of camera to render")
+    parser.add_argument(
+        "--pos-sensitivity",
+        type=float,
+        default=1.0,
+        help="How much to scale position user inputs",
+    )
+    parser.add_argument(
+        "--rot-sensitivity",
+        type=float,
+        default=1.0,
+        help="How much to scale rotation user inputs",
+    )
+    parser.add_argument(
+        "--delay", type=float, default=0.04, help="average delay to use (sec)"
+    )
+    parser.add_argument(
+        "--corruption",
+        type=float,
+        default=20.0,
+        help="Scale of corruption to use (std dev)",
+    )
+    parser.add_argument(
+        "--camera", type=str, default="agentview", help="Name of camera to render"
+    )
     parser.add_argument("--width", type=int, default=512)
     parser.add_argument("--height", type=int, default=384)
     args = parser.parse_args()
@@ -104,8 +152,12 @@ if __name__ == "__main__":
     # Add image corruption and delay
     image_sampling_rate = 10.0
     image_obs_name = f"{args.camera}_image"
-    image_corrupter = create_gaussian_noise_corrupter(mean=0.0, std=args.corruption, low=0, high=255)
-    image_delayer = create_uniform_sampled_delayer(min_delay=max(0, args.delay - 0.025), max_delay=args.delay + 0.025)
+    image_corrupter = create_gaussian_noise_corrupter(
+        mean=0.0, std=args.corruption, low=0, high=255
+    )
+    image_delayer = create_uniform_sampled_delayer(
+        min_delay=max(0, args.delay - 0.025), max_delay=args.delay + 0.025
+    )
     image_modifiers = [image_corrupter, image_delayer, image_sampling_rate]
 
     # Initialize settings
@@ -122,7 +174,9 @@ if __name__ == "__main__":
     proprio_obs_name = f"{env.robots[0].robot_model.naming_prefix}joint_pos"
     joint_limits = env.sim.model.jnt_range[env.robots[0]._ref_joint_indexes]
     joint_range = joint_limits[:, 1] - joint_limits[:, 0]
-    proprio_corrupter = create_gaussian_noise_corrupter(mean=0.0, std=joint_range / 50.0)
+    proprio_corrupter = create_gaussian_noise_corrupter(
+        mean=0.0, std=joint_range / 50.0
+    )
     curr_proprio_delay = 0.0
     tmp_delayer = create_uniform_sampled_delayer(
         min_delay=max(0, (args.delay - 0.025) / 2), max_delay=(args.delay + 0.025) / 2
@@ -156,7 +210,9 @@ if __name__ == "__main__":
     env.add_observable(observable)
 
     # We also need to set the normal joint pos observable to be active (not active by default)
-    env.modify_observable(observable_name=proprio_obs_name, attribute="active", modifier=True)
+    env.modify_observable(
+        observable_name=proprio_obs_name, attribute="active", modifier=True
+    )
 
     # Initialize settings
     modify_obs(obs_name=proprio_obs_name, attrs=attributes, mods=proprio_modifiers)
@@ -178,13 +234,19 @@ if __name__ == "__main__":
     if args.device == "keyboard":
         from robosuite.devices import Keyboard
 
-        device = Keyboard(pos_sensitivity=args.pos_sensitivity, rot_sensitivity=args.rot_sensitivity)
+        device = Keyboard(
+            pos_sensitivity=args.pos_sensitivity, rot_sensitivity=args.rot_sensitivity
+        )
     elif args.device == "spacemouse":
         from robosuite.devices import SpaceMouse
 
-        device = SpaceMouse(pos_sensitivity=args.pos_sensitivity, rot_sensitivity=args.rot_sensitivity)
+        device = SpaceMouse(
+            pos_sensitivity=args.pos_sensitivity, rot_sensitivity=args.rot_sensitivity
+        )
     else:
-        raise Exception("Invalid device choice: choose either 'keyboard' or 'spacemouse'.")
+        raise Exception(
+            "Invalid device choice: choose either 'keyboard' or 'spacemouse'."
+        )
 
     while True:
         # Reset the environment
@@ -201,11 +263,18 @@ if __name__ == "__main__":
 
         while True:
             # Set active robot
-            active_robot = env.robots[0] if args.config == "bimanual" else env.robots[args.arm == "left"]
+            active_robot = (
+                env.robots[0]
+                if args.config == "bimanual"
+                else env.robots[args.arm == "left"]
+            )
 
             # Get the newest action
             action, grasp = input2action(
-                device=device, robot=active_robot, active_arm=args.arm, env_configuration=args.config
+                device=device,
+                robot=active_robot,
+                active_arm=args.arm,
+                env_configuration=args.config,
             )
 
             # If action is none, then this a reset so we should break
@@ -221,7 +290,11 @@ if __name__ == "__main__":
                     # Toggle corruption and update observable
                     corruption_mode = 1 - corruption_mode
                     for obs_name, settings in obs_settings.items():
-                        modify_obs(obs_name=obs_name, attrs=settings["attrs"], mods=settings["mods"]())
+                        modify_obs(
+                            obs_name=obs_name,
+                            attrs=settings["attrs"],
+                            mods=settings["mods"](),
+                        )
             # Update last grasp
             last_grasp = grasp
 

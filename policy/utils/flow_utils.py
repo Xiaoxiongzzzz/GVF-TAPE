@@ -38,7 +38,9 @@ def get_track_displacement(tracks):
     return disp_tracks
 
 
-def sample_grid(n, device="cuda", dtype=torch.float32, left=(0.1, 0.1), right=(0.9, 0.9)):
+def sample_grid(
+    n, device="cuda", dtype=torch.float32, left=(0.1, 0.1), right=(0.9, 0.9)
+):
     # sample nxn points as a grid
     u = torch.linspace(left[0], right[0], n, device=device, dtype=dtype)
     v = torch.linspace(left[1], right[1], n, device=device, dtype=dtype)
@@ -49,7 +51,11 @@ def sample_grid(n, device="cuda", dtype=torch.float32, left=(0.1, 0.1), right=(0
     return points
 
 
-def sample_double_grid(n, device="cuda", dtype=torch.float32,):
+def sample_double_grid(
+    n,
+    device="cuda",
+    dtype=torch.float32,
+):
     points1 = sample_grid(n, device, dtype, left=(0.05, 0.05), right=(0.85, 0.85))
     points2 = sample_grid(n, device, dtype, left=(0.15, 0.15), right=(0.95, 0.95))
     points = torch.cat([points1, points2], dim=0)
@@ -70,14 +76,18 @@ def sample_tracks_nearest_to_grids(tracks, vis, num_samples):
     reference_grid_points = sample_double_grid(n=4, device="cpu")  # (32, 2)
 
     first_points = tracks[0]  # (n, 2)
-    dist = torch.norm(first_points[:, None, :] - reference_grid_points[None, :, :], dim=-1)  # (n, 32)
+    dist = torch.norm(
+        first_points[:, None, :] - reference_grid_points[None, :, :], dim=-1
+    )  # (n, 32)
     nearest_idx = torch.argmin(dist, dim=0)  # (32,)
     nearest_tracks = tracks[:, nearest_idx, :]  # (track_len, 32, 2)
     nearest_vis = vis[:, nearest_idx]  # (track_len, 32)
     return nearest_tracks, nearest_vis
 
 
-def sample_tracks(tracks, num_samples=16, uniform_ratio=0.25, vis=None, motion=False, h=None):
+def sample_tracks(
+    tracks, num_samples=16, uniform_ratio=0.25, vis=None, motion=False, h=None
+):
     """
     tracks: (T, N, 2)
     num_samples: int, number of samples to take
@@ -92,10 +102,12 @@ def sample_tracks(tracks, num_samples=16, uniform_ratio=0.25, vis=None, motion=F
 
     if motion:
         mask = (tracks > 0) & (tracks < h)
-        mask = mask.all(dim=-1) # if any of u, v is out of bounds, then it's false
-        mask = mask.all(dim=0) # if any of the points in the track is out of bounds, then it's false
+        mask = mask.all(dim=-1)  # if any of u, v is out of bounds, then it's false
+        mask = mask.all(
+            dim=0
+        )  # if any of the points in the track is out of bounds, then it's false
 
-        mask = repeat(mask, 'n -> t n', t=t)
+        mask = repeat(mask, "n -> t n", t=t)
         tracks = tracks[mask]
         tracks = tracks.reshape(t, -1, c)
 
@@ -129,6 +141,7 @@ def sample_tracks(tracks, num_samples=16, uniform_ratio=0.25, vis=None, motion=F
 
     return sampled_tracks
 
+
 def sample_tracks_visible_first(tracks, vis, num_samples=16):
     """
     Only sample points which are visible on the initial frame
@@ -142,7 +155,7 @@ def sample_tracks_visible_first(tracks, vis, num_samples=16):
     """
     t, n, c = tracks.shape
 
-    vis_idx = torch.where(vis[0] >0)[0]
+    vis_idx = torch.where(vis[0] > 0)[0]
 
     idx = torch.randint(0, len(vis_idx), (num_samples,))
 
@@ -157,6 +170,7 @@ def tracks_to_binary_img(tracks, img_size):
     return: (B, T, C, H, W)
     """
     from einops import repeat
+
     B, T, N, C = tracks.shape
     generation_size = 128
     H, W = generation_size, generation_size
@@ -171,24 +185,27 @@ def tracks_to_binary_img(tracks, img_size):
     img = img.scatter(2, uv, 1).view(B, T, H, W)
 
     # img size is b x t x h x w
-    img = repeat(img, 'b t h w -> (b t) h w')[:, None, :, :]
+    img = repeat(img, "b t h w -> (b t) h w")[:, None, :, :]
     import torch.nn.functional as F
+
     # Generate 5x5 gaussian kernel
-    kernel = [[0.003765, 0.015019, 0.023792, 0.015019, 0.003765],
-              [0.015019, 0.059912, 0.094907, 0.059912, 0.015019],
-              [0.023792, 0.094907, 0.150342, 0.094907, 0.023792],
-              [0.015019, 0.059912, 0.094907, 0.059912, 0.015019],
-              [0.003765, 0.015019, 0.023792, 0.015019, 0.003765]]
+    kernel = [
+        [0.003765, 0.015019, 0.023792, 0.015019, 0.003765],
+        [0.015019, 0.059912, 0.094907, 0.059912, 0.015019],
+        [0.023792, 0.094907, 0.150342, 0.094907, 0.023792],
+        [0.015019, 0.059912, 0.094907, 0.059912, 0.015019],
+        [0.003765, 0.015019, 0.023792, 0.015019, 0.003765],
+    ]
     kernel /= np.max(kernel)
     kernel = torch.FloatTensor(kernel)[None, None, :, :].to(tracks.device)
     img = F.conv2d(img, kernel, padding=2)[:, 0, :, :]
-    img = rearrange(img, '(b t) h w -> b t h w', b=B)
+    img = rearrange(img, "(b t) h w -> b t h w", b=B)
     if generation_size != img_size:
         img = F.interpolate(img, size=(img_size, img_size), mode="bicubic")
     img = torch.clamp(img, 0, 1)
     img = torch.where(img < 0.05, torch.tensor(0.0), img)
 
-    img = repeat(img, 'b t h w -> b t c h w', c=3)
+    img = repeat(img, "b t h w -> b t c h w", c=3)
 
     assert torch.max(img) <= 1
     return img
@@ -200,12 +217,14 @@ def tracks_to_video(tracks, img_size):
     return: (B, C, H, W)
     """
     B, T, N, _ = tracks.shape
-    binary_vid = tracks_to_binary_img(tracks, img_size=img_size).float()  # b, t, c, h, w
+    binary_vid = tracks_to_binary_img(
+        tracks, img_size=img_size
+    ).float()  # b, t, c, h, w
     binary_vid[:, :, 0] = binary_vid[:, :, 1]
     binary_vid[:, :, 2] = binary_vid[:, :, 1]
 
     # Get blue to purple cmap
-    cmap = plt.get_cmap('coolwarm')
+    cmap = plt.get_cmap("coolwarm")
     cmap = cmap(1 / np.arange(T))[:T, :3][::-1]
     binary_vid = binary_vid.clone()
 
@@ -218,6 +237,7 @@ def tracks_to_video(tracks, img_size):
     track_vid = torch.sum(binary_vid, dim=1)
     track_vid[track_vid > 255] = 255
     return track_vid
+
 
 def combine_track_and_img(track: torch.Tensor, vid: np.ndarray):
     """
@@ -246,15 +266,15 @@ def draw_traj_on_images(tracks: torch.Tensor, images: np.ndarray, show_dots=Fals
     images_back = rearrange(images_back, "b c h w -> b h w c")
     images_back = images_back.copy()
 
-    tracks[:, :, :, 0] = torch.clamp(tracks[:, :, :, 0] * h, 0, h-1)
-    tracks[:, :, :, 1] = torch.clamp(tracks[:, :, :, 1] * w, 0, w-1)
+    tracks[:, :, :, 0] = torch.clamp(tracks[:, :, :, 0] * h, 0, h - 1)
+    tracks[:, :, :, 1] = torch.clamp(tracks[:, :, :, 1] * w, 0, w - 1)
 
     color_map = cm.get_cmap("cool")
     linewidth = max(int(5 * h / 512), 1)
 
     result_images = []
     for traj_set, img in zip(tracks, images_back):
-        traj_len  = traj_set.shape[0]
+        traj_len = traj_set.shape[0]
         for traj_idx in range(traj_set.shape[1]):
             traj = traj_set[:, traj_idx]  # (T, 2)
 
@@ -262,10 +282,14 @@ def draw_traj_on_images(tracks: torch.Tensor, images: np.ndarray, show_dots=Fals
                 color = np.array(color_map((s) / max(1, traj_len - 2))[:3]) * 255  # rgb
                 # print(int(traj[s, 0]), int(traj[s, 1]), int(traj[s + 1, 0]), int(traj[s + 1, 1]))
 
-                cv2.line(img, pt1=(int(traj[s, 0]), int(traj[s, 1])), pt2=(int(traj[s + 1, 0]), int(traj[s + 1, 1])),
+                cv2.line(
+                    img,
+                    pt1=(int(traj[s, 0]), int(traj[s, 1])),
+                    pt2=(int(traj[s + 1, 0]), int(traj[s + 1, 1])),
                     color=color,
                     thickness=linewidth,
-                    lineType=cv2.LINE_AA)
+                    lineType=cv2.LINE_AA,
+                )
                 if show_dots:
                     cv2.circle(img, (traj[s, 0], traj[s, 1]), linewidth, color, -1)
         result_images.append(img)
@@ -284,12 +308,12 @@ def sample_from_mask(mask, num_samples=16, replace=False):
 
     # write the code according to the docstring above
     h, w, c = mask.shape
-    mask = rearrange(mask, 'h w c -> (h w) c')
+    mask = rearrange(mask, "h w c -> (h w) c")
 
     idxs = np.where(mask == 255)[0]
     if len(idxs) == 0:
         # return random samples from the image
-        idxs = np.arange(h*w)
+        idxs = np.arange(h * w)
         np.random.shuffle(idxs)
 
     if num_samples == -1:

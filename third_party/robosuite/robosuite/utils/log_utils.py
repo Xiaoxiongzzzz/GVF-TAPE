@@ -2,6 +2,7 @@
 This file contains utility classes and functions for logging to stdout and stderr
 Adapted from robomimic: https://github.com/ARISE-Initiative/robomimic/blob/master/robomimic/utils/log_utils.py
 """
+
 import logging
 import os
 import time
@@ -18,7 +19,10 @@ LEVEL_COLORS = {
     logging.CRITICAL: "red",
 }
 
-FORMAT_STR = {"file": "[robosuite %(levelname)s - %(asctime)s] ", "console": "[robosuite %(levelname)s] "}
+FORMAT_STR = {
+    "file": "[robosuite %(levelname)s - %(asctime)s] ",
+    "console": "[robosuite %(levelname)s] ",
+}
 
 MESSAGE_STR = "%(message)s (%(filename)s:%(lineno)d)"
 
@@ -44,9 +48,14 @@ class ConsoleFormatter(logging.Formatter):
     FORMATS = {
         logging.DEBUG: FORMAT_STR["console"] + MESSAGE_STR,
         logging.INFO: "%(message)s",
-        logging.WARNING: colored(FORMAT_STR["console"], "yellow", attrs=["bold"]) + MESSAGE_STR,
-        logging.ERROR: colored(FORMAT_STR["console"], "red", attrs=["bold"]) + MESSAGE_STR,
-        logging.CRITICAL: colored(FORMAT_STR["console"], "red", attrs=["bold", "reverse"]) + MESSAGE_STR,
+        logging.WARNING: colored(FORMAT_STR["console"], "yellow", attrs=["bold"])
+        + MESSAGE_STR,
+        logging.ERROR: colored(FORMAT_STR["console"], "red", attrs=["bold"])
+        + MESSAGE_STR,
+        logging.CRITICAL: colored(
+            FORMAT_STR["console"], "red", attrs=["bold", "reverse"]
+        )
+        + MESSAGE_STR,
     }
 
     def format(self, record):
@@ -59,7 +68,12 @@ class ConsoleFormatter(logging.Formatter):
 class DefaultLogger:
     """Default logger class in robosuite codebase."""
 
-    def __init__(self, logger_name="robosuite_logs", console_logging_level="INFO", file_logging_level=None):
+    def __init__(
+        self,
+        logger_name="robosuite_logs",
+        console_logging_level="INFO",
+        file_logging_level=None,
+    ):
         """
         Args:
             logger_name (str, optional): logger name. Defaults to "robosuite_logs".
@@ -73,7 +87,11 @@ class DefaultLogger:
             time_str = str(time.time()).replace(".", "_")
             log_file_path = "/tmp/robosuite_{}_{}.log".format(time_str, os.getpid())
             fh = logging.FileHandler(log_file_path)
-            print(colored("[robosuite]: Saving logs to {}".format(log_file_path), "yellow"))
+            print(
+                colored(
+                    "[robosuite]: Saving logs to {}".format(log_file_path), "yellow"
+                )
+            )
             fh.setLevel(logging.getLevelName(file_logging_level))
             file_formatter = FileFormatter()
             fh.setFormatter(file_formatter)

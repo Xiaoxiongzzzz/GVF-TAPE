@@ -259,7 +259,9 @@ class TwoArmLift(TwoArmEnv):
         # use a shaping reward
         elif self.reward_shaping:
             # lifting reward
-            pot_bottom_height = self.sim.data.site_xpos[self.pot_center_id][2] - self.pot.top_offset[2]
+            pot_bottom_height = (
+                self.sim.data.site_xpos[self.pot_center_id][2] - self.pot.top_offset[2]
+            )
             table_height = self.sim.data.site_xpos[self.table_top_id][2]
             elevation = pot_bottom_height - table_height
             r_lift = min(max(elevation - 0.05, 0), 0.15)
@@ -306,13 +308,17 @@ class TwoArmLift(TwoArmEnv):
 
         # Adjust base pose(s) accordingly
         if self.env_configuration == "bimanual":
-            xpos = self.robots[0].robot_model.base_xpos_offset["table"](self.table_full_size[0])
+            xpos = self.robots[0].robot_model.base_xpos_offset["table"](
+                self.table_full_size[0]
+            )
             self.robots[0].robot_model.set_base_xpos(xpos)
         else:
             if self.env_configuration == "single-arm-opposed":
                 # Set up robots facing towards each other by rotating them from their default position
                 for robot, rotation in zip(self.robots, (np.pi / 2, -np.pi / 2)):
-                    xpos = robot.robot_model.base_xpos_offset["table"](self.table_full_size[0])
+                    xpos = robot.robot_model.base_xpos_offset["table"](
+                        self.table_full_size[0]
+                    )
                     rot = np.array((0, 0, rotation))
                     xpos = T.euler2mat(rot) @ np.array(xpos)
                     robot.robot_model.set_base_xpos(xpos)
@@ -320,7 +326,9 @@ class TwoArmLift(TwoArmEnv):
             else:  # "single-arm-parallel" configuration setting
                 # Set up robots parallel to each other but offset from the center
                 for robot, offset in zip(self.robots, (-0.25, 0.25)):
-                    xpos = robot.robot_model.base_xpos_offset["table"](self.table_full_size[0])
+                    xpos = robot.robot_model.base_xpos_offset["table"](
+                        self.table_full_size[0]
+                    )
                     xpos = np.array(xpos) + np.array((0, offset, 0))
                     robot.robot_model.set_base_xpos(xpos)
 
@@ -370,10 +378,16 @@ class TwoArmLift(TwoArmEnv):
 
         # Additional object references from this env
         self.pot_body_id = self.sim.model.body_name2id(self.pot.root_body)
-        self.handle0_site_id = self.sim.model.site_name2id(self.pot.important_sites["handle0"])
-        self.handle1_site_id = self.sim.model.site_name2id(self.pot.important_sites["handle1"])
+        self.handle0_site_id = self.sim.model.site_name2id(
+            self.pot.important_sites["handle0"]
+        )
+        self.handle1_site_id = self.sim.model.site_name2id(
+            self.pot.important_sites["handle1"]
+        )
         self.table_top_id = self.sim.model.site_name2id("table_top")
-        self.pot_center_id = self.sim.model.site_name2id(self.pot.important_sites["center"])
+        self.pot_center_id = self.sim.model.site_name2id(
+            self.pot.important_sites["center"]
+        )
 
     def _setup_observables(self):
         """
@@ -403,7 +417,9 @@ class TwoArmLift(TwoArmEnv):
 
             @sensor(modality=modality)
             def pot_quat(obs_cache):
-                return T.convert_quat(self.sim.data.body_xquat[self.pot_body_id], to="xyzw")
+                return T.convert_quat(
+                    self.sim.data.body_xquat[self.pot_body_id], to="xyzw"
+                )
 
             @sensor(modality=modality)
             def handle0_xpos(obs_cache):
@@ -429,7 +445,14 @@ class TwoArmLift(TwoArmEnv):
                     else np.zeros(3)
                 )
 
-            sensors = [pot_pos, pot_quat, handle0_xpos, handle1_xpos, gripper0_to_handle0, gripper1_to_handle1]
+            sensors = [
+                pot_pos,
+                pot_quat,
+                handle0_xpos,
+                handle1_xpos,
+                gripper0_to_handle0,
+                gripper1_to_handle1,
+            ]
             names = [s.__name__ for s in sensors]
 
             # Create observables
@@ -456,7 +479,10 @@ class TwoArmLift(TwoArmEnv):
 
             # Loop through all objects and reset their positions
             for obj_pos, obj_quat, obj in object_placements.values():
-                self.sim.data.set_joint_qpos(obj.joints[0], np.concatenate([np.array(obj_pos), np.array(obj_quat)]))
+                self.sim.data.set_joint_qpos(
+                    obj.joints[0],
+                    np.concatenate([np.array(obj_pos), np.array(obj_quat)]),
+                )
 
     def visualize(self, vis_settings):
         """
@@ -479,7 +505,9 @@ class TwoArmLift(TwoArmEnv):
                 else [robot.gripper for robot in self.robots]
             )
             for gripper, handle in zip(grippers, handles):
-                self._visualize_gripper_to_target(gripper=gripper, target=handle, target_type="site")
+                self._visualize_gripper_to_target(
+                    gripper=gripper, target=handle, target_type="site"
+                )
 
     def _check_success(self):
         """
@@ -488,7 +516,9 @@ class TwoArmLift(TwoArmEnv):
         Returns:
             bool: True if pot is lifted
         """
-        pot_bottom_height = self.sim.data.site_xpos[self.pot_center_id][2] - self.pot.top_offset[2]
+        pot_bottom_height = (
+            self.sim.data.site_xpos[self.pot_center_id][2] - self.pot.top_offset[2]
+        )
         table_height = self.sim.data.site_xpos[self.table_top_id][2]
 
         # cube is higher than the table top above a margin

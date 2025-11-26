@@ -1,7 +1,11 @@
 import numpy as np
 
 from robosuite.models.objects import MujocoXMLObject
-from robosuite.utils.mjcf_utils import array_to_string, find_elements, xml_path_completion
+from robosuite.utils.mjcf_utils import (
+    array_to_string,
+    find_elements,
+    xml_path_completion,
+)
 
 
 class BottleObject(MujocoXMLObject):
@@ -41,7 +45,10 @@ class LemonObject(MujocoXMLObject):
 
     def __init__(self, name):
         super().__init__(
-            xml_path_completion("objects/lemon.xml"), name=name, obj_type="all", duplicate_collision_geoms=True
+            xml_path_completion("objects/lemon.xml"),
+            name=name,
+            obj_type="all",
+            duplicate_collision_geoms=True,
         )
 
 
@@ -248,7 +255,11 @@ class DoorObject(MujocoXMLObject):
         if lock:
             xml_path = "objects/door_lock.xml"
         super().__init__(
-            xml_path_completion(xml_path), name=name, joints=None, obj_type="all", duplicate_collision_geoms=True
+            xml_path_completion(xml_path),
+            name=name,
+            joints=None,
+            obj_type="all",
+            duplicate_collision_geoms=True,
         )
 
         # Set relevant body names
@@ -272,7 +283,12 @@ class DoorObject(MujocoXMLObject):
         Args:
             friction (3-tuple of float): friction parameters to override the ones specified in the XML
         """
-        hinge = find_elements(root=self.worldbody, tags="joint", attribs={"name": self.hinge_joint}, return_first=True)
+        hinge = find_elements(
+            root=self.worldbody,
+            tags="joint",
+            attribs={"name": self.hinge_joint},
+            return_first=True,
+        )
         hinge.set("frictionloss", array_to_string(np.array([friction])))
 
     def _set_door_damping(self, damping):
@@ -282,7 +298,12 @@ class DoorObject(MujocoXMLObject):
         Args:
             damping (float): damping parameter to override the ones specified in the XML
         """
-        hinge = find_elements(root=self.worldbody, tags="joint", attribs={"name": self.hinge_joint}, return_first=True)
+        hinge = find_elements(
+            root=self.worldbody,
+            tags="joint",
+            attribs={"name": self.hinge_joint},
+            return_first=True,
+        )
         hinge.set("damping", array_to_string(np.array([damping])))
 
     @property

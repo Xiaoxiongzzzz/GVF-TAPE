@@ -30,9 +30,17 @@ class FeatureViLTPolicy(nn.Module):
     Output: a_t or distribution of a_t
     """
 
-    def __init__(self, obs_cfg, img_encoder_cfg, extra_state_encoder_cfg, 
-                 spatial_transformer_cfg, temporal_transformer_cfg,
-                 policy_head_cfg, feature_encoder_cfg, load_path=None):
+    def __init__(
+        self,
+        obs_cfg,
+        img_encoder_cfg,
+        extra_state_encoder_cfg,
+        spatial_transformer_cfg,
+        temporal_transformer_cfg,
+        policy_head_cfg,
+        feature_encoder_cfg,
+        load_path=None,
+    ):
         super().__init__()
 
         self._process_obs_shapes(**obs_cfg)
@@ -48,7 +56,9 @@ class FeatureViLTPolicy(nn.Module):
         self._setup_spatial_transformer(**spatial_transformer_cfg)
 
         ### 5. encode extra information (e.g. gripper, joint_state)
-        self.extra_encoder = self._setup_extra_state_encoder(extra_embedding_size=self.temporal_embed_size, **extra_state_encoder_cfg)
+        self.extra_encoder = self._setup_extra_state_encoder(
+            extra_embedding_size=self.temporal_embed_size, **extra_state_encoder_cfg
+        )
 
         # 7. define temporal transformer
         self._setup_temporal_transformer(**temporal_transformer_cfg)
@@ -56,31 +66,44 @@ class FeatureViLTPolicy(nn.Module):
         # 8. define policy head
         self._setup_policy_head(**policy_head_cfg)
 
-
-    def _process_obs_shapes(self, obs_shapes, num_views, extra_states, img_mean, img_std, max_seq_len):
+    def _process_obs_shapes(
+        self, obs_shapes, num_views, extra_states, img_mean, img_std, max_seq_len
+    ):
         self.img_normalizer = T.Normalize(img_mean, img_std)
         self.img_unnormalizer = ImageUnNormalize(img_mean, img_std)
         self.obs_shapes = obs_shapes
         self.num_views = num_views
         self.extra_state_keys = extra_states
         self.max_seq_len = max_seq_len
-    def _setup_image_encoder(self, network_name, patch_size, embed_size, no_patch_embed_bias):
+
+    def _setup_image_encoder(
+        self, network_name, patch_size, embed_size, no_patch_embed_bias
+    ):
         self.spatial_embed_size = embed_size
 
-    def _setup_feature_encoder(self, network_name, patch_size, embed_size, no_patch_embed_bias):
+    def _setup_feature_encoder(
+        self, network_name, patch_size, embed_size, no_patch_embed_bias
+    ):
         input_shape = self.obs_shapes["feature"]
 
-        self.feature_encoder = eval(network_name)(input_shape=input_shape, patch_size=patch_size,
-                                                        embed_size=self.spatial_embed_size,
-                                                        no_patch_embed_bias=no_patch_embed_bias)
+        self.feature_encoder = eval(network_name)(
+            input_shape=input_shape,
+            patch_size=patch_size,
+            embed_size=self.spatial_embed_size,
+            no_patch_embed_bias=no_patch_embed_bias,
+        )
 
         self.feature_num_patches = self.feature_encoder.num_patches
 
     def _setup_spatial_positional_embeddings(self):
         # setup positional embeddings
-        spatial_token = nn.Parameter(torch.randn(1, 1, self.spatial_embed_size))  # SPATIAL_TOKEN
-        feature_patch_pos_embed = nn.Parameter(torch.randn(1, self.feature_num_patches, self.spatial_embed_size))
-        #TODO:
+        spatial_token = nn.Parameter(
+            torch.randn(1, 1, self.spatial_embed_size)
+        )  # SPATIAL_TOKEN
+        feature_patch_pos_embed = nn.Parameter(
+            torch.randn(1, self.feature_num_patches, self.spatial_embed_size)
+        )
+        # TODO:
         modality_embed = nn.Parameter(
             torch.randn(1, 1, self.spatial_embed_size)
         )  # FEATURE_TOKENS
@@ -90,7 +113,7 @@ class FeatureViLTPolicy(nn.Module):
         self.register_parameter("modality_embed", modality_embed)
 
         # for selecting modality embed
-        modality_idx = [0] * self.feature_num_patches   #for feature modality embeding
+        modality_idx = [0] * self.feature_num_patches  # for feature modality embeding
         self.modality_idx = torch.LongTensor(modality_idx)
 
     def _setup_extra_state_encoder(self, **extra_state_encoder_cfg):
@@ -104,8 +127,17 @@ class FeatureViLTPolicy(nn.Module):
                 **extra_state_encoder_cfg
             )
 
-    def _setup_spatial_transformer(self, num_layers, num_heads, head_output_size, mlp_hidden_size, dropout,
-                                   spatial_downsample, spatial_downsample_embed_size, use_language_token=True):
+    def _setup_spatial_transformer(
+        self,
+        num_layers,
+        num_heads,
+        head_output_size,
+        mlp_hidden_size,
+        dropout,
+        spatial_downsample,
+        spatial_downsample_embed_size,
+        use_language_token=True,
+    ):
         self.spatial_transformer = TransformerDecoder(
             input_size=self.spatial_embed_size,
             num_layers=num_layers,
@@ -117,15 +149,27 @@ class FeatureViLTPolicy(nn.Module):
 
         if spatial_downsample:
             self.temporal_embed_size = spatial_downsample_embed_size
-            self.spatial_downsample = nn.Linear(self.spatial_embed_size, self.temporal_embed_size)
+            self.spatial_downsample = nn.Linear(
+                self.spatial_embed_size, self.temporal_embed_size
+            )
         else:
             self.temporal_embed_size = self.spatial_embed_size
             self.spatial_downsample = nn.Identity()
 
         self.spatial_transformer_use_text = use_language_token
 
-    def _setup_temporal_transformer(self, num_layers, num_heads, head_output_size, mlp_hidden_size, dropout, use_language_token=True):
-        self.temporal_position_encoding_fn = SinusoidalPositionEncoding(input_size=self.temporal_embed_size)
+    def _setup_temporal_transformer(
+        self,
+        num_layers,
+        num_heads,
+        head_output_size,
+        mlp_hidden_size,
+        dropout,
+        use_language_token=True,
+    ):
+        self.temporal_position_encoding_fn = SinusoidalPositionEncoding(
+            input_size=self.temporal_embed_size
+        )
 
         self.temporal_transformer = TransformerDecoder(
             input_size=self.temporal_embed_size,
@@ -133,7 +177,8 @@ class FeatureViLTPolicy(nn.Module):
             num_heads=num_heads,
             head_output_size=head_output_size,
             mlp_hidden_size=mlp_hidden_size,
-            dropout=dropout,)
+            dropout=dropout,
+        )
         self.temporal_transformer_use_text = use_language_token
 
         action_cls_token = nn.Parameter(torch.zeros(1, 1, self.temporal_embed_size))
@@ -143,8 +188,10 @@ class FeatureViLTPolicy(nn.Module):
     def _setup_policy_head(self, network_name, **policy_head_kwargs):
         self.late_fusion = policy_head_kwargs.pop("late_fusion")
         if self.late_fusion:
-            policy_head_kwargs["input_size"] \
-                = self.temporal_embed_size + self.feature_num_patches * self.spatial_embed_size
+            policy_head_kwargs["input_size"] = (
+                self.temporal_embed_size
+                + self.feature_num_patches * self.spatial_embed_size
+            )
         else:
             policy_head_kwargs["input_size"] = self.temporal_embed_size
 
@@ -156,9 +203,8 @@ class FeatureViLTPolicy(nn.Module):
 
     @torch.no_grad()
     def __normalize_img__(self, rgb):
-        rgb = self.img_normalizer(rgb / 255.)
+        rgb = self.img_normalizer(rgb / 255.0)
         return rgb
-
 
     def spatial_encode(self, feature, extra_states, return_feature=False, debug=False):
         """
@@ -172,12 +218,18 @@ class FeatureViLTPolicy(nn.Module):
         # 1. encode feature
         feature = rearrange(feature, "b t c h w -> (b t) c h w")
         feature_encoded = self.feature_encoder(feature)
-        feature_encoded = rearrange(feature_encoded, "(b t) c h w ->  b t (h w) c", b=B, t=T)       #（b, patch, channel）
+        feature_encoded = rearrange(
+            feature_encoded, "(b t) c h w ->  b t (h w) c", b=B, t=T
+        )  # （b, patch, channel）
         feature_encoded += self.feature_patch_pos_embed.unsqueeze(0)
 
         # 2. add spatial [cls] token
-        spatial_token = self.spatial_token.unsqueeze(0).expand(B, T, -1, -1)  # (b, t, 1, c)
-        encoded = torch.cat([spatial_token, feature_encoded], -2)  # (b, 1+num_feature_patch, c)
+        spatial_token = self.spatial_token.unsqueeze(0).expand(
+            B, T, -1, -1
+        )  # (b, t, 1, c)
+        encoded = torch.cat(
+            [spatial_token, feature_encoded], -2
+        )  # (b, 1+num_feature_patch, c)
 
         # 3. pass through spatial transformer
         encoded = rearrange(encoded, "b t n c -> (b t) n c")
@@ -192,7 +244,9 @@ class FeatureViLTPolicy(nn.Module):
             extra = self.extra_encoder(extra_states)  # (b, t, num_extra, c')
 
         # 5. add action token
-        action_cls_token = self.action_cls_token.unsqueeze(0).expand(B, T, -1, -1)  # (b, 1, c')
+        action_cls_token = self.action_cls_token.unsqueeze(0).expand(
+            B, T, -1, -1
+        )  # (b, 1, c')
         out_seq = [action_cls_token, out]
 
         # 6. add extra state token
@@ -201,7 +255,7 @@ class FeatureViLTPolicy(nn.Module):
         output = torch.cat(out_seq, -2)  # (b, t, 1 + 1 + num_extra, c')
 
         if return_feature:
-            output = (output, feature_encoded)     #feature: b, patches, c
+            output = (output, feature_encoded)  # feature: b, patches, c
 
         return output
 
@@ -216,10 +270,10 @@ class FeatureViLTPolicy(nn.Module):
         sh = x.shape
         self.temporal_transformer.compute_mask(x.shape)
 
-        x = TensorUtils.join_dimensions(x, 1, 2)        #b, t*n, c
+        x = TensorUtils.join_dimensions(x, 1, 2)  # b, t*n, c
         x = self.temporal_transformer(x)
         x = x.reshape(*sh)
-        return x[:, :, 0]  #action token: b, t, c
+        return x[:, :, 0]  # action token: b, t, c
 
     def forward(self, feature, extra_states):
         """
@@ -230,17 +284,19 @@ class FeatureViLTPolicy(nn.Module):
         Return:
             dist: b, t, action_dim
         """
-        x, feature_encoded = self.spatial_encode(feature, extra_states, return_feature=True)  # x: (b, t, 2+num_extra, c)
+        x, feature_encoded = self.spatial_encode(
+            feature, extra_states, return_feature=True
+        )  # x: (b, t, 2+num_extra, c)
         x = self.temporal_encode(x)  # (b, t, c)
 
         if self.late_fusion:
-            feature_encoded = torch.flatten(feature_encoded, start_dim=-2)  #b, t, p#c
+            feature_encoded = torch.flatten(feature_encoded, start_dim=-2)  # b, t, p#c
             x = torch.cat([x, feature_encoded], dim=-1)  # (b, channel)
-            
+
         dist = self.policy_head(x)  # project to robot control b, t, action_dim
         return dist
-        
-    def forward_loss(self, feature, extra_states, action):         
+
+    def forward_loss(self, feature, extra_states, action):
         """
         Args:
             feature: (b, t, channel, h, w)
@@ -273,45 +329,72 @@ class FeatureViLTPolicy(nn.Module):
             action: [b, act_dim] numpy type
         """
         self.eval()
-        B = feature.shape[0]    
+        B = feature.shape[0]
 
         # 1. update buffer and get input
-        self.extra_state_buffer = self.push_to_buffer(self.extra_state_buffer, extra_states)
+        self.extra_state_buffer = self.push_to_buffer(
+            self.extra_state_buffer, extra_states
+        )
 
-        _, extra_state_input = self.get_input_from_buffer(self.visual_observation_buffer, self.extra_state_buffer)
+        _, extra_state_input = self.get_input_from_buffer(
+            self.visual_observation_buffer, self.extra_state_buffer
+        )
 
         # 2. inference the action
         with torch.no_grad():
-            action = self.forward(feature, extra_state_input).detach().cpu()  # (b, act_dim)
+            action = (
+                self.forward(feature, extra_state_input).detach().cpu()
+            )  # (b, act_dim)
 
         return action.float().numpy()
 
     def push_to_buffer(self, buffer: list, element):
-        buffer.pop(0)               #remove the earliest element
-        buffer.append(element)      #add the latest element
-        
+        buffer.pop(0)  # remove the earliest element
+        buffer.append(element)  # add the latest element
+
         return buffer
+
     def get_input_from_buffer(self, visual_obs_buffer: list, extra_state_buffer: list):
-        '''
+        """
         Args:
         visual_obs_buffer: list of [b, v, c, h, w]
         extra_state_buffer: list of {k: b, n}
         Return:
         visual_obs_input: [b, v, t, c, h, w]
         extra_state_input: {k: b, t, n}
-        '''
+        """
         visual_obs_input = torch.stack(visual_obs_buffer, dim=2)
-        extra_state_input = {k: torch.stack([element[k] for element in extra_state_buffer], dim=1) for k in extra_state_buffer[0].keys()}
-        
+        extra_state_input = {
+            k: torch.stack([element[k] for element in extra_state_buffer], dim=1)
+            for k in extra_state_buffer[0].keys()
+        }
+
         return visual_obs_input, extra_state_input
+
     def reset(self, device):
         # define buffer queue for visual observation and extra_states, initialize them with all padding
-        self.visual_observation_buffer = [torch.zeros(1, self.num_views, self.obs_shapes["rgb"][0],\
-                                                       self.obs_shapes["rgb"][1], self.obs_shapes["rgb"][2]).to(device) for i in range(self.max_seq_len)]
-        extra_state_padding = {"joint_states": torch.zeros(1,7,), "gripper_states": torch.zeros(1,2,)}
+        self.visual_observation_buffer = [
+            torch.zeros(
+                1,
+                self.num_views,
+                self.obs_shapes["rgb"][0],
+                self.obs_shapes["rgb"][1],
+                self.obs_shapes["rgb"][2],
+            ).to(device)
+            for i in range(self.max_seq_len)
+        ]
+        extra_state_padding = {
+            "joint_states": torch.zeros(
+                1,
+                7,
+            ),
+            "gripper_states": torch.zeros(
+                1,
+                2,
+            ),
+        }
         extra_state_padding = {k: v.to(device) for k, v in extra_state_padding.items()}
-        self.extra_state_buffer = [extra_state_padding for i in range (self.max_seq_len)]
-
+        self.extra_state_buffer = [extra_state_padding for i in range(self.max_seq_len)]
 
     def save(self, path):
         torch.save(self.state_dict(), path)

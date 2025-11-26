@@ -1,6 +1,7 @@
 """
 Set of functions that streamline controller initialization process
 """
+
 import json
 import os
 from copy import deepcopy
@@ -66,26 +67,34 @@ def load_controller_config(custom_fpath=None, default_controller=None):
         # Assert that requested default controller is in the available default controllers
         from robosuite.controllers import ALL_CONTROLLERS
 
-        assert (
-            default_controller in ALL_CONTROLLERS
-        ), "Error: Unknown default controller specified. Requested {}, " "available controllers: {}".format(
-            default_controller, list(ALL_CONTROLLERS)
+        assert default_controller in ALL_CONTROLLERS, (
+            "Error: Unknown default controller specified. Requested {}, "
+            "available controllers: {}".format(
+                default_controller, list(ALL_CONTROLLERS)
+            )
         )
 
         # Store the default controller config fpath associated with the requested controller
         custom_fpath = os.path.join(
-            os.path.dirname(__file__), "..", "controllers/config/{}.json".format(default_controller.lower())
+            os.path.dirname(__file__),
+            "..",
+            "controllers/config/{}.json".format(default_controller.lower()),
         )
 
     # Assert that the fpath to load the controller is not empty
-    assert custom_fpath is not None, "Error: Either custom_fpath or default_controller must be specified!"
+    assert (
+        custom_fpath is not None
+    ), "Error: Either custom_fpath or default_controller must be specified!"
 
     # Attempt to load the controller
     try:
         with open(custom_fpath) as f:
             controller_config = json.load(f)
     except FileNotFoundError:
-        print("Error opening controller filepath at: {}. " "Please check filepath and try again.".format(custom_fpath))
+        print(
+            "Error opening controller filepath at: {}. "
+            "Please check filepath and try again.".format(custom_fpath)
+        )
 
     # Return the loaded controller
     return controller_config
@@ -126,7 +135,9 @@ def controller_factory(name, params):
             ori_interpolator = deepcopy(interpolator)
             ori_interpolator.set_states(ori="euler")
         params["control_ori"] = True
-        return OperationalSpaceController(interpolator_pos=interpolator, interpolator_ori=ori_interpolator, **params)
+        return OperationalSpaceController(
+            interpolator_pos=interpolator, interpolator_ori=ori_interpolator, **params
+        )
 
     if name == "OSC_POSITION":
         if interpolator is not None:
@@ -137,7 +148,9 @@ def controller_factory(name, params):
     if name == "IK_POSE":
         ori_interpolator = None
         if interpolator is not None:
-            interpolator.set_states(dim=3)  # EE IK control uses dim 3 for pos and dim 4 for ori
+            interpolator.set_states(
+                dim=3
+            )  # EE IK control uses dim 3 for pos and dim 4 for ori
             ori_interpolator = deepcopy(interpolator)
             ori_interpolator.set_states(dim=4, ori="quat")
 

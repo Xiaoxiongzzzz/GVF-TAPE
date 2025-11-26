@@ -2,7 +2,6 @@
 Collection of Buffer objects with general functionality
 """
 
-
 import numpy as np
 
 
@@ -138,7 +137,11 @@ class DeltaBuffer(Buffer):
         Returns:
             float or np.array: difference between current and last value
         """
-        return self.current - self.last if not abs_value else np.abs(self.current - self.last)
+        return (
+            self.current - self.last
+            if not abs_value
+            else np.abs(self.current - self.last)
+        )
 
     @property
     def average(self):

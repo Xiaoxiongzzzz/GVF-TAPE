@@ -36,7 +36,12 @@ if __name__ == "__main__":
     print(suite.__logo__)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--renderer", type=str, default="mujoco", help="Valid options include mujoco, and nvisii")
+    parser.add_argument(
+        "--renderer",
+        type=str,
+        default="mujoco",
+        help="Valid options include mujoco, and nvisii",
+    )
 
     args = parser.parse_args()
     renderer = args.renderer
@@ -69,7 +74,9 @@ if __name__ == "__main__":
     controller_name = choose_controller()
 
     # Load the desired controller
-    options["controller_configs"] = load_controller_config(default_controller=controller_name)
+    options["controller_configs"] = load_controller_config(
+        default_controller=controller_name
+    )
 
     env = suite.make(
         **options,

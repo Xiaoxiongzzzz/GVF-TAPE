@@ -90,7 +90,10 @@ class HingedBoxObject(CompositeBodyObject):
             CylinderObject(
                 name="hinge",
                 size=np.array(
-                    [min(self.box1_size[2], self.box2_size[2]) / 5.0, min(self.box1_size[0], self.box2_size[0])]
+                    [
+                        min(self.box1_size[2], self.box2_size[2]) / 5.0,
+                        min(self.box1_size[0], self.box2_size[0]),
+                    ]
                 ),
                 rgba=[0.5, 0.5, 0, 1],
                 obj_type="visual",
@@ -98,7 +101,11 @@ class HingedBoxObject(CompositeBodyObject):
         )
 
         # Define hinge joint
-        rel_hinge_pos = [self.box2_size[0], 0, -self.box2_size[2]]  # want offset in all except y-axis
+        rel_hinge_pos = [
+            self.box2_size[0],
+            0,
+            -self.box2_size[2],
+        ]  # want offset in all except y-axis
         hinge_joint = {
             "name": "box_hinge",
             "type": "hinge",
@@ -113,7 +120,13 @@ class HingedBoxObject(CompositeBodyObject):
         # Hinge visualizer should be aligned at hinge joint location
         positions = [
             np.zeros(3),  # First box is centered at top-level body anyways
-            np.array([-(self.box2_size[0] - self.box1_size[0]), 0, self.box1_size[2] + self.box2_size[2]]),
+            np.array(
+                [
+                    -(self.box2_size[0] - self.box1_size[0]),
+                    0,
+                    self.box1_size[2] + self.box2_size[2],
+                ]
+            ),
             np.array(rel_hinge_pos),
         ]
 

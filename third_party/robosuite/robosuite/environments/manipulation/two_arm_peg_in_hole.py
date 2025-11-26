@@ -170,7 +170,9 @@ class TwoArmPegInHole(TwoArmEnv):
         renderer_config=None,
     ):
         # Assert that the gripper type is None
-        assert gripper_types is None, "Tried to specify gripper other than None in TwoArmPegInHole environment!"
+        assert (
+            gripper_types is None
+        ), "Tried to specify gripper other than None in TwoArmPegInHole environment!"
 
         # reward configuration
         self.reward_scale = reward_scale
@@ -298,7 +300,12 @@ class TwoArmPegInHole(TwoArmEnv):
         mujoco_arena.set_camera(
             camera_name="agentview",
             pos=[1.0666432116509934, 1.4903257668114777e-08, 2.0563394967349096],
-            quat=[0.6530979871749878, 0.27104058861732483, 0.27104055881500244, 0.6530978679656982],
+            quat=[
+                0.6530979871749878,
+                0.27104058861732483,
+                0.27104055881500244,
+                0.6530978679656982,
+            ],
         )
 
         # initialize objects of interest
@@ -338,13 +345,25 @@ class TwoArmPegInHole(TwoArmEnv):
 
         # Append appropriate objects to arms
         if self.env_configuration == "bimanual":
-            r_eef, l_eef = [self.robots[0].robot_model.eef_name[arm] for arm in self.robots[0].arms]
+            r_eef, l_eef = [
+                self.robots[0].robot_model.eef_name[arm] for arm in self.robots[0].arms
+            ]
             r_model, l_model = [self.robots[0].robot_model, self.robots[0].robot_model]
         else:
             r_eef, l_eef = [robot.robot_model.eef_name for robot in self.robots]
             r_model, l_model = [self.robots[0].robot_model, self.robots[1].robot_model]
-        r_body = find_elements(root=r_model.worldbody, tags="body", attribs={"name": r_eef}, return_first=True)
-        l_body = find_elements(root=l_model.worldbody, tags="body", attribs={"name": l_eef}, return_first=True)
+        r_body = find_elements(
+            root=r_model.worldbody,
+            tags="body",
+            attribs={"name": r_eef},
+            return_first=True,
+        )
+        l_body = find_elements(
+            root=l_model.worldbody,
+            tags="body",
+            attribs={"name": l_eef},
+            return_first=True,
+        )
         r_body.append(peg_obj)
         l_body.append(hole_obj)
 
@@ -398,19 +417,24 @@ class TwoArmPegInHole(TwoArmEnv):
 
             @sensor(modality=modality)
             def hole_quat(obs_cache):
-                return T.convert_quat(self.sim.data.body_xquat[self.hole_body_id], to="xyzw")
+                return T.convert_quat(
+                    self.sim.data.body_xquat[self.hole_body_id], to="xyzw"
+                )
 
             @sensor(modality=modality)
             def peg_to_hole(obs_cache):
                 return (
-                    obs_cache["hole_pos"] - np.array(self.sim.data.body_xpos[self.peg_body_id])
+                    obs_cache["hole_pos"]
+                    - np.array(self.sim.data.body_xpos[self.peg_body_id])
                     if "hole_pos" in obs_cache
                     else np.zeros(3)
                 )
 
             @sensor(modality=modality)
             def peg_quat(obs_cache):
-                return T.convert_quat(self.sim.data.body_xquat[self.peg_body_id], to="xyzw")
+                return T.convert_quat(
+                    self.sim.data.body_xquat[self.peg_body_id], to="xyzw"
+                )
 
             # Relative orientation parameters
             @sensor(modality=modality)
@@ -491,7 +515,9 @@ class TwoArmPegInHole(TwoArmEnv):
         return (
             t,
             d,
-            abs(np.dot(hole_normal, v) / np.linalg.norm(hole_normal) / np.linalg.norm(v)),
+            abs(
+                np.dot(hole_normal, v) / np.linalg.norm(hole_normal) / np.linalg.norm(v)
+            ),
         )
 
     def _peg_pose_in_hole_frame(self):
@@ -504,15 +530,21 @@ class TwoArmPegInHole(TwoArmEnv):
         """
         # World frame
         peg_pos_in_world = self.sim.data.get_body_xpos(self.peg.root_body)
-        peg_rot_in_world = self.sim.data.get_body_xmat(self.peg.root_body).reshape((3, 3))
+        peg_rot_in_world = self.sim.data.get_body_xmat(self.peg.root_body).reshape(
+            (3, 3)
+        )
         peg_pose_in_world = T.make_pose(peg_pos_in_world, peg_rot_in_world)
 
         # World frame
         hole_pos_in_world = self.sim.data.get_body_xpos(self.hole.root_body)
-        hole_rot_in_world = self.sim.data.get_body_xmat(self.hole.root_body).reshape((3, 3))
+        hole_rot_in_world = self.sim.data.get_body_xmat(self.hole.root_body).reshape(
+            (3, 3)
+        )
         hole_pose_in_world = T.make_pose(hole_pos_in_world, hole_rot_in_world)
 
         world_pose_in_hole = T.pose_inv(hole_pose_in_world)
 
-        peg_pose_in_hole = T.pose_in_A_to_pose_in_B(peg_pose_in_world, world_pose_in_hole)
+        peg_pose_in_hole = T.pose_in_A_to_pose_in_B(
+            peg_pose_in_world, world_pose_in_hole
+        )
         return peg_pose_in_hole

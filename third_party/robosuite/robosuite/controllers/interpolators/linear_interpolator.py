@@ -39,13 +39,17 @@ class LinearInterpolator(Interpolator):
         ori_interpolate=None,
     ):
         self.dim = ndim  # Number of dimensions to interpolate
-        self.ori_interpolate = ori_interpolate  # Whether this is interpolating orientation or not
+        self.ori_interpolate = (
+            ori_interpolate  # Whether this is interpolating orientation or not
+        )
         self.order = 1  # Order of the interpolator (1 = linear)
         self.step = 0  # Current step of the interpolator
         self.total_steps = np.ceil(
             ramp_ratio * controller_freq / policy_freq
         )  # Total num steps per interpolator action
-        self.use_delta_goal = use_delta_goal  # Whether to use delta or absolute goals (currently
+        self.use_delta_goal = (
+            use_delta_goal  # Whether to use delta or absolute goals (currently
+        )
         # not implemented yet- TODO)
         self.set_states(dim=ndim, ori=ori_interpolate)
 
@@ -89,7 +93,9 @@ class LinearInterpolator(Interpolator):
         if goal.shape[0] != self.dim:
             print("Requested goal: {}".format(goal))
             raise ValueError(
-                "LinearInterpolator: Input size wrong for goal; got {}, needs to be {}!".format(goal.shape[0], self.dim)
+                "LinearInterpolator: Input size wrong for goal; got {}, needs to be {}!".format(
+                    goal.shape[0], self.dim
+                )
             )
 
         # Update start and goal
@@ -120,7 +126,9 @@ class LinearInterpolator(Interpolator):
                 goal = T.mat2quat(T.euler2mat(self.goal))
 
             # Interpolate to the next sequence
-            x_current = T.quat_slerp(x, goal, fraction=(self.step + 1) / self.total_steps)
+            x_current = T.quat_slerp(
+                x, goal, fraction=(self.step + 1) / self.total_steps
+            )
             if self.ori_interpolate == "euler":
                 # Map back to euler
                 x_current = T.mat2euler(T.quat2mat(x_current))

@@ -180,5 +180,13 @@ man_pages = [(master_doc, "robosuite", "robosuite Documentation", [author], 1)]
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, "robosuite", "robosuite Documentation", author, "robosuite", "ARISE", "Miscellaneous"),
+    (
+        master_doc,
+        "robosuite",
+        "robosuite Documentation",
+        author,
+        "robosuite",
+        "ARISE",
+        "Miscellaneous",
+    ),
 ]

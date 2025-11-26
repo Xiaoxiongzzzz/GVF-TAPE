@@ -90,7 +90,9 @@ if __name__ == "__main__":
     controller_name = choose_controller()
 
     # Load the desired controller
-    options["controller_configs"] = suite.load_controller_config(default_controller=controller_name)
+    options["controller_configs"] = suite.load_controller_config(
+        default_controller=controller_name
+    )
 
     # Define the pre-defined controller actions to use (action_dim, num_test_steps, test_value)
     controller_settings = {
@@ -129,7 +131,11 @@ if __name__ == "__main__":
     n = 0
     gripper_dim = 0
     for robot in env.robots:
-        gripper_dim = robot.gripper["right"].dof if isinstance(robot, Bimanual) else robot.gripper.dof
+        gripper_dim = (
+            robot.gripper["right"].dof
+            if isinstance(robot, Bimanual)
+            else robot.gripper.dof
+        )
         n += int(robot.action_dim / (action_dim + gripper_dim))
 
     # Define neutral value

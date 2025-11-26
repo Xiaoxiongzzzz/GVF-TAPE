@@ -1,6 +1,7 @@
 """
 This file contains vilt_modules that encode language task embeddings.
 """
+
 import torch.nn as nn
 
 

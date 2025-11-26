@@ -1,6 +1,11 @@
 import numpy as np
 
-from robosuite.models.objects import BoxObject, CompositeBodyObject, CylinderObject, HollowCylinderObject
+from robosuite.models.objects import (
+    BoxObject,
+    CompositeBodyObject,
+    CylinderObject,
+    HollowCylinderObject,
+)
 from robosuite.utils.mjcf_utils import CustomMaterial
 
 
@@ -115,8 +120,12 @@ class RatchetingWrenchObject(CompositeBodyObject):
         hole_2_box_geom_height = 2.0 * objects[1].unit_box_height
         positions = [
             # this computation ensures no gaps between the center bar geom and the two wrench holes at the end
-            np.array([-handle_size[0] - self.outer_radii[0] + hole_1_box_geom_height, 0, 0]),
-            np.array([handle_size[0] + self.outer_radii[1] - hole_2_box_geom_height, 0, 0]),
+            np.array(
+                [-handle_size[0] - self.outer_radii[0] + hole_1_box_geom_height, 0, 0]
+            ),
+            np.array(
+                [handle_size[0] + self.outer_radii[1] - hole_2_box_geom_height, 0, 0]
+            ),
             np.zeros(3),
         ]
         quats = [None, None, None]
@@ -136,7 +145,9 @@ class RatchetingWrenchObject(CompositeBodyObject):
                 )
             )
             positions.append(np.zeros(3))
-            quats.append((np.sqrt(2) / 2.0, 0.0, np.sqrt(2) / 2.0, 0.0))  # rotate 90 degrees about y-axis
+            quats.append(
+                (np.sqrt(2) / 2.0, 0.0, np.sqrt(2) / 2.0, 0.0)
+            )  # rotate 90 degrees about y-axis
             parents.append(None)
 
         # Run super init
@@ -146,5 +157,7 @@ class RatchetingWrenchObject(CompositeBodyObject):
             object_locations=positions,
             object_quats=quats,
             object_parents=parents,
-            joints=[dict(type="free", damping="0.0005")],  # be consistent with round-nut.xml
+            joints=[
+                dict(type="free", damping="0.0005")
+            ],  # be consistent with round-nut.xml
         )

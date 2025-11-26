@@ -35,11 +35,17 @@ class Task(MujocoWorldBase):
 
         # Store references to all models
         self.mujoco_arena = mujoco_arena
-        self.mujoco_robots = [mujoco_robots] if isinstance(mujoco_robots, RobotModel) else mujoco_robots
+        self.mujoco_robots = (
+            [mujoco_robots] if isinstance(mujoco_robots, RobotModel) else mujoco_robots
+        )
         if mujoco_objects is None:
             self.mujoco_objects = []
         else:
-            self.mujoco_objects = [mujoco_objects] if isinstance(mujoco_objects, MujocoObject) else mujoco_objects
+            self.mujoco_objects = (
+                [mujoco_objects]
+                if isinstance(mujoco_objects, MujocoObject)
+                else mujoco_objects
+            )
 
         # Merge all models
         self.merge_arena(self.mujoco_arena)
@@ -81,9 +87,9 @@ class Task(MujocoWorldBase):
         """
         for mujoco_obj in mujoco_objects:
             # Make sure we actually got a MujocoObject
-            assert isinstance(mujoco_obj, MujocoObject), "Tried to merge non-MujocoObject! Got type: {}".format(
-                type(mujoco_obj)
-            )
+            assert isinstance(
+                mujoco_obj, MujocoObject
+            ), "Tried to merge non-MujocoObject! Got type: {}".format(type(mujoco_obj))
             # Merge this object
             self.merge_assets(mujoco_obj)
             self.worldbody.append(mujoco_obj.get_obj())
@@ -112,22 +118,33 @@ class Task(MujocoWorldBase):
             cls = str(type(model)).split("'")[1].split(".")[-1]
             inst = model.name
             id_groups = [
-                get_ids(sim=sim, elements=model.visual_geoms + model.contact_geoms, element_type="geom"),
+                get_ids(
+                    sim=sim,
+                    elements=model.visual_geoms + model.contact_geoms,
+                    element_type="geom",
+                ),
                 get_ids(sim=sim, elements=model.sites, element_type="site"),
             ]
             group_types = ("geom", "site")
-            ids_to_instances = (self._geom_ids_to_instances, self._site_ids_to_instances)
+            ids_to_instances = (
+                self._geom_ids_to_instances,
+                self._site_ids_to_instances,
+            )
             ids_to_classes = (self._geom_ids_to_classes, self._site_ids_to_classes)
 
             # Add entry to mapping dicts
 
             # Instances should be unique
-            assert inst not in self._instances_to_ids, f"Instance {inst} already registered; should be unique"
+            assert (
+                inst not in self._instances_to_ids
+            ), f"Instance {inst} already registered; should be unique"
             self._instances_to_ids[inst] = {}
 
             # Classes may not be unique
             if cls not in self._classes_to_ids:
-                self._classes_to_ids[cls] = {group_type: [] for group_type in group_types}
+                self._classes_to_ids[cls] = {
+                    group_type: [] for group_type in group_types
+                }
 
             for ids, group_type, ids_to_inst, ids_to_cls in zip(
                 id_groups, group_types, ids_to_instances, ids_to_classes
@@ -138,7 +155,9 @@ class Task(MujocoWorldBase):
 
                 # Add reverse mappings as well
                 for idn in ids:
-                    assert idn not in ids_to_inst, f"ID {idn} already registered; should be unique"
+                    assert (
+                        idn not in ids_to_inst
+                    ), f"ID {idn} already registered; should be unique"
                     ids_to_inst[idn] = inst
                     ids_to_cls[idn] = cls
 

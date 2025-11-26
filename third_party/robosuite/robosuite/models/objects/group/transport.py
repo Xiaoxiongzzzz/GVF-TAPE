@@ -23,9 +23,15 @@ class TransportGroup(ObjectGroup):
         self.bin_size = bin_size
 
         # Create bins and lid
-        self.start_bin = Bin(name=f"{name}_start_bin", bin_size=bin_size, density=10000.0)
-        self.target_bin = Bin(name=f"{name}_target_bin", bin_size=bin_size, density=10000.0)
-        self.trash_bin = Bin(name=f"{name}_trash_bin", bin_size=bin_size, density=10000.0)
+        self.start_bin = Bin(
+            name=f"{name}_start_bin", bin_size=bin_size, density=10000.0
+        )
+        self.target_bin = Bin(
+            name=f"{name}_target_bin", bin_size=bin_size, density=10000.0
+        )
+        self.trash_bin = Bin(
+            name=f"{name}_trash_bin", bin_size=bin_size, density=10000.0
+        )
         self.lid = Lid(name=f"{name}_start_bin_lid", lid_size=(*bin_size[:2], 0.01))
 
         # Relevant geom ids
@@ -85,11 +91,21 @@ class TransportGroup(ObjectGroup):
         super().update_sim(sim=sim)
 
         # Update internal references to IDs
-        self.payload_geom_ids = [self.sim.model.geom_name2id(geom) for geom in self.payload.contact_geoms]
-        self.trash_geom_ids = [self.sim.model.geom_name2id(geom) for geom in self.trash.contact_geoms]
-        self.target_bin_base_geom_ids = [self.sim.model.geom_name2id(geom) for geom in self.target_bin.base_geoms]
-        self.trash_bin_base_geom_ids = [self.sim.model.geom_name2id(geom) for geom in self.trash_bin.base_geoms]
-        self.lid_handle_geom_ids = [self.sim.model.geom_name2id(geom) for geom in self.lid.handle_geoms]
+        self.payload_geom_ids = [
+            self.sim.model.geom_name2id(geom) for geom in self.payload.contact_geoms
+        ]
+        self.trash_geom_ids = [
+            self.sim.model.geom_name2id(geom) for geom in self.trash.contact_geoms
+        ]
+        self.target_bin_base_geom_ids = [
+            self.sim.model.geom_name2id(geom) for geom in self.target_bin.base_geoms
+        ]
+        self.trash_bin_base_geom_ids = [
+            self.sim.model.geom_name2id(geom) for geom in self.trash_bin.base_geoms
+        ]
+        self.lid_handle_geom_ids = [
+            self.sim.model.geom_name2id(geom) for geom in self.lid.handle_geoms
+        ]
         self.payload_body_id = self.sim.model.body_name2id(self.payload.root_body)
         self.trash_body_id = self.sim.model.body_name2id(self.trash.root_body)
 
@@ -107,7 +123,11 @@ class TransportGroup(ObjectGroup):
         Returns:
             np.array: (x,y,z,w) quaternion of the lid handle
         """
-        return np.array(T.mat2quat(self.sim.data.geom_xmat[self.lid_handle_geom_ids[0]].reshape(3, 3)))
+        return np.array(
+            T.mat2quat(
+                self.sim.data.geom_xmat[self.lid_handle_geom_ids[0]].reshape(3, 3)
+            )
+        )
 
     @property
     def payload_pos(self):
@@ -123,7 +143,9 @@ class TransportGroup(ObjectGroup):
         Returns:
             np.array: (x,y,z,w) quaternion of the payload
         """
-        return np.array(T.mat2quat(self.sim.data.body_xmat[self.payload_body_id].reshape(3, 3)))
+        return np.array(
+            T.mat2quat(self.sim.data.body_xmat[self.payload_body_id].reshape(3, 3))
+        )
 
     @property
     def trash_pos(self):
@@ -139,7 +161,9 @@ class TransportGroup(ObjectGroup):
         Returns:
             np.array: (x,y,z,w) quaternion of the trash
         """
-        return np.array(T.mat2quat(self.sim.data.body_xmat[self.trash_body_id].reshape(3, 3)))
+        return np.array(
+            T.mat2quat(self.sim.data.body_xmat[self.trash_body_id].reshape(3, 3))
+        )
 
     @property
     def target_bin_pos(self):
@@ -163,7 +187,9 @@ class TransportGroup(ObjectGroup):
         Returns:
             bool: True if trash is in trash bin
         """
-        return SU.check_contact(self.sim, self.trash_bin.base_geoms, self.trash.contact_geoms)
+        return SU.check_contact(
+            self.sim, self.trash_bin.base_geoms, self.trash.contact_geoms
+        )
 
     @property
     def payload_in_target_bin(self):
@@ -171,4 +197,6 @@ class TransportGroup(ObjectGroup):
         Returns:
             bool: True if payload is in target bin
         """
-        return SU.check_contact(self.sim, self.target_bin.base_geoms, self.payload.contact_geoms)
+        return SU.check_contact(
+            self.sim, self.target_bin.base_geoms, self.payload.contact_geoms
+        )

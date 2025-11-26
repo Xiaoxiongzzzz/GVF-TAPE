@@ -119,13 +119,23 @@ class StandWithMount(CompositeObject):
         # Walls
         x_vals = (
             np.array(
-                [0, -(self.mount_width - self.wall_thickness) / 2, 0, (self.mount_width - self.wall_thickness) / 2]
+                [
+                    0,
+                    -(self.mount_width - self.wall_thickness) / 2,
+                    0,
+                    (self.mount_width - self.wall_thickness) / 2,
+                ]
             )
             + self.mount_location[0]
         )
         y_vals = (
             np.array(
-                [-(self.mount_width - self.wall_thickness) / 2, 0, (self.mount_width - self.wall_thickness) / 2, 0]
+                [
+                    -(self.mount_width - self.wall_thickness) / 2,
+                    0,
+                    (self.mount_width - self.wall_thickness) / 2,
+                    0,
+                ]
             )
             + self.mount_location[1]
         )
@@ -135,8 +145,14 @@ class StandWithMount(CompositeObject):
                 dic=obj_args,
                 geom_types="box",
                 geom_locations=(x, y, self.base_thickness / 2),
-                geom_quats=T.convert_quat(T.axisangle2quat(np.array([0, 0, r])), to="wxyz"),
-                geom_sizes=(self.wall_thickness / 2, self.mount_width / 2, (self.size[2] - self.base_thickness) / 2),
+                geom_quats=T.convert_quat(
+                    T.axisangle2quat(np.array([0, 0, r])), to="wxyz"
+                ),
+                geom_sizes=(
+                    self.wall_thickness / 2,
+                    self.mount_width / 2,
+                    (self.size[2] - self.base_thickness) / 2,
+                ),
                 geom_names=f"wall{i}",
                 geom_rgbas=None if self.use_texture else self.rgba,
                 geom_materials=self.mat_name if self.use_texture else None,
@@ -153,7 +169,11 @@ class StandWithMount(CompositeObject):
             add_to_dict(
                 dic=obj_args,
                 geom_types="box",
-                geom_locations=(self.mount_location[0], self.mount_location[1], (self.size[2] / 2) - vis_geom_size[2]),
+                geom_locations=(
+                    self.mount_location[0],
+                    self.mount_location[1],
+                    (self.size[2] / 2) - vis_geom_size[2],
+                ),
                 geom_quats=(1, 0, 0, 0),
                 geom_sizes=vis_geom_size,
                 geom_names="hole_vis",
@@ -188,7 +208,11 @@ class StandWithMount(CompositeObject):
             np.array: (x, y, z, w) quaternion orientation for this object
         """
         # Rotate 90 deg about Y axis if at all
-        return np.array([0, 0.707107, 0, 0.707107]) if self.initialize_on_side else np.array([0, 0, 0, 1])
+        return (
+            np.array([0, 0.707107, 0, 0.707107])
+            if self.initialize_on_side
+            else np.array([0, 0, 0, 1])
+        )
 
     @property
     def base_geoms(self):

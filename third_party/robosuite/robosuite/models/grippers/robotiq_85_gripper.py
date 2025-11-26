@@ -1,6 +1,7 @@
 """
 6-DoF gripper with its open/close variant
 """
+
 import numpy as np
 
 from robosuite.models.grippers.gripper_model import GripperModel
@@ -16,7 +17,9 @@ class Robotiq85GripperBase(GripperModel):
     """
 
     def __init__(self, idn=0):
-        super().__init__(xml_path_completion("grippers/robotiq_gripper_85.xml"), idn=idn)
+        super().__init__(
+            xml_path_completion("grippers/robotiq_gripper_85.xml"), idn=idn
+        )
 
     def format_action(self, action):
         return action
@@ -62,7 +65,9 @@ class Robotiq85Gripper(Robotiq85GripperBase):
             AssertionError: [Invalid action dimension size]
         """
         assert len(action) == 1
-        self.current_action = np.clip(self.current_action + self.speed * np.sign(action), -1.0, 1.0)
+        self.current_action = np.clip(
+            self.current_action + self.speed * np.sign(action), -1.0, 1.0
+        )
         return self.current_action
 
     @property

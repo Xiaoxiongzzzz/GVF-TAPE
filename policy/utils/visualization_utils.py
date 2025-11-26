@@ -4,9 +4,9 @@ from moviepy.editor import ImageSequenceClip
 
 
 def make_grid(array, ncol=5, padding=0, pad_value=120):
-    """ numpy version of the make_grid function in torch. Dimension of array: NHWC """
-    if np.max(array) < 2.:
-        array = array * 255.
+    """numpy version of the make_grid function in torch. Dimension of array: NHWC"""
+    if np.max(array) < 2.0:
+        array = array * 255.0
     if len(array.shape) == 3:  # In case there is only one channel
         array = np.expand_dims(array, 3)
     N, H, W, C = array.shape
@@ -18,12 +18,20 @@ def make_grid(array, ncol=5, padding=0, pad_value=120):
     idx = 0
     grid_img = None
     for i in range(nrow):
-        row = np.pad(array[idx], [[padding if i == 0 else 0, padding], [padding, padding], [0, 0]],
-                     constant_values=pad_value, mode='constant')
+        row = np.pad(
+            array[idx],
+            [[padding if i == 0 else 0, padding], [padding, padding], [0, 0]],
+            constant_values=pad_value,
+            mode="constant",
+        )
         for j in range(1, ncol):
             idx += 1
-            cur_img = np.pad(array[idx], [[padding if i == 0 else 0, padding], [0, padding], [0, 0]],
-                             constant_values=pad_value, mode='constant')
+            cur_img = np.pad(
+                array[idx],
+                [[padding if i == 0 else 0, padding], [0, padding], [0, 0]],
+                constant_values=pad_value,
+                mode="constant",
+            )
             row = np.hstack([row, cur_img])
         idx += 1
         if i == 0:
@@ -33,7 +41,7 @@ def make_grid(array, ncol=5, padding=0, pad_value=120):
     return grid_img.astype(np.float32)
 
 
-def save_numpy_as_video(array, filename, fps=20, extension='mp4'):
+def save_numpy_as_video(array, filename, fps=20, extension="mp4"):
     """Creates a gif given a stack of images using moviepy
     Notes
     -----
@@ -43,12 +51,12 @@ def save_numpy_as_video(array, filename, fps=20, extension='mp4'):
     """
     import cv2
 
-    if np.max(array) <= 2.:
-        array *= 255.
+    if np.max(array) <= 2.0:
+        array *= 255.0
     array = array.astype(np.uint8)
     # ensure that the file has the .mp4 extension
     fname, _ = os.path.splitext(filename)
-    filename = fname + f'.{extension}'
+    filename = fname + f".{extension}"
 
     # copy into the color dimension if the images are black and white
     if array.ndim == 3:

@@ -44,18 +44,26 @@ class MultiTableArena(Arena):
         self.table_offsets = np.array(table_offsets)
         self.n_tables = self.table_offsets.shape[0]
         self.table_rots = (
-            np.array(table_rots) if isinstance(table_rots, Iterable) else np.ones(self.n_tables) * table_rots
+            np.array(table_rots)
+            if isinstance(table_rots, Iterable)
+            else np.ones(self.n_tables) * table_rots
         )
         self.table_full_sizes = np.array(table_full_sizes)
         if len(self.table_full_sizes.shape) == 1:
-            self.table_full_sizes = np.stack([self.table_full_sizes] * self.n_tables, axis=0)
+            self.table_full_sizes = np.stack(
+                [self.table_full_sizes] * self.n_tables, axis=0
+            )
         self.table_half_sizes = self.table_full_sizes / 2
         self.table_frictions = np.array(table_frictions)
         if len(self.table_frictions.shape) == 1:
-            self.table_frictions = np.stack([self.table_frictions] * self.n_tables, axis=0)
+            self.table_frictions = np.stack(
+                [self.table_frictions] * self.n_tables, axis=0
+            )
         self.center_pos = np.array(self.table_offsets)
         self.center_pos[:, 2] -= self.table_half_sizes[:, 2]
-        self.has_legs = has_legs if isinstance(has_legs, Iterable) else [has_legs] * self.n_tables
+        self.has_legs = (
+            has_legs if isinstance(has_legs, Iterable) else [has_legs] * self.n_tables
+        )
 
         # Run super init
         super().__init__(xml_path_completion(xml))
@@ -80,15 +88,27 @@ class MultiTableArena(Arena):
         }
 
         # Create collision and visual bodies, and add them to the table body
-        col_geom = new_geom(name=f"{name}_collision", group=0, friction=friction, **table_attribs)
+        col_geom = new_geom(
+            name=f"{name}_collision", group=0, friction=friction, **table_attribs
+        )
         vis_geom = new_geom(
-            name=f"{name}_visual", group=1, conaffinity=0, contype=0, material="table_ceramic", **table_attribs
+            name=f"{name}_visual",
+            group=1,
+            conaffinity=0,
+            contype=0,
+            material="table_ceramic",
+            **table_attribs,
         )
         table_body.append(col_geom)
         table_body.append(vis_geom)
 
         # Add tabletop site to table
-        top_site = new_site(name=f"{name}_top", pos=(0, 0, half_size[2]), size=(0.001, 0.001, 0.001), rgba=(0, 0, 0, 0))
+        top_site = new_site(
+            name=f"{name}_top",
+            pos=(0, 0, half_size[2]),
+            size=(0.001, 0.001, 0.001),
+            rgba=(0, 0, 0, 0),
+        )
         table_body.append(top_site)
 
         # Add legs if requested
@@ -137,7 +157,13 @@ class MultiTableArena(Arena):
         """
         # Create tables
         for i, (offset, rot, half_size, friction, legs) in enumerate(
-            zip(self.table_offsets, self.table_rots, self.table_half_sizes, self.table_frictions, self.has_legs)
+            zip(
+                self.table_offsets,
+                self.table_rots,
+                self.table_half_sizes,
+                self.table_frictions,
+                self.has_legs,
+            )
         ):
             self._add_table(
                 name=f"table{i}",

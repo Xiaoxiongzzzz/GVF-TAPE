@@ -74,23 +74,39 @@ class Bimanual(Manipulator):
         self.controller_config = self._input2dict(copy.deepcopy(controller_config))
         self.gripper = self._input2dict(None)
         self.gripper_type = self._input2dict(gripper_type)
-        self.has_gripper = self._input2dict([gripper_type is not None for _, gripper_type in self.gripper_type.items()])
+        self.has_gripper = self._input2dict(
+            [gripper_type is not None for _, gripper_type in self.gripper_type.items()]
+        )
 
         self.gripper_joints = self._input2dict(None)  # xml joint names for gripper
-        self._ref_gripper_joint_pos_indexes = self._input2dict(None)  # xml gripper joint position indexes in mjsim
-        self._ref_gripper_joint_vel_indexes = self._input2dict(None)  # xml gripper joint velocity indexes in mjsim
+        self._ref_gripper_joint_pos_indexes = self._input2dict(
+            None
+        )  # xml gripper joint position indexes in mjsim
+        self._ref_gripper_joint_vel_indexes = self._input2dict(
+            None
+        )  # xml gripper joint velocity indexes in mjsim
         self._ref_joint_gripper_actuator_indexes = self._input2dict(
             None
         )  # xml gripper (pos) actuator indexes for robot in mjsim
-        self.eef_rot_offset = self._input2dict(None)  # rotation offsets from final arm link to gripper (quat)
+        self.eef_rot_offset = self._input2dict(
+            None
+        )  # rotation offsets from final arm link to gripper (quat)
         self.eef_site_id = self._input2dict(None)  # xml element id for eef in mjsim
-        self.eef_cylinder_id = self._input2dict(None)  # xml element id for eef cylinder in mjsim
+        self.eef_cylinder_id = self._input2dict(
+            None
+        )  # xml element id for eef cylinder in mjsim
         self.torques = None  # Current torques being applied
 
-        self.recent_ee_forcetorques = self._input2dict(None)  # Current and last forces / torques sensed at eef
-        self.recent_ee_pose = self._input2dict(None)  # Current and last eef pose (pos + ori (quat))
+        self.recent_ee_forcetorques = self._input2dict(
+            None
+        )  # Current and last forces / torques sensed at eef
+        self.recent_ee_pose = self._input2dict(
+            None
+        )  # Current and last eef pose (pos + ori (quat))
         self.recent_ee_vel = self._input2dict(None)  # Current and last eef velocity
-        self.recent_ee_vel_buffer = self._input2dict(None)  # RingBuffer holding prior 10 values of velocity values
+        self.recent_ee_vel_buffer = self._input2dict(
+            None
+        )  # RingBuffer holding prior 10 values of velocity values
         self.recent_ee_acc = self._input2dict(None)  # Current and last eef acceleration
 
         super().__init__(
@@ -117,9 +133,13 @@ class Bimanual(Manipulator):
                 controller_path = os.path.join(
                     os.path.dirname(__file__),
                     "..",
-                    "controllers/config/{}.json".format(self.robot_model.default_controller_config[arm]),
+                    "controllers/config/{}.json".format(
+                        self.robot_model.default_controller_config[arm]
+                    ),
                 )
-                self.controller_config[arm] = load_controller_config(custom_fpath=controller_path)
+                self.controller_config[arm] = load_controller_config(
+                    custom_fpath=controller_path
+                )
 
             # Assert that the controller config is a dict file:
             #             NOTE: "type" must be one of: {JOINT_POSITION, JOINT_TORQUE, JOINT_VELOCITY,
@@ -135,11 +155,17 @@ class Bimanual(Manipulator):
             #   policy (control) freq, and ndim (# joints)
             self.controller_config[arm]["robot_name"] = self.name
             self.controller_config[arm]["sim"] = self.sim
-            self.controller_config[arm]["eef_name"] = self.gripper[arm].important_sites["grip_site"]
+            self.controller_config[arm]["eef_name"] = self.gripper[arm].important_sites[
+                "grip_site"
+            ]
             self.controller_config[arm]["eef_rot_offset"] = self.eef_rot_offset[arm]
             self.controller_config[arm]["ndim"] = self._joint_split_idx
             self.controller_config[arm]["policy_freq"] = self.control_freq
-            (start, end) = (None, self._joint_split_idx) if arm == "right" else (self._joint_split_idx, None)
+            (start, end) = (
+                (None, self._joint_split_idx)
+                if arm == "right"
+                else (self._joint_split_idx, None)
+            )
             self.controller_config[arm]["joint_indexes"] = {
                 "joints": self.joint_indexes[start:end],
                 "qpos": self._ref_joint_pos_indexes[start:end],
@@ -151,11 +177,15 @@ class Bimanual(Manipulator):
             )
 
             # Only load urdf the first time this controller gets called
-            self.controller_config[arm]["load_urdf"] = True if not urdf_loaded else False
+            self.controller_config[arm]["load_urdf"] = (
+                True if not urdf_loaded else False
+            )
             urdf_loaded = True
 
             # Instantiate the relevant controller
-            self.controller[arm] = controller_factory(self.controller_config[arm]["type"], self.controller_config[arm])
+            self.controller[arm] = controller_factory(
+                self.controller_config[arm]["type"], self.controller_config[arm]
+            )
 
     def load_model(self):
         """
@@ -168,7 +198,9 @@ class Bimanual(Manipulator):
         if self.robot_model.arm_type != "bimanual":
             raise TypeError(
                 "Error loading robot model: Incompatible arm type specified for this robot. "
-                "Requested model arm type: {}, robot arm type: {}".format(self.robot_model.arm_type, type(self))
+                "Requested model arm type: {}, robot arm type: {}".format(
+                    self.robot_model.arm_type, type(self)
+                )
             )
 
         # Now, load the gripper if necessary
@@ -177,20 +209,28 @@ class Bimanual(Manipulator):
                 if self.gripper_type[arm] == "default":
                     # Load the default gripper from the robot file
                     self.gripper[arm] = gripper_factory(
-                        self.robot_model.default_gripper[arm], idn="_".join((str(self.idn), arm))
+                        self.robot_model.default_gripper[arm],
+                        idn="_".join((str(self.idn), arm)),
                     )
                 else:
                     # Load user-specified gripper
-                    self.gripper[arm] = gripper_factory(self.gripper_type[arm], idn="_".join((str(self.idn), arm)))
+                    self.gripper[arm] = gripper_factory(
+                        self.gripper_type[arm], idn="_".join((str(self.idn), arm))
+                    )
             else:
                 # Load null gripper
-                self.gripper[arm] = gripper_factory(None, idn="_".join((str(self.idn), arm)))
+                self.gripper[arm] = gripper_factory(
+                    None, idn="_".join((str(self.idn), arm))
+                )
             # Grab eef rotation offset
             self.eef_rot_offset[arm] = T.quat_multiply(
-                self.robot_model.hand_rotation_offset[arm], self.gripper[arm].rotation_offset
+                self.robot_model.hand_rotation_offset[arm],
+                self.gripper[arm].rotation_offset,
             )
             # Add this gripper to the robot model
-            self.robot_model.add_gripper(self.gripper[arm], self.robot_model.eef_name[arm])
+            self.robot_model.add_gripper(
+                self.gripper[arm], self.robot_model.eef_name[arm]
+            )
 
     def reset(self, deterministic=False):
         """
@@ -208,7 +248,9 @@ class Bimanual(Manipulator):
             # Now, reset the grippers if necessary
             if self.has_gripper[arm]:
                 if not deterministic:
-                    self.sim.data.qpos[self._ref_gripper_joint_pos_indexes[arm]] = self.gripper[arm].init_qpos
+                    self.sim.data.qpos[self._ref_gripper_joint_pos_indexes[arm]] = (
+                        self.gripper[arm].init_qpos
+                    )
 
                 self.gripper[arm].current_action = np.zeros(self.gripper[arm].dof)
 
@@ -236,18 +278,25 @@ class Bimanual(Manipulator):
             if self.has_gripper[arm]:
                 self.gripper_joints[arm] = list(self.gripper[arm].joints)
                 self._ref_gripper_joint_pos_indexes[arm] = [
-                    self.sim.model.get_joint_qpos_addr(x) for x in self.gripper_joints[arm]
+                    self.sim.model.get_joint_qpos_addr(x)
+                    for x in self.gripper_joints[arm]
                 ]
                 self._ref_gripper_joint_vel_indexes[arm] = [
-                    self.sim.model.get_joint_qvel_addr(x) for x in self.gripper_joints[arm]
+                    self.sim.model.get_joint_qvel_addr(x)
+                    for x in self.gripper_joints[arm]
                 ]
                 self._ref_joint_gripper_actuator_indexes[arm] = [
-                    self.sim.model.actuator_name2id(actuator) for actuator in self.gripper[arm].actuators
+                    self.sim.model.actuator_name2id(actuator)
+                    for actuator in self.gripper[arm].actuators
                 ]
 
             # IDs of sites for eef visualization
-            self.eef_site_id[arm] = self.sim.model.site_name2id(self.gripper[arm].important_sites["grip_site"])
-            self.eef_cylinder_id[arm] = self.sim.model.site_name2id(self.gripper[arm].important_sites["grip_cylinder"])
+            self.eef_site_id[arm] = self.sim.model.site_name2id(
+                self.gripper[arm].important_sites["grip_site"]
+            )
+            self.eef_cylinder_id[arm] = self.sim.model.site_name2id(
+                self.gripper[arm].important_sites["grip_cylinder"]
+            )
 
     def control(self, action, policy_step=False):
         """
@@ -268,7 +317,9 @@ class Bimanual(Manipulator):
             AssertionError: [Invalid action dimension]
         """
         # clip actions into valid range
-        assert len(action) == self.action_dim, "environment got invalid action dimension -- expected {}, got {}".format(
+        assert (
+            len(action) == self.action_dim
+        ), "environment got invalid action dimension -- expected {}, got {}".format(
             self.action_dim, len(action)
         )
 
@@ -276,7 +327,11 @@ class Bimanual(Manipulator):
         # Now execute actions for each arm
         for arm in self.arms:
             # Make sure to split action space correctly
-            (start, end) = (None, self._action_split_idx) if arm == "right" else (self._action_split_idx, None)
+            (start, end) = (
+                (None, self._action_split_idx)
+                if arm == "right"
+                else (self._action_split_idx, None)
+            )
             sub_action = action[start:end]
 
             gripper_action = None
@@ -290,11 +345,15 @@ class Bimanual(Manipulator):
                 self.controller[arm].set_goal(sub_action)
 
             # Now run the controller for a step and add it to the torques
-            self.torques = np.concatenate((self.torques, self.controller[arm].run_controller()))
+            self.torques = np.concatenate(
+                (self.torques, self.controller[arm].run_controller())
+            )
 
             # Get gripper action, if applicable
             if self.has_gripper[arm]:
-                self.grip_action(gripper=self.gripper[arm], gripper_action=gripper_action)
+                self.grip_action(
+                    gripper=self.gripper[arm], gripper_action=gripper_action
+                )
 
         # Clip the torques
         low, high = self.torque_limits
@@ -312,25 +371,48 @@ class Bimanual(Manipulator):
 
             for arm in self.arms:
                 # Update arm-specific proprioceptive values
-                self.recent_ee_forcetorques[arm].push(np.concatenate((self.ee_force[arm], self.ee_torque[arm])))
+                self.recent_ee_forcetorques[arm].push(
+                    np.concatenate((self.ee_force[arm], self.ee_torque[arm]))
+                )
                 self.recent_ee_pose[arm].push(
-                    np.concatenate((self.controller[arm].ee_pos, T.mat2quat(self.controller[arm].ee_ori_mat)))
+                    np.concatenate(
+                        (
+                            self.controller[arm].ee_pos,
+                            T.mat2quat(self.controller[arm].ee_ori_mat),
+                        )
+                    )
                 )
                 self.recent_ee_vel[arm].push(
-                    np.concatenate((self.controller[arm].ee_pos_vel, self.controller[arm].ee_ori_vel))
+                    np.concatenate(
+                        (
+                            self.controller[arm].ee_pos_vel,
+                            self.controller[arm].ee_ori_vel,
+                        )
+                    )
                 )
 
                 # Estimation of eef acceleration (averaged derivative of recent velocities)
                 self.recent_ee_vel_buffer[arm].push(
-                    np.concatenate((self.controller[arm].ee_pos_vel, self.controller[arm].ee_ori_vel))
+                    np.concatenate(
+                        (
+                            self.controller[arm].ee_pos_vel,
+                            self.controller[arm].ee_ori_vel,
+                        )
+                    )
                 )
                 diffs = np.vstack(
                     [
                         self.recent_ee_acc[arm].current,
-                        self.control_freq * np.diff(self.recent_ee_vel_buffer[arm].buf, axis=0),
+                        self.control_freq
+                        * np.diff(self.recent_ee_vel_buffer[arm].buf, axis=0),
                     ]
                 )
-                ee_acc = np.array([np.convolve(col, np.ones(10) / 10.0, mode="valid")[0] for col in diffs.transpose()])
+                ee_acc = np.array(
+                    [
+                        np.convolve(col, np.ones(10) / 10.0, mode="valid")[0]
+                        for col in diffs.transpose()
+                    ]
+                )
                 self.recent_ee_acc[arm].push(ee_acc)
 
     def _visualize_grippers(self, visible):
@@ -361,7 +443,9 @@ class Bimanual(Manipulator):
 
         for arm in self.arms:
             # Add in eef info
-            arm_sensors, arm_sensor_names = self._create_arm_sensors(arm=arm, modality=modality)
+            arm_sensors, arm_sensor_names = self._create_arm_sensors(
+                arm=arm, modality=modality
+            )
             sensors += arm_sensors
             names += arm_sensor_names
 
@@ -398,7 +482,9 @@ class Bimanual(Manipulator):
 
         @sensor(modality=modality)
         def eef_quat(obs_cache):
-            return T.convert_quat(self.sim.data.get_body_xquat(self.robot_model.eef_name[arm]), to="xyzw")
+            return T.convert_quat(
+                self.sim.data.get_body_xquat(self.robot_model.eef_name[arm]), to="xyzw"
+            )
 
         sensors = [eef_pos, eef_quat]
         names = [f"{pf}{arm}_eef_pos", f"{pf}{arm}_eef_quat"]
@@ -408,11 +494,21 @@ class Bimanual(Manipulator):
 
             @sensor(modality=modality)
             def gripper_qpos(obs_cache):
-                return np.array([self.sim.data.qpos[x] for x in self._ref_gripper_joint_pos_indexes[arm]])
+                return np.array(
+                    [
+                        self.sim.data.qpos[x]
+                        for x in self._ref_gripper_joint_pos_indexes[arm]
+                    ]
+                )
 
             @sensor(modality=modality)
             def gripper_qvel(obs_cache):
-                return np.array([self.sim.data.qvel[x] for x in self._ref_gripper_joint_vel_indexes[arm]])
+                return np.array(
+                    [
+                        self.sim.data.qvel[x]
+                        for x in self._ref_gripper_joint_vel_indexes[arm]
+                    ]
+                )
 
             sensors += [gripper_qpos, gripper_qvel]
             names += [f"{pf}{arm}_gripper_qpos", f"{pf}{arm}_gripper_qvel"]
@@ -463,10 +559,14 @@ class Bimanual(Manipulator):
         low, high = [], []
         for arm in self.arms:
             low_g, high_g = (
-                ([-1] * self.gripper[arm].dof, [1] * self.gripper[arm].dof) if self.has_gripper[arm] else ([], [])
+                ([-1] * self.gripper[arm].dof, [1] * self.gripper[arm].dof)
+                if self.has_gripper[arm]
+                else ([], [])
             )
             low_c, high_c = self.controller[arm].control_limits
-            low, high = np.concatenate([low, low_c, low_g]), np.concatenate([high, high_c, high_g])
+            low, high = np.concatenate([low, low_c, low_g]), np.concatenate(
+                [high, high_c, high_g]
+            )
         return low, high
 
     @property
@@ -477,7 +577,9 @@ class Bimanual(Manipulator):
         """
         vals = {}
         for arm in self.arms:
-            vals[arm] = np.abs((1.0 / self.control_freq) * self.recent_ee_forcetorques[arm].average)
+            vals[arm] = np.abs(
+                (1.0 / self.control_freq) * self.recent_ee_forcetorques[arm].average
+            )
         return vals
 
     @property
@@ -488,7 +590,9 @@ class Bimanual(Manipulator):
         """
         vals = {}
         for arm in self.arms:
-            vals[arm] = self.get_sensor_measurement(self.gripper[arm].important_sensors["force_ee"])
+            vals[arm] = self.get_sensor_measurement(
+                self.gripper[arm].important_sensors["force_ee"]
+            )
         return vals
 
     @property
@@ -499,7 +603,9 @@ class Bimanual(Manipulator):
         """
         vals = {}
         for arm in self.arms:
-            vals[arm] = self.get_sensor_measurement(self.gripper[arm].important_sensors["torque_ee"])
+            vals[arm] = self.get_sensor_measurement(
+                self.gripper[arm].important_sensors["torque_ee"]
+            )
         return vals
 
     @property
@@ -535,13 +641,21 @@ class Bimanual(Manipulator):
         vals = {}
         for arm in self.arms:
             # Determine correct start, end points based on arm
-            (start, end) = (None, self._joint_split_idx) if arm == "right" else (self._joint_split_idx, None)
+            (start, end) = (
+                (None, self._joint_split_idx)
+                if arm == "right"
+                else (self._joint_split_idx, None)
+            )
 
             # Use jacobian to translate joint velocities to end effector velocities.
-            Jp = self.sim.data.get_body_jacp(self.robot_model.eef_name[arm]).reshape((3, -1))
+            Jp = self.sim.data.get_body_jacp(self.robot_model.eef_name[arm]).reshape(
+                (3, -1)
+            )
             Jp_joint = Jp[:, self._ref_joint_vel_indexes[start:end]]
 
-            Jr = self.sim.data.get_body_jacr(self.robot_model.eef_name[arm]).reshape((3, -1))
+            Jr = self.sim.data.get_body_jacr(self.robot_model.eef_name[arm]).reshape(
+                (3, -1)
+            )
             Jr_joint = Jr[:, self._ref_joint_vel_indexes[start:end]]
 
             eef_lin_vel = Jp_joint.dot(self._joint_velocities)

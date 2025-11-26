@@ -19,7 +19,9 @@ class SingleArmEnv(ManipulationEnv):
         # Verify the correct robot has been loaded
         assert isinstance(
             self.robots[0], SingleArm
-        ), "Error: Expected one single-armed robot! Got {} type instead.".format(type(self.robots[0]))
+        ), "Error: Expected one single-armed robot! Got {} type instead.".format(
+            type(self.robots[0])
+        )
 
     def _check_robot_configuration(self, robots):
         """
@@ -30,7 +32,9 @@ class SingleArmEnv(ManipulationEnv):
         """
         super()._check_robot_configuration(robots)
         if type(robots) is list:
-            assert len(robots) == 1, "Error: Only one robot should be inputted for this task!"
+            assert (
+                len(robots) == 1
+            ), "Error: Only one robot should be inputted for this task!"
 
     @property
     def _eef_xpos(self):
@@ -55,9 +59,15 @@ class SingleArmEnv(ManipulationEnv):
         pf = self.robots[0].gripper.naming_prefix
 
         if self.env_configuration == "bimanual":
-            return np.array(self.sim.data.site_xmat[self.sim.model.site_name2id(pf + "right_grip_site")]).reshape(3, 3)
+            return np.array(
+                self.sim.data.site_xmat[
+                    self.sim.model.site_name2id(pf + "right_grip_site")
+                ]
+            ).reshape(3, 3)
         else:
-            return np.array(self.sim.data.site_xmat[self.sim.model.site_name2id(pf + "grip_site")]).reshape(3, 3)
+            return np.array(
+                self.sim.data.site_xmat[self.sim.model.site_name2id(pf + "grip_site")]
+            ).reshape(3, 3)
 
     @property
     def _eef_xquat(self):

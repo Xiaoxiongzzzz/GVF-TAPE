@@ -1,6 +1,7 @@
 """
 Defines GripperTester that is used to test the physical properties of various grippers
 """
+
 import xml.etree.ElementTree as ET
 
 import numpy as np
@@ -48,7 +49,9 @@ class GripperTester:
 
         world = MujocoWorldBase()
         # Add a table
-        arena = TableArena(table_full_size=(0.4, 0.4, 0.1), table_offset=(0, 0, 0.1), has_legs=False)
+        arena = TableArena(
+            table_full_size=(0.4, 0.4, 0.1), table_offset=(0, 0, 0.1), has_legs=False
+        )
         world.merge(arena)
 
         # Add a gripper
@@ -57,7 +60,9 @@ class GripperTester:
         gripper_body = ET.Element("body")
         gripper_body.set("pos", pos)
         gripper_body.set("quat", quat)  # flip z
-        gripper_body.append(new_joint(name="gripper_z_joint", type="slide", axis="0 0 -1", damping="50"))
+        gripper_body.append(
+            new_joint(name="gripper_z_joint", type="slide", axis="0 0 -1", damping="50")
+        )
         # Add all gripper bodies to this higher level body
         for body in gripper.worldbody:
             gripper_body.append(body)
@@ -66,7 +71,11 @@ class GripperTester:
         # Manually add the higher level body we created
         world.worldbody.append(gripper_body)
         # Create a new actuator to control our slider joint
-        world.actuator.append(new_actuator(joint="gripper_z_joint", act_type="position", name="gripper_z", kp="500"))
+        world.actuator.append(
+            new_actuator(
+                joint="gripper_z_joint", act_type="position", name="gripper_z", kp="500"
+            )
+        )
 
         # Add an object for grasping
         # density is in units kg / m3
@@ -75,7 +84,11 @@ class GripperTester:
             box_size = [0.02, 0.02, 0.02]
         box_size = np.array(box_size)
         self.cube = BoxObject(
-            name="object", size=box_size, rgba=[1, 0, 0, 1], friction=[1, 0.005, 0.0001], density=box_density
+            name="object",
+            size=box_size,
+            rgba=[1, 0, 0, 1],
+            friction=[1, 0.005, 0.0001],
+            density=box_density,
         )
         object_pos = np.array(TABLE_TOP + box_size * [0, 0, 1])
         mujoco_object = self.cube.get_obj()
@@ -86,12 +99,20 @@ class GripperTester:
 
         # add reference objects for x and y axes
         x_ref = BoxObject(
-            name="x_ref", size=[0.01, 0.01, 0.01], rgba=[0, 1, 0, 1], obj_type="visual", joints=None
+            name="x_ref",
+            size=[0.01, 0.01, 0.01],
+            rgba=[0, 1, 0, 1],
+            obj_type="visual",
+            joints=None,
         ).get_obj()
         x_ref.set("pos", "0.2 0 0.105")
         world.worldbody.append(x_ref)
         y_ref = BoxObject(
-            name="y_ref", size=[0.01, 0.01, 0.01], rgba=[0, 0, 1, 1], obj_type="visual", joints=None
+            name="y_ref",
+            size=[0.01, 0.01, 0.01],
+            rgba=[0, 0, 1, 1],
+            obj_type="visual",
+            joints=None,
         ).get_obj()
         y_ref.set("pos", "0 0.2 0.105")
         world.worldbody.append(y_ref)
@@ -103,7 +124,8 @@ class GripperTester:
         self.cur_step = 0
         if gripper_low_pos > gripper_high_pos:
             raise ValueError(
-                "gripper_low_pos {} is larger " "than gripper_high_pos {}".format(gripper_low_pos, gripper_high_pos)
+                "gripper_low_pos {} is larger "
+                "than gripper_high_pos {}".format(gripper_low_pos, gripper_high_pos)
             )
         self.gripper_low_pos = gripper_low_pos
         self.gripper_high_pos = gripper_high_pos
@@ -125,12 +147,16 @@ class GripperTester:
 
         # For gravity correction
         gravity_corrected = ["gripper_z_joint"]
-        self._gravity_corrected_qvels = [self.sim.model.get_joint_qvel_addr(x) for x in gravity_corrected]
+        self._gravity_corrected_qvels = [
+            self.sim.model.get_joint_qvel_addr(x) for x in gravity_corrected
+        ]
 
         self.gripper_z_id = self.sim.model.actuator_name2id("gripper_z")
         self.gripper_z_is_low = False
 
-        self.gripper_actuator_ids = [self.sim.model.actuator_name2id(x) for x in self.gripper.actuators]
+        self.gripper_actuator_ids = [
+            self.sim.model.actuator_name2id(x) for x in self.gripper.actuators
+        ]
 
         self.gripper_is_closed = True
 
@@ -197,9 +223,9 @@ class GripperTester:
         """
         Applies gravity compensation to the simulation
         """
-        self.sim.data.qfrc_applied[self._gravity_corrected_qvels] = self.sim.data.qfrc_bias[
-            self._gravity_corrected_qvels
-        ]
+        self.sim.data.qfrc_applied[self._gravity_corrected_qvels] = (
+            self.sim.data.qfrc_bias[self._gravity_corrected_qvels]
+        )
 
     def loop(self, total_iters=1, test_y=False, y_baseline=0.01):
         """

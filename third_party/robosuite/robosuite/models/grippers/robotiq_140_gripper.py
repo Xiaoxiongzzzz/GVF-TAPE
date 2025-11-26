@@ -1,6 +1,7 @@
 """
 Gripper with 140mm Jaw width from Robotiq (has two fingers).
 """
+
 import numpy as np
 
 from robosuite.models.grippers.gripper_model import GripperModel
@@ -17,7 +18,9 @@ class Robotiq140GripperBase(GripperModel):
     """
 
     def __init__(self, idn=0):
-        super().__init__(xml_path_completion("grippers/robotiq_gripper_140.xml"), idn=idn)
+        super().__init__(
+            xml_path_completion("grippers/robotiq_gripper_140.xml"), idn=idn
+        )
 
     def format_action(self, action):
         return action
@@ -64,7 +67,9 @@ class Robotiq140Gripper(Robotiq140GripperBase):
         """
         assert len(action) == 1
         self.current_action = np.clip(
-            self.current_action + np.array([1.0, -1.0]) * self.speed * np.sign(action), -1.0, 1.0
+            self.current_action + np.array([1.0, -1.0]) * self.speed * np.sign(action),
+            -1.0,
+            1.0,
         )
         return self.current_action
 

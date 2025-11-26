@@ -23,7 +23,6 @@ from .nn import (
 from .imagen import PerceiverResampler
 
 
-
 class AttentionPool2d(nn.Module):
     """
     Adapted from CLIP: https://github.com/openai/CLIP/blob/main/clip/model.py
@@ -38,7 +37,7 @@ class AttentionPool2d(nn.Module):
     ):
         super().__init__()
         self.positional_embedding = nn.Parameter(
-            th.randn(embed_dim, spacial_dim ** 2 + 1) / embed_dim ** 0.5
+            th.randn(embed_dim, spacial_dim**2 + 1) / embed_dim**0.5
         )
         self.qkv_proj = conv_nd(1, embed_dim, 3 * embed_dim, 1)
         self.c_proj = conv_nd(1, embed_dim, output_dim or embed_dim, 1)
@@ -212,7 +211,7 @@ class ResBlock(TimestepBlock):
             normalization(self.out_channels),
             nn.SiLU(),
             nn.Dropout(p=dropout),
-            conv_nd(dims, self.out_channels, self.out_channels, 3, padding=1)
+            conv_nd(dims, self.out_channels, self.out_channels, 3, padding=1),
         )
 
         if self.out_channels == channels:
@@ -306,8 +305,10 @@ class AttentionBlock(nn.Module):
         qkv = self.qkv(self.norm(x))
         h = self.attention(qkv)
         h = self.proj_out(h)
-        return rearrange((x + h), "(b f) c (x y) -> b c f x y", c=c, f=f, x=spatial[0], y=spatial[1])
-   
+        return rearrange(
+            (x + h), "(b f) c (x y) -> b c f x y", c=c, f=f, x=spatial[0], y=spatial[1]
+        )
+
 
 def count_flops_attn(model, _x, y):
     """
@@ -325,7 +326,7 @@ def count_flops_attn(model, _x, y):
     # We perform two matmuls with the same number of ops.
     # The first computes the weight matrix, the second computes
     # the combination of the value vectors.
-    matmul_ops = 2 * b * (num_spatial ** 2) * c * f
+    matmul_ops = 2 * b * (num_spatial**2) * c * f
     model.total_ops += th.DoubleTensor([matmul_ops])
 
 
@@ -362,7 +363,6 @@ class QKVAttentionLegacy(nn.Module):
         return count_flops_attn(model, _x, y)
 
 
-
 class QKVAttention(nn.Module):
     """
     A module which performs QKV attention and splits in a different order.
@@ -396,9 +396,6 @@ class QKVAttention(nn.Module):
     @staticmethod
     def count_flops(model, _x, y):
         return count_flops_attn(model, _x, y)
-    
-
-
 
 
 class UNetModel(nn.Module):
@@ -666,7 +663,7 @@ class UNetModel(nn.Module):
         if self.num_classes is not None:
             assert y.shape == (x.shape[0],)
             emb = emb + self.label_emb(y)
-        
+
         if self.task_tokens:
             label_emb = self.task_attnpool(y).mean(dim=1)
             emb = emb + label_emb

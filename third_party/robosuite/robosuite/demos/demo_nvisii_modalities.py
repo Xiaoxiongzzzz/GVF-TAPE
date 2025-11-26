@@ -64,7 +64,9 @@ if __name__ == "__main__":
         options["robots"] = choose_robots(exclude_bimanual=True)
 
     # Load the desired controller
-    options["controller_configs"] = load_controller_config(default_controller="OSC_POSE")
+    options["controller_configs"] = load_controller_config(
+        default_controller="OSC_POSE"
+    )
 
     # change renderer config
     config = load_renderer_config("nvisii")
@@ -87,7 +89,9 @@ if __name__ == "__main__":
         control_freq=20,
         renderer="nvisii",
         renderer_config=config,
-        camera_segmentations="element" if config["vision_modalities"] == "segmentation" else None,
+        camera_segmentations=(
+            "element" if config["vision_modalities"] == "segmentation" else None
+        ),
     )
 
     env.reset()

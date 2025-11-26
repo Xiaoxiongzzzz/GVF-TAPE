@@ -148,7 +148,9 @@ class RobotEnv(MujocoEnv):
         self._check_robot_configuration(robots)
 
         # Robot
-        robots = list(robots) if type(robots) is list or type(robots) is tuple else [robots]
+        robots = (
+            list(robots) if type(robots) is list or type(robots) is tuple else [robots]
+        )
         self.num_robots = len(robots)
         self.robot_names = robots
         self.robots = self._input2list(None, self.num_robots)
@@ -169,14 +171,18 @@ class RobotEnv(MujocoEnv):
         # Camera / Rendering Settings
         self.has_offscreen_renderer = has_offscreen_renderer
         self.camera_names = (
-            list(camera_names) if type(camera_names) is list or type(camera_names) is tuple else [camera_names]
+            list(camera_names)
+            if type(camera_names) is list or type(camera_names) is tuple
+            else [camera_names]
         )
         self.num_cameras = len(self.camera_names)
 
         self.camera_heights = self._input2list(camera_heights, self.num_cameras)
         self.camera_widths = self._input2list(camera_widths, self.num_cameras)
         self.camera_depths = self._input2list(camera_depths, self.num_cameras)
-        self.camera_segmentations = self._input2list(camera_segmentations, self.num_cameras)
+        self.camera_segmentations = self._input2list(
+            camera_segmentations, self.num_cameras
+        )
         # We need to parse camera segmentations more carefully since it may be a nested list
         seg_is_nested = False
         for i, camera_s in enumerate(self.camera_segmentations):
@@ -186,13 +192,21 @@ class RobotEnv(MujocoEnv):
         camera_segs = deepcopy(self.camera_segmentations)
         for i, camera_s in enumerate(self.camera_segmentations):
             if camera_s is not None:
-                self.camera_segmentations[i] = self._input2list(camera_s, 1) if seg_is_nested else deepcopy(camera_segs)
+                self.camera_segmentations[i] = (
+                    self._input2list(camera_s, 1)
+                    if seg_is_nested
+                    else deepcopy(camera_segs)
+                )
 
         # sanity checks for camera rendering
         if self.use_camera_obs and not self.has_offscreen_renderer:
-            raise ValueError("Error: Camera observations require an offscreen renderer!")
+            raise ValueError(
+                "Error: Camera observations require an offscreen renderer!"
+            )
         if self.use_camera_obs and self.camera_names is None:
-            raise ValueError("Must specify at least one camera name when using camera obs")
+            raise ValueError(
+                "Must specify at least one camera name when using camera obs"
+            )
 
         # Robot configurations -- update from subclass configs
         if robot_configs is None:
@@ -293,7 +307,11 @@ class RobotEnv(MujocoEnv):
             list: input @inp converted into a list of length @length
         """
         # convert to list if necessary
-        return list(inp) if type(inp) is list or type(inp) is tuple else [inp for _ in range(length)]
+        return (
+            list(inp)
+            if type(inp) is list or type(inp) is tuple
+            else [inp for _ in range(length)]
+        )
 
     def _load_model(self):
         """
@@ -336,7 +354,7 @@ class RobotEnv(MujocoEnv):
             # Create sensor information
             sensors = []
             names = []
-            for (cam_name, cam_w, cam_h, cam_d, cam_segs) in zip(
+            for cam_name, cam_w, cam_h, cam_d, cam_segs in zip(
                 self.camera_names,
                 self.camera_widths,
                 self.camera_heights,
@@ -346,7 +364,12 @@ class RobotEnv(MujocoEnv):
 
                 # Add cameras associated to our arrays
                 cam_sensors, cam_sensor_names = self._create_camera_sensors(
-                    cam_name, cam_w=cam_w, cam_h=cam_h, cam_d=cam_d, cam_segs=cam_segs, modality="image"
+                    cam_name,
+                    cam_w=cam_w,
+                    cam_h=cam_h,
+                    cam_d=cam_d,
+                    cam_segs=cam_segs,
+                    modality="image",
                 )
                 sensors += cam_sensors
                 names += cam_sensor_names
@@ -366,7 +389,9 @@ class RobotEnv(MujocoEnv):
 
         return observables
 
-    def _create_camera_sensors(self, cam_name, cam_w, cam_h, cam_d, cam_segs, modality="image"):
+    def _create_camera_sensors(
+        self, cam_name, cam_w, cam_h, cam_d, cam_segs, modality="image"
+    ):
         """
         Helper function to create sensors for a given camera. This is abstracted in a separate function call so that we
         don't have local function naming collisions during the _setup_observables() call.
@@ -409,7 +434,9 @@ class RobotEnv(MujocoEnv):
             )
             if cam_d:
                 rgb, depth = img
-                obs_cache[depth_sensor_name] = np.expand_dims(depth[::convention], axis=-1)
+                obs_cache[depth_sensor_name] = np.expand_dims(
+                    depth[::convention], axis=-1
+                )
                 return rgb[::convention]
             else:
                 return img[::convention]
@@ -421,7 +448,11 @@ class RobotEnv(MujocoEnv):
 
             @sensor(modality=modality)
             def camera_depth(obs_cache):
-                return obs_cache[depth_sensor_name] if depth_sensor_name in obs_cache else np.zeros((cam_h, cam_w, 1))
+                return (
+                    obs_cache[depth_sensor_name]
+                    if depth_sensor_name in obs_cache
+                    else np.zeros((cam_h, cam_w, 1))
+                )
 
             sensors.append(camera_depth)
             names.append(depth_sensor_name)
@@ -443,7 +474,9 @@ class RobotEnv(MujocoEnv):
 
         return sensors, names
 
-    def _create_segementation_sensor(self, cam_name, cam_w, cam_h, cam_s, seg_name_root, modality="image"):
+    def _create_segementation_sensor(
+        self, cam_name, cam_w, cam_h, cam_s, seg_name_root, modality="image"
+    ):
         """
         Helper function to create sensors for a given camera. This is abstracted in a separate function call so that we
         don't have local function naming collisions during the _setup_observables() call.
@@ -469,11 +502,21 @@ class RobotEnv(MujocoEnv):
         convention = IMAGE_CONVENTION_MAPPING[macros.IMAGE_CONVENTION]
 
         if cam_s == "instance":
-            name2id = {inst: i for i, inst in enumerate(list(self.model.instances_to_ids.keys()))}
-            mapping = {idn: name2id[inst] for idn, inst in self.model.geom_ids_to_instances.items()}
+            name2id = {
+                inst: i
+                for i, inst in enumerate(list(self.model.instances_to_ids.keys()))
+            }
+            mapping = {
+                idn: name2id[inst]
+                for idn, inst in self.model.geom_ids_to_instances.items()
+            }
         elif cam_s == "class":
-            name2id = {cls: i for i, cls in enumerate(list(self.model.classes_to_ids.keys()))}
-            mapping = {idn: name2id[cls] for idn, cls in self.model.geom_ids_to_classes.items()}
+            name2id = {
+                cls: i for i, cls in enumerate(list(self.model.classes_to_ids.keys()))
+            }
+            mapping = {
+                idn: name2id[cls] for idn, cls in self.model.geom_ids_to_classes.items()
+            }
         else:  # element
             # No additional mapping needed
             mapping = None
@@ -491,9 +534,9 @@ class RobotEnv(MujocoEnv):
             # Map raw IDs to grouped IDs if we're using instance or class-level segmentation
             if mapping is not None:
                 seg = (
-                    np.fromiter(map(lambda x: mapping.get(x, -1), seg.flatten()), dtype=np.int32).reshape(
-                        cam_h, cam_w, 1
-                    )
+                    np.fromiter(
+                        map(lambda x: mapping.get(x, -1), seg.flatten()), dtype=np.int32
+                    ).reshape(cam_h, cam_w, 1)
                     + 1
                 )
             return seg
@@ -572,7 +615,9 @@ class RobotEnv(MujocoEnv):
             AssertionError: [Invalid action dimension]
         """
         # Verify that the action is the correct dimension
-        assert len(action) == self.action_dim, "environment got invalid action dimension -- expected {}, got {}".format(
+        assert (
+            len(action) == self.action_dim
+        ), "environment got invalid action dimension -- expected {}, got {}".format(
             self.action_dim, len(action)
         )
 
@@ -590,7 +635,9 @@ class RobotEnv(MujocoEnv):
         # Loop through robots and instantiate Robot object for each
         for idx, (name, config) in enumerate(zip(self.robot_names, self.robot_configs)):
             # Create the robot instance
-            self.robots[idx] = ROBOT_CLASS_MAPPING[name](robot_type=name, idn=idx, **config)
+            self.robots[idx] = ROBOT_CLASS_MAPPING[name](
+                robot_type=name, idn=idx, **config
+            )
             # Now, load the robot models
             self.robots[idx].load_model()
 

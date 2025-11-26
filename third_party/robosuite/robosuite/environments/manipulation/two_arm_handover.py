@@ -263,7 +263,9 @@ class TwoArmHandover(TwoArmEnv):
         # use a shaping reward if specified
         if self.reward_shaping:
             # Grab relevant parameters
-            arm0_grasp_any, arm1_grasp_handle, hammer_height, table_height = self._get_task_info()
+            arm0_grasp_any, arm1_grasp_handle, hammer_height, table_height = (
+                self._get_task_info()
+            )
             # First, we'll consider the cases if the hammer is lifted above the threshold (step 3 - 6)
             if hammer_height - table_height > self.height_threshold:
                 # Split cases depending on whether arm1 is currently grasping the handle or not
@@ -313,13 +315,19 @@ class TwoArmHandover(TwoArmEnv):
 
         # Adjust base pose(s) accordingly
         if self.env_configuration == "bimanual":
-            xpos = self.robots[0].robot_model.base_xpos_offset["table"](self.table_full_size[0])
+            xpos = self.robots[0].robot_model.base_xpos_offset["table"](
+                self.table_full_size[0]
+            )
             self.robots[0].robot_model.set_base_xpos(xpos)
         else:
             if self.env_configuration == "single-arm-opposed":
                 # Set up robots facing towards each other by rotating them from their default position
-                for robot, rotation, offset in zip(self.robots, (np.pi / 2, -np.pi / 2), (-0.25, 0.25)):
-                    xpos = robot.robot_model.base_xpos_offset["table"](self.table_full_size[0])
+                for robot, rotation, offset in zip(
+                    self.robots, (np.pi / 2, -np.pi / 2), (-0.25, 0.25)
+                ):
+                    xpos = robot.robot_model.base_xpos_offset["table"](
+                        self.table_full_size[0]
+                    )
                     rot = np.array((0, 0, rotation))
                     xpos = T.euler2mat(rot) @ np.array(xpos)
                     xpos += np.array((0, offset, 0))
@@ -328,13 +336,17 @@ class TwoArmHandover(TwoArmEnv):
             else:  # "single-arm-parallel" configuration setting
                 # Set up robots parallel to each other but offset from the center
                 for robot, offset in zip(self.robots, (-0.6, 0.6)):
-                    xpos = robot.robot_model.base_xpos_offset["table"](self.table_full_size[0])
+                    xpos = robot.robot_model.base_xpos_offset["table"](
+                        self.table_full_size[0]
+                    )
                     xpos = np.array(xpos) + np.array((0, offset, 0))
                     robot.robot_model.set_base_xpos(xpos)
 
         # load model for table top workspace
         mujoco_arena = TableArena(
-            table_full_size=self.table_true_size, table_friction=self.table_friction, table_offset=self.table_offset
+            table_full_size=self.table_true_size,
+            table_friction=self.table_friction,
+            table_offset=self.table_offset,
         )
 
         # Arena always gets set to zero origin
@@ -344,7 +356,12 @@ class TwoArmHandover(TwoArmEnv):
         mujoco_arena.set_camera(
             camera_name="agentview",
             pos=[0.8894354364730311, -3.481824231498976e-08, 1.7383813133506494],
-            quat=[0.6530981063842773, 0.2710406184196472, 0.27104079723358154, 0.6530979871749878],
+            quat=[
+                0.6530981063842773,
+                0.2710406184196472,
+                0.27104079723358154,
+                0.6530979871749878,
+            ],
         )
 
         # initialize objects of interest
@@ -386,7 +403,9 @@ class TwoArmHandover(TwoArmEnv):
 
         # Hammer object references from this env
         self.hammer_body_id = self.sim.model.body_name2id(self.hammer.root_body)
-        self.hammer_handle_geom_id = self.sim.model.geom_name2id(self.hammer.handle_geoms[0])
+        self.hammer_handle_geom_id = self.sim.model.geom_name2id(
+            self.hammer.handle_geoms[0]
+        )
 
         # General env references
         self.table_top_id = self.sim.model.site_name2id("table_top")
@@ -440,7 +459,13 @@ class TwoArmHandover(TwoArmEnv):
                     else np.zeros(3)
                 )
 
-            sensors = [hammer_pos, hammer_quat, handle_xpos, gripper0_to_handle, gripper1_to_handle]
+            sensors = [
+                hammer_pos,
+                hammer_quat,
+                handle_xpos,
+                gripper0_to_handle,
+                gripper1_to_handle,
+            ]
             names = [s.__name__ for s in sensors]
 
             # Create observables
@@ -469,39 +494,56 @@ class TwoArmHandover(TwoArmEnv):
             for obj_pos, obj_quat, obj in object_placements.values():
                 # If prehensile, set the object normally
                 if self.prehensile:
-                    self.sim.data.set_joint_qpos(obj.joints[0], np.concatenate([np.array(obj_pos), np.array(obj_quat)]))
+                    self.sim.data.set_joint_qpos(
+                        obj.joints[0],
+                        np.concatenate([np.array(obj_pos), np.array(obj_quat)]),
+                    )
                 # Else, set the object in the hand of the robot and loop a few steps to guarantee the robot is grasping
                 #   the object initially
                 else:
-                    eef_rot_quat = T.mat2quat(T.euler2mat([np.pi - T.mat2euler(self._eef0_xmat)[2], 0, 0]))
+                    eef_rot_quat = T.mat2quat(
+                        T.euler2mat([np.pi - T.mat2euler(self._eef0_xmat)[2], 0, 0])
+                    )
                     obj_quat = T.quat_multiply(obj_quat, eef_rot_quat)
                     for j in range(100):
                         # Set object in hand
                         self.sim.data.set_joint_qpos(
-                            obj.joints[0], np.concatenate([self._eef0_xpos, np.array(obj_quat)])
+                            obj.joints[0],
+                            np.concatenate([self._eef0_xpos, np.array(obj_quat)]),
                         )
                         # Close gripper (action = 1) and prevent arm from moving
                         if self.env_configuration == "bimanual":
                             # Execute no-op action with gravity compensation
                             torques = np.concatenate(
                                 [
-                                    self.robots[0].controller["right"].torque_compensation,
-                                    self.robots[0].controller["left"].torque_compensation,
+                                    self.robots[0]
+                                    .controller["right"]
+                                    .torque_compensation,
+                                    self.robots[0]
+                                    .controller["left"]
+                                    .torque_compensation,
                                 ]
                             )
-                            self.sim.data.ctrl[self.robots[0]._ref_joint_actuator_indexes] = torques
+                            self.sim.data.ctrl[
+                                self.robots[0]._ref_joint_actuator_indexes
+                            ] = torques
                             # Execute gripper action
-                            self.robots[0].grip_action(gripper=self.robots[0].gripper["right"], gripper_action=[1])
+                            self.robots[0].grip_action(
+                                gripper=self.robots[0].gripper["right"],
+                                gripper_action=[1],
+                            )
                         else:
                             # Execute no-op action with gravity compensation
-                            self.sim.data.ctrl[self.robots[0]._ref_joint_actuator_indexes] = self.robots[
-                                0
-                            ].controller.torque_compensation
-                            self.sim.data.ctrl[self.robots[1]._ref_joint_actuator_indexes] = self.robots[
-                                1
-                            ].controller.torque_compensation
+                            self.sim.data.ctrl[
+                                self.robots[0]._ref_joint_actuator_indexes
+                            ] = self.robots[0].controller.torque_compensation
+                            self.sim.data.ctrl[
+                                self.robots[1]._ref_joint_actuator_indexes
+                            ] = self.robots[1].controller.torque_compensation
                             # Execute gripper action
-                            self.robots[0].grip_action(gripper=self.robots[0].gripper, gripper_action=[1])
+                            self.robots[0].grip_action(
+                                gripper=self.robots[0].gripper, gripper_action=[1]
+                            )
                         # Take forward step
                         self.sim.step()
 
@@ -518,11 +560,13 @@ class TwoArmHandover(TwoArmEnv):
                 - (float) Height of the table surface
         """
         # Get height of hammer and table and define height threshold
-        hammer_angle_offset = (self.hammer.handle_length / 2 + 2 * self.hammer.head_halfsize) * np.sin(
-            self._hammer_angle
-        )
+        hammer_angle_offset = (
+            self.hammer.handle_length / 2 + 2 * self.hammer.head_halfsize
+        ) * np.sin(self._hammer_angle)
         hammer_height = (
-            self.sim.data.geom_xpos[self.hammer_handle_geom_id][2] - self.hammer.top_offset[2] - hammer_angle_offset
+            self.sim.data.geom_xpos[self.hammer_handle_geom_id][2]
+            - self.hammer.top_offset[2]
+            - hammer_angle_offset
         )
         table_height = self.sim.data.site_xpos[self.table_top_id][2]
 
@@ -533,7 +577,9 @@ class TwoArmHandover(TwoArmEnv):
             else (self.robots[0].gripper, self.robots[1].gripper)
         )
         arm0_grasp_any = self._check_grasp(gripper=g0, object_geoms=self.hammer)
-        arm1_grasp_handle = self._check_grasp(gripper=g1, object_geoms=self.hammer.handle_geoms)
+        arm1_grasp_handle = self._check_grasp(
+            gripper=g1, object_geoms=self.hammer.handle_geoms
+        )
 
         # Return all relevant values
         return arm0_grasp_any, arm1_grasp_handle, hammer_height, table_height
@@ -546,10 +592,14 @@ class TwoArmHandover(TwoArmEnv):
             bool: True if handover has been completed
         """
         # Grab relevant params
-        arm0_grasp_any, arm1_grasp_handle, hammer_height, table_height = self._get_task_info()
+        arm0_grasp_any, arm1_grasp_handle, hammer_height, table_height = (
+            self._get_task_info()
+        )
         return (
             True
-            if arm1_grasp_handle and not arm0_grasp_any and hammer_height - table_height > self.height_threshold
+            if arm1_grasp_handle
+            and not arm0_grasp_any
+            and hammer_height - table_height > self.height_threshold
             else False
         )
 

@@ -44,7 +44,9 @@ damping_default = 1  # critically damped
 
 # Define arguments for this test
 parser = argparse.ArgumentParser()
-parser.add_argument("--render", action="store_true", help="Whether to render tests or run headless")
+parser.add_argument(
+    "--render", action="store_true", help="Whether to render tests or run headless"
+)
 args = parser.parse_args()
 
 
@@ -58,7 +60,9 @@ def test_variable_impedance():
 
         # Define controller path to load
         controller_path = os.path.join(
-            os.path.dirname(__file__), "../../robosuite", "controllers/config/{}.json".format(controller_name.lower())
+            os.path.dirname(__file__),
+            "../../robosuite",
+            "controllers/config/{}.json".format(controller_name.lower()),
         )
 
         # Load the controller
@@ -119,7 +123,11 @@ def test_variable_impedance():
             env.robots[0].controller.update_initial_joints(init_qpos)
 
             # Notify user a new test is beginning
-            print("\nTesting controller {} while sweeping {}...".format(controller_name, gain))
+            print(
+                "\nTesting controller {} while sweeping {}...".format(
+                    controller_name, gain
+                )
+            )
 
             # If rendering, set controller to front view to get best angle for viewing robot movements
             if args.render:
@@ -165,7 +173,11 @@ def test_variable_impedance():
                 if i % num_timesteps_per_change == 0:
                     # Compare delta, print out to user, and update last_pos
                     delta_pos = np.linalg.norm(cur_pos - last_pos)
-                    print("    Magnitude eef distance change with {} = {}: {:.5f}".format(gain, gain_val[0], delta_pos))
+                    print(
+                        "    Magnitude eef distance change with {} = {}: {:.5f}".format(
+                            gain, gain_val[0], delta_pos
+                        )
+                    )
                     last_pos = cur_pos
                     # Update gain
                     gain_val += percent_increase * gain_range * sign

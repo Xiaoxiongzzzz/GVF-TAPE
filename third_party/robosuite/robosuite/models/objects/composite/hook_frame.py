@@ -116,7 +116,9 @@ class HookFrame(CompositeObject):
             dict: args to be used by CompositeObject to generate geoms
         """
         # Initialize dict of obj args that we'll pass to the CompositeObject constructor
-        self.size = np.array((self.frame_length, self.frame_thickness, self.frame_height))
+        self.size = np.array(
+            (self.frame_length, self.frame_thickness, self.frame_height)
+        )
         if self.tip_size is not None:
             self.size[2] += 2.0 * (self.tip_size[0] + (2.0 * self.tip_size[3]))
         base_args = {
@@ -134,9 +136,19 @@ class HookFrame(CompositeObject):
         add_to_dict(
             dic=obj_args,
             geom_types="box",
-            geom_locations=((self.frame_length - self.frame_thickness) / 2, 0, -self.frame_thickness / 2),
+            geom_locations=(
+                (self.frame_length - self.frame_thickness) / 2,
+                0,
+                -self.frame_thickness / 2,
+            ),
             geom_quats=(1, 0, 0, 0),
-            geom_sizes=np.array((self.frame_thickness, self.frame_thickness, self.frame_height - self.frame_thickness))
+            geom_sizes=np.array(
+                (
+                    self.frame_thickness,
+                    self.frame_thickness,
+                    self.frame_height - self.frame_thickness,
+                )
+            )
             / 2,
             geom_names="vertical_frame",
             geom_rgbas=None if self.use_texture else self.rgba,
@@ -150,7 +162,10 @@ class HookFrame(CompositeObject):
             geom_types="box",
             geom_locations=(0, 0, (self.frame_height - self.frame_thickness) / 2),
             geom_quats=(1, 0, 0, 0),
-            geom_sizes=np.array((self.frame_length, self.frame_thickness, self.frame_thickness)) / 2,
+            geom_sizes=np.array(
+                (self.frame_length, self.frame_thickness, self.frame_thickness)
+            )
+            / 2,
             geom_names="horizontal_frame",
             geom_rgbas=None if self.use_texture else self.rgba,
             geom_materials=self.mat_name if self.use_texture else None,
@@ -168,7 +183,10 @@ class HookFrame(CompositeObject):
                     (self.frame_height + self.hook_height) / 2,
                 ),
                 geom_quats=(1, 0, 0, 0),
-                geom_sizes=np.array((self.frame_thickness, self.frame_thickness, self.hook_height)) / 2,
+                geom_sizes=np.array(
+                    (self.frame_thickness, self.frame_thickness, self.hook_height)
+                )
+                / 2,
                 geom_names="hook_frame",
                 geom_rgbas=None if self.use_texture else self.rgba,
                 geom_materials=self.mat_name if self.use_texture else None,
@@ -227,14 +245,16 @@ class HookFrame(CompositeObject):
             cylinder_offset = (
                 (self.frame_length - self.frame_thickness) / 2,
                 0,
-                -self.frame_height / 2 - self.tip_size[0],  # account for half-height of cylinder
+                -self.frame_height / 2
+                - self.tip_size[0],  # account for half-height of cylinder
             )
             cone_offset = (
                 cylinder_offset[0],
                 cylinder_offset[1],
                 cylinder_offset[2]
                 - self.tip_size[0]
-                - self.tip_size[3] / 2.0,  # need to move below cylinder, and account for half-height
+                - self.tip_size[3]
+                / 2.0,  # need to move below cylinder, and account for half-height
             )
 
             # first add cylinder
@@ -272,14 +292,22 @@ class HookFrame(CompositeObject):
         obj_args["sites"] = [
             {
                 "name": f"hang_site",
-                "pos": (-self.frame_length / 2, 0, (self.frame_height - self.frame_thickness) / 2),
+                "pos": (
+                    -self.frame_length / 2,
+                    0,
+                    (self.frame_height - self.frame_thickness) / 2,
+                ),
                 "size": "0.002",
                 "rgba": RED,
                 "type": "sphere",
             },
             {
                 "name": f"mount_site",
-                "pos": ((self.frame_length - self.frame_thickness) / 2, 0, -self.frame_height / 2),
+                "pos": (
+                    (self.frame_length - self.frame_thickness) / 2,
+                    0,
+                    -self.frame_height / 2,
+                ),
                 "size": "0.002",
                 "rgba": GREEN,
                 "type": "sphere",
@@ -304,7 +332,9 @@ class HookFrame(CompositeObject):
                     "pos": (
                         ((self.frame_length - self.frame_thickness) / 2),
                         0,
-                        (-self.frame_height / 2) - 2.0 * self.tip_size[0] - self.tip_size[3],
+                        (-self.frame_height / 2)
+                        - 2.0 * self.tip_size[0]
+                        - self.tip_size[3],
                     ),
                     "size": "0.002",
                     "rgba": RED,

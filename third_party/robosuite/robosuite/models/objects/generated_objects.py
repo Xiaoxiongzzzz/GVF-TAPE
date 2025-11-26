@@ -82,7 +82,9 @@ class CompositeBodyObject(MujocoGeneratedObject):
         self._name = name
 
         # Set internal variable geometric properties which will be modified later
-        self._object_absolute_positions = {"root": np.zeros(3)}  # maps body names to abs positions (rel to root)
+        self._object_absolute_positions = {
+            "root": np.zeros(3)
+        }  # maps body names to abs positions (rel to root)
         self._top = 0
         self._bottom = 0
         self._horizontal = 0
@@ -94,12 +96,20 @@ class CompositeBodyObject(MujocoGeneratedObject):
             self.objects = list(objects)
         else:
             # Invalid objects received
-            raise ValueError("Invalid objects received, got type: {}".format(type(objects)))
+            raise ValueError(
+                "Invalid objects received, got type: {}".format(type(objects))
+            )
 
         n_objects = len(self.objects)
         self.object_locations = np.array(object_locations)
-        self.object_quats = deepcopy(object_quats) if object_quats is not None else [None] * n_objects
-        self.object_parents = deepcopy(object_parents) if object_parents is not None else ["root"] * n_objects
+        self.object_quats = (
+            deepcopy(object_quats) if object_quats is not None else [None] * n_objects
+        )
+        self.object_parents = (
+            deepcopy(object_parents)
+            if object_parents is not None
+            else ["root"] * n_objects
+        )
 
         # Set joints
         if joints == "default":
@@ -164,7 +174,9 @@ class CompositeBodyObject(MujocoGeneratedObject):
         for o, o_parent, o_pos, o_quat in zip(
             self.objects, self.object_parents, self.object_locations, self.object_quats
         ):
-            self._append_object(root=obj, obj=o, parent_name=o_parent, pos=o_pos, quat=o_quat)
+            self._append_object(
+                root=obj, obj=o, parent_name=o_parent, pos=o_pos, quat=o_quat
+            )
 
         # Loop through all joints and append them appropriately
         for body_name, joint_specs in self.body_joint_specs.items():
@@ -179,7 +191,11 @@ class CompositeBodyObject(MujocoGeneratedObject):
         """
         super()._get_object_properties()
         # Add prefix to all assets
-        add_prefix(root=self.asset, prefix=self.naming_prefix, exclude=self.exclude_from_prefixing)
+        add_prefix(
+            root=self.asset,
+            prefix=self.naming_prefix,
+            exclude=self.exclude_from_prefixing,
+        )
 
     def _append_object(self, root, obj, parent_name=None, pos=None, quat=None):
         """
@@ -203,8 +219,12 @@ class CompositeBodyObject(MujocoGeneratedObject):
         if quat is None:
             quat = np.array([1, 0, 0, 0])
         # First, find parent body
-        parent = find_elements(root=root, tags="body", attribs={"name": parent_name}, return_first=True)
-        assert parent is not None, "Could not find parent body with name: {}".format(parent_name)
+        parent = find_elements(
+            root=root, tags="body", attribs={"name": parent_name}, return_first=True
+        )
+        assert parent is not None, "Could not find parent body with name: {}".format(
+            parent_name
+        )
         # Get the object xml element tree, remove its top-level joints, and modify its top-level pos / quat
         child = obj.get_obj()
         self._remove_joints(child)
@@ -229,7 +249,9 @@ class CompositeBodyObject(MujocoGeneratedObject):
         self._object_absolute_positions[obj.root_body] = obj_abs_pos
         self._top = max(self._top, obj_abs_pos[2] + obj.top_offset[2])
         self._bottom = min(self._bottom, obj_abs_pos[2] + obj.bottom_offset[2])
-        self._horizontal = max(self._horizontal, max(obj_abs_pos[:2]) + obj.horizontal_radius)
+        self._horizontal = max(
+            self._horizontal, max(obj_abs_pos[:2]) + obj.horizontal_radius
+        )
 
     def _append_joints(self, root, body_name=None, joint_specs="default"):
         """
@@ -251,7 +273,9 @@ class CompositeBodyObject(MujocoGeneratedObject):
             if "name" not in joint_spec:
                 joint_spec["name"] = f"{body_name}_joint{i}"
         # Search for body and make sure it exists
-        body = find_elements(root=root, tags="body", attribs={"name": body_name}, return_first=True)
+        body = find_elements(
+            root=root, tags="body", attribs={"name": body_name}, return_first=True
+        )
         assert body is not None, "Could not find body with name: {}".format(body_name)
         # Add joint(s) to this body
         for joint_spec in joint_specs:
@@ -416,18 +440,46 @@ class CompositeObject(MujocoGeneratedObject):
         self.geom_types = np.array(geom_types)
         self.geom_sizes = deepcopy(geom_sizes)
         self.geom_locations = np.array(geom_locations)
-        self.geom_quats = deepcopy(geom_quats) if geom_quats is not None else [None] * n_geoms
-        self.geom_names = list(geom_names) if geom_names is not None else [None] * n_geoms
-        self.geom_rgbas = list(geom_rgbas) if geom_rgbas is not None else [None] * n_geoms
-        self.geom_materials = list(geom_materials) if geom_materials is not None else [None] * n_geoms
-        self.geom_frictions = list(geom_frictions) if geom_frictions is not None else [None] * n_geoms
-        self.geom_condims = list(geom_condims) if geom_condims is not None else [None] * n_geoms
-        self.density = [density] * n_geoms if density is None or type(density) in {float, int} else list(density)
-        self.solref = [solref] * n_geoms if solref is None or type(solref[0]) in {float, int} else list(solref)
-        self.solimp = [solimp] * n_geoms if obj_types is None or type(solimp[0]) in {float, int} else list(solimp)
+        self.geom_quats = (
+            deepcopy(geom_quats) if geom_quats is not None else [None] * n_geoms
+        )
+        self.geom_names = (
+            list(geom_names) if geom_names is not None else [None] * n_geoms
+        )
+        self.geom_rgbas = (
+            list(geom_rgbas) if geom_rgbas is not None else [None] * n_geoms
+        )
+        self.geom_materials = (
+            list(geom_materials) if geom_materials is not None else [None] * n_geoms
+        )
+        self.geom_frictions = (
+            list(geom_frictions) if geom_frictions is not None else [None] * n_geoms
+        )
+        self.geom_condims = (
+            list(geom_condims) if geom_condims is not None else [None] * n_geoms
+        )
+        self.density = (
+            [density] * n_geoms
+            if density is None or type(density) in {float, int}
+            else list(density)
+        )
+        self.solref = (
+            [solref] * n_geoms
+            if solref is None or type(solref[0]) in {float, int}
+            else list(solref)
+        )
+        self.solimp = (
+            [solimp] * n_geoms
+            if obj_types is None or type(solimp[0]) in {float, int}
+            else list(solimp)
+        )
         self.rgba = rgba  # override superclass setting of this variable
         self.locations_relative_to_center = locations_relative_to_center
-        self.obj_types = [obj_types] * n_geoms if obj_types is None or type(obj_types) is str else list(obj_types)
+        self.obj_types = (
+            [obj_types] * n_geoms
+            if obj_types is None or type(obj_types) is str
+            else list(obj_types)
+        )
 
         # Always run sanity check
         self.sanity_check()
@@ -663,7 +715,9 @@ class PrimitiveObject(MujocoGeneratedObject):
         duplicate_collision_geoms=True,
     ):
         # Always call superclass first
-        super().__init__(obj_type=obj_type, duplicate_collision_geoms=duplicate_collision_geoms)
+        super().__init__(
+            obj_type=obj_type, duplicate_collision_geoms=duplicate_collision_geoms
+        )
 
         # Set name
         self._name = name
@@ -685,7 +739,9 @@ class PrimitiveObject(MujocoGeneratedObject):
             friction = [1, 0.005, 0.0001]  # MuJoCo default
         elif isinstance(friction, float) or isinstance(friction, int):
             friction = [friction, 0.005, 0.0001]
-        assert len(friction) == 3, "friction must be a length 3 array or a single number"
+        assert (
+            len(friction) == 3
+        ), "friction must be a length 3 array or a single number"
         self.friction = list(friction)
 
         if solref is None:
@@ -738,7 +794,11 @@ class PrimitiveObject(MujocoGeneratedObject):
         obj = new_body(name="main")
 
         # Get base element attributes
-        element_attr = {"name": "g0", "type": ob_type, "size": array_to_string(self.size)}
+        element_attr = {
+            "name": "g0",
+            "type": ob_type,
+            "size": array_to_string(self.size),
+        }
 
         # Add collision geom if necessary
         if self.obj_type in {"collision", "all"}:

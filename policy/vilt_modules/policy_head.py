@@ -7,14 +7,15 @@ import torch.nn.functional as F
 
 class DeterministicHead(nn.Module):
     deterministic = True
+
     def __init__(
-            self,
-            input_size,
-            output_size,
-            hidden_size=1024,
-            num_layers=2,
-            loss_coef=1.0,
-            action_squash=False
+        self,
+        input_size,
+        output_size,
+        hidden_size=1024,
+        num_layers=2,
+        loss_coef=1.0,
+        action_squash=False,
     ):
 
         super().__init__()

@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torchvision
 
+
 class ResNet18MLP(nn.Module):
     def __init__(self, out_size=9, pretrain_resnet_dir=None):
         super(ResNet18MLP, self).__init__()
@@ -19,7 +20,7 @@ class ResNet18MLP(nn.Module):
             nn.ReLU(),
             nn.Linear(mlp_size, mlp_size),
             nn.ReLU(),
-            nn.Linear(mlp_size, out_size) 
+            nn.Linear(mlp_size, out_size),
         )
 
     def forward(self, x):

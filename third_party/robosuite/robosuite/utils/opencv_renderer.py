@@ -1,6 +1,7 @@
 """
 opencv renderer class.
 """
+
 import cv2
 import numpy as np
 
@@ -26,7 +27,9 @@ class OpenCVRenderer:
 
     def render(self):
         # get frame with offscreen renderer (assumes that the renderer already exists)
-        im = self.sim.render(camera_name=self.camera_name, height=self.height, width=self.width)[..., ::-1]
+        im = self.sim.render(
+            camera_name=self.camera_name, height=self.height, width=self.width
+        )[..., ::-1]
 
         # write frame to window
         im = np.flip(im, axis=0)

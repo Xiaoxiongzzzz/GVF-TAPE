@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
 
+
 class ResNet50Pretrained(nn.Module):
     def __init__(self, output_dim=8):
         super(ResNet50Pretrained, self).__init__()
@@ -21,7 +22,7 @@ class ResNet50Pretrained(nn.Module):
             nn.ReLU(),
             nn.Linear(mlp_size, mlp_size),
             nn.ReLU(),
-            nn.Linear(mlp_size, output_dim)  # Predicting two joint angles: q1 and q2
+            nn.Linear(mlp_size, output_dim),  # Predicting two joint angles: q1 and q2
         )
 
     def forward(self, x):
@@ -35,6 +36,7 @@ class ResNet50Pretrained(nn.Module):
         x = self.mlp(x)
 
         return x
+
     def train_loss(self, goal, condition, loss_type="L1", weight: torch.Tensor = None):
         pred = self.forward(condition)
 
@@ -46,28 +48,41 @@ class ResNet50Pretrained(nn.Module):
             loss = F.smooth_l1_loss(pred, goal, reduction="none")
         else:
             raise ValueError(f"Unsupported loss type: {loss_type}")
-        
+
         if weight is None:
             weight = torch.ones_like(loss).to(loss.device)
 
         loss = torch.mean(loss * weight)
 
         return loss
+
+
 class BasicBlock(nn.Module):
     def __init__(self, in_channels, out_channels, stride=1):
         super(BasicBlock, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1, bias=False)
+        self.conv1 = nn.Conv2d(
+            in_channels,
+            out_channels,
+            kernel_size=3,
+            stride=stride,
+            padding=1,
+            bias=False,
+        )
         self.bn1 = nn.BatchNorm2d(out_channels)
         self.relu = nn.ReLU(inplace=True)
-        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv2 = nn.Conv2d(
+            out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False
+        )
         self.bn2 = nn.BatchNorm2d(out_channels)
-        
+
         # If channels of input is not equal to output channel, then apply 1x1 conv to make them the same
         self.shortcut = nn.Sequential()
         if stride != 1 or in_channels != out_channels:
             self.shortcut = nn.Sequential(
-                nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=False),
-                nn.BatchNorm2d(out_channels)
+                nn.Conv2d(
+                    in_channels, out_channels, kernel_size=1, stride=stride, bias=False
+                ),
+                nn.BatchNorm2d(out_channels),
             )
 
     def forward(self, x):
@@ -77,10 +92,13 @@ class BasicBlock(nn.Module):
         out = self.relu(out)
         return out
 
+
 class ResNet18(nn.Module):
     def __init__(self, input_dim):
         super(ResNet18, self).__init__()
-        self.conv1 = nn.Conv2d(input_dim, 64, kernel_size=7, stride=2, padding=3, bias=False)
+        self.conv1 = nn.Conv2d(
+            input_dim, 64, kernel_size=7, stride=2, padding=3, bias=False
+        )
         self.bn1 = nn.BatchNorm2d(64)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
@@ -108,18 +126,28 @@ class ResNet18(nn.Module):
         x = self.layer3(x)
         x = self.layer4(x)
         x = self.avgpool(x)
-        x = torch.flatten(x, 1) 
+        x = torch.flatten(x, 1)
         # x = self.fc(x)
         return x
-    
+
+
 class BottleneckBlock(nn.Module):
     def __init__(self, in_channels, out_channels, stride=1, downsample=None):
         super(BottleneckBlock, self).__init__()
         self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=False)
         self.bn1 = nn.BatchNorm2d(out_channels)
-        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=stride, padding=1, bias=False)
+        self.conv2 = nn.Conv2d(
+            out_channels,
+            out_channels,
+            kernel_size=3,
+            stride=stride,
+            padding=1,
+            bias=False,
+        )
         self.bn2 = nn.BatchNorm2d(out_channels)
-        self.conv3 = nn.Conv2d(out_channels, out_channels * 4, kernel_size=1, bias=False)
+        self.conv3 = nn.Conv2d(
+            out_channels, out_channels * 4, kernel_size=1, bias=False
+        )
         self.bn3 = nn.BatchNorm2d(out_channels * 4)
         self.relu = nn.ReLU(inplace=True)
         self.downsample = downsample
@@ -147,10 +175,13 @@ class BottleneckBlock(nn.Module):
 
         return out
 
+
 class ResNet50(nn.Module):
     def __init__(self, input_dim, output_dim=1000):
         super(ResNet50, self).__init__()
-        self.conv1 = nn.Conv2d(input_dim, 64, kernel_size=7, stride=2, padding=3, bias=False)
+        self.conv1 = nn.Conv2d(
+            input_dim, 64, kernel_size=7, stride=2, padding=3, bias=False
+        )
         self.bn1 = nn.BatchNorm2d(64)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
@@ -165,10 +196,16 @@ class ResNet50(nn.Module):
 
     def _make_layer(self, in_channels, out_channels, blocks, stride):
         downsample = None
-        if stride!= 1 or in_channels!= out_channels * 4:
+        if stride != 1 or in_channels != out_channels * 4:
             downsample = nn.Sequential(
-                nn.Conv2d(in_channels, out_channels * 4, kernel_size=1, stride=stride, bias=False),
-                nn.BatchNorm2d(out_channels * 4)
+                nn.Conv2d(
+                    in_channels,
+                    out_channels * 4,
+                    kernel_size=1,
+                    stride=stride,
+                    bias=False,
+                ),
+                nn.BatchNorm2d(out_channels * 4),
             )
 
         layers = []
@@ -192,7 +229,7 @@ class ResNet50(nn.Module):
         x = self.fc(x)
 
         return x
-    
+
     def train_loss(self, goal, condition, loss_type="L1", weight: torch.Tensor = None):
         pred = self.forward(condition)
 
@@ -204,13 +241,14 @@ class ResNet50(nn.Module):
             loss = F.smooth_l1_loss(pred, goal, reduction="none")
         else:
             raise ValueError(f"Unsupported loss type: {loss_type}")
-        
+
         if weight is None:
             weight = torch.ones_like(loss).to(loss.device)
 
         loss = torch.mean(loss * weight)
 
         return loss
+
 
 # Test Code
 # if __name__ == "__main__":

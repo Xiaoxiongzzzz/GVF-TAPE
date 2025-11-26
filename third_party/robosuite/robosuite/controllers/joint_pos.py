@@ -121,7 +121,9 @@ class JointPositionController(Controller):
         self.output_min = self.nums2array(output_min, self.control_dim)
 
         # limits
-        self.position_limits = np.array(qpos_limits) if qpos_limits is not None else qpos_limits
+        self.position_limits = (
+            np.array(qpos_limits) if qpos_limits is not None else qpos_limits
+        )
 
         # kp kd
         self.kp = self.nums2array(kp, self.control_dim)
@@ -130,13 +132,19 @@ class JointPositionController(Controller):
         # kp and kd limits
         self.kp_min = self.nums2array(kp_limits[0], self.control_dim)
         self.kp_max = self.nums2array(kp_limits[1], self.control_dim)
-        self.damping_ratio_min = self.nums2array(damping_ratio_limits[0], self.control_dim)
-        self.damping_ratio_max = self.nums2array(damping_ratio_limits[1], self.control_dim)
+        self.damping_ratio_min = self.nums2array(
+            damping_ratio_limits[0], self.control_dim
+        )
+        self.damping_ratio_max = self.nums2array(
+            damping_ratio_limits[1], self.control_dim
+        )
 
         # Verify the proposed impedance mode is supported
         assert impedance_mode in IMPEDANCE_MODES, (
             "Error: Tried to instantiate OSC controller for unsupported "
-            "impedance mode! Inputted impedance mode: {}, Supported modes: {}".format(impedance_mode, IMPEDANCE_MODES)
+            "impedance mode! Inputted impedance mode: {}, Supported modes: {}".format(
+                impedance_mode, IMPEDANCE_MODES
+            )
         )
 
         # Impedance mode
@@ -182,9 +190,17 @@ class JointPositionController(Controller):
         # Parse action based on the impedance mode, and update kp / kd as necessary
         jnt_dim = len(self.qpos_index)
         if self.impedance_mode == "variable":
-            damping_ratio, kp, delta = action[:jnt_dim], action[jnt_dim : 2 * jnt_dim], action[2 * jnt_dim :]
+            damping_ratio, kp, delta = (
+                action[:jnt_dim],
+                action[jnt_dim : 2 * jnt_dim],
+                action[2 * jnt_dim :],
+            )
             self.kp = np.clip(kp, self.kp_min, self.kp_max)
-            self.kd = 2 * np.sqrt(self.kp) * np.clip(damping_ratio, self.damping_ratio_min, self.damping_ratio_max)
+            self.kd = (
+                2
+                * np.sqrt(self.kp)
+                * np.clip(damping_ratio, self.damping_ratio_min, self.damping_ratio_max)
+            )
         elif self.impedance_mode == "variable_kp":
             kp, delta = action[:jnt_dim], action[jnt_dim:]
             self.kp = np.clip(kp, self.kp_min, self.kp_max)
@@ -193,7 +209,9 @@ class JointPositionController(Controller):
             delta = action
 
         # Check to make sure delta is size self.joint_dim
-        assert len(delta) == jnt_dim, "Delta qpos must be equal to the robot's joint dimension space!"
+        assert (
+            len(delta) == jnt_dim
+        ), "Delta qpos must be equal to the robot's joint dimension space!"
 
         if delta is not None:
             scaled_delta = self.scale_action(delta)
@@ -201,7 +219,10 @@ class JointPositionController(Controller):
             scaled_delta = None
 
         self.goal_qpos = set_goal_position(
-            scaled_delta, self.joint_pos, position_limit=self.position_limits, set_pos=set_qpos
+            scaled_delta,
+            self.joint_pos,
+            position_limit=self.position_limits,
+            set_pos=set_qpos,
         )
 
         if self.interpolator is not None:
@@ -237,10 +258,14 @@ class JointPositionController(Controller):
         # torques = pos_err * kp + vel_err * kd
         position_error = desired_qpos - self.joint_pos
         vel_pos_error = -self.joint_vel
-        desired_torque = np.multiply(np.array(position_error), np.array(self.kp)) + np.multiply(vel_pos_error, self.kd)
+        desired_torque = np.multiply(
+            np.array(position_error), np.array(self.kp)
+        ) + np.multiply(vel_pos_error, self.kd)
 
         # Return desired torques plus gravity compensations
-        self.torques = np.dot(self.mass_matrix, desired_torque) + self.torque_compensation
+        self.torques = (
+            np.dot(self.mass_matrix, desired_torque) + self.torque_compensation
+        )
 
         # Always run superclass call for any cleanups at the end
         super().run_controller()

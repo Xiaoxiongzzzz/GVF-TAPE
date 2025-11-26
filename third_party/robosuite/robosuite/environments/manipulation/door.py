@@ -243,7 +243,9 @@ class Door(SingleArmEnv):
             # Add rotating component if we're using a locked door
             if self.use_latch:
                 handle_qpos = self.sim.data.qpos[self.handle_qpos_addr]
-                reward += np.clip(0.25 * np.abs(handle_qpos / (0.5 * np.pi)), -0.25, 0.25)
+                reward += np.clip(
+                    0.25 * np.abs(handle_qpos / (0.5 * np.pi)), -0.25, 0.25
+                )
 
         # Scale reward if requested
         if self.reward_scale is not None:
@@ -258,7 +260,9 @@ class Door(SingleArmEnv):
         super()._load_model()
 
         # Adjust base pose accordingly
-        xpos = self.robots[0].robot_model.base_xpos_offset["table"](self.table_full_size[0])
+        xpos = self.robots[0].robot_model.base_xpos_offset["table"](
+            self.table_full_size[0]
+        )
         self.robots[0].robot_model.set_base_xpos(xpos)
 
         # load model for table top workspace
@@ -274,7 +278,12 @@ class Door(SingleArmEnv):
         mujoco_arena.set_camera(
             camera_name="agentview",
             pos=[0.5986131746834771, -4.392035683362857e-09, 1.5903500240372423],
-            quat=[0.6380177736282349, 0.3048497438430786, 0.30484986305236816, 0.6380177736282349],
+            quat=[
+                0.6380177736282349,
+                0.3048497438430786,
+                0.30484986305236816,
+                0.6380177736282349,
+            ],
         )
 
         # initialize objects of interest
@@ -320,12 +329,20 @@ class Door(SingleArmEnv):
         # Additional object references from this env
         self.object_body_ids = dict()
         self.object_body_ids["door"] = self.sim.model.body_name2id(self.door.door_body)
-        self.object_body_ids["frame"] = self.sim.model.body_name2id(self.door.frame_body)
-        self.object_body_ids["latch"] = self.sim.model.body_name2id(self.door.latch_body)
-        self.door_handle_site_id = self.sim.model.site_name2id(self.door.important_sites["handle"])
+        self.object_body_ids["frame"] = self.sim.model.body_name2id(
+            self.door.frame_body
+        )
+        self.object_body_ids["latch"] = self.sim.model.body_name2id(
+            self.door.latch_body
+        )
+        self.door_handle_site_id = self.sim.model.site_name2id(
+            self.door.important_sites["handle"]
+        )
         self.hinge_qpos_addr = self.sim.model.get_joint_qpos_addr(self.door.joints[0])
         if self.use_latch:
-            self.handle_qpos_addr = self.sim.model.get_joint_qpos_addr(self.door.joints[1])
+            self.handle_qpos_addr = self.sim.model.get_joint_qpos_addr(
+                self.door.joints[1]
+            )
 
     def _setup_observables(self):
         """
@@ -371,7 +388,13 @@ class Door(SingleArmEnv):
             def hinge_qpos(obs_cache):
                 return np.array([self.sim.data.qpos[self.hinge_qpos_addr]])
 
-            sensors = [door_pos, handle_pos, door_to_eef_pos, handle_to_eef_pos, hinge_qpos]
+            sensors = [
+                door_pos,
+                handle_pos,
+                door_to_eef_pos,
+                handle_to_eef_pos,
+                hinge_qpos,
+            ]
             names = [s.__name__ for s in sensors]
 
             # Also append handle qpos if we're using a locked door version with rotatable handle
@@ -437,7 +460,9 @@ class Door(SingleArmEnv):
         # Color the gripper visualization site according to its distance to the door handle
         if vis_settings["grippers"]:
             self._visualize_gripper_to_target(
-                gripper=self.robots[0].gripper, target=self.door.important_sites["handle"], target_type="site"
+                gripper=self.robots[0].gripper,
+                target=self.door.important_sites["handle"],
+                target_type="site",
             )
 
     @property

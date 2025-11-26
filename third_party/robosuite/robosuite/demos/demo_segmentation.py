@@ -1,6 +1,7 @@
 """
 Play random actions in an environment and render a video that demonstrates segmentation.
 """
+
 import argparse
 import colorsys
 import json
@@ -55,9 +56,18 @@ def segmentation_to_rgb(seg_im, random_colors=False):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--video-path", type=str, default="/tmp/video.mp4", help="Path to video file")
-    parser.add_argument("--random-colors", action="store_true", help="Radnomize segmentation colors")
-    parser.add_argument("--segmentation-level", type=str, default="element", help="instance, class, or element")
+    parser.add_argument(
+        "--video-path", type=str, default="/tmp/video.mp4", help="Path to video file"
+    )
+    parser.add_argument(
+        "--random-colors", action="store_true", help="Radnomize segmentation colors"
+    )
+    parser.add_argument(
+        "--segmentation-level",
+        type=str,
+        default="element",
+        help="instance, class, or element",
+    )
     args = parser.parse_args()
 
     # Create dict to hold options that will be passed to env creation call
@@ -74,10 +84,14 @@ if __name__ == "__main__":
     camera = "frontview"
 
     # Choose segmentation type
-    segmentation_level = args.segmentation_level  # Options are {instance, class, element}
+    segmentation_level = (
+        args.segmentation_level
+    )  # Options are {instance, class, element}
 
     # Load the desired controller
-    options["controller_configs"] = load_controller_config(default_controller=controller_name)
+    options["controller_configs"] = load_controller_config(
+        default_controller=controller_name
+    )
 
     # initialize the task
     env = suite.make(

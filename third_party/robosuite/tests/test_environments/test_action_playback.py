@@ -45,7 +45,9 @@ def test_playback():
 
     # random actions to play
     n_actions = 100
-    actions = 0.1 * np.random.uniform(low=-1.0, high=1.0, size=(n_actions, env.action_spec[0].shape[0]))
+    actions = 0.1 * np.random.uniform(
+        low=-1.0, high=1.0, size=(n_actions, env.action_spec[0].shape[0])
+    )
 
     # play actions
     print("playing random actions...")

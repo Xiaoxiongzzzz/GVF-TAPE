@@ -48,7 +48,9 @@ if __name__ == "__main__":
     controller_name = choose_controller()
 
     # Load the desired controller
-    options["controller_configs"] = load_controller_config(default_controller=controller_name)
+    options["controller_configs"] = load_controller_config(
+        default_controller=controller_name
+    )
 
     # initialize the task
     env = suite.make(

@@ -92,7 +92,12 @@ class WipeArena(TableArena):
             )
             # Manually add this object to the arena xml
             self.merge_assets(marker)
-            table = find_elements(root=self.worldbody, tags="body", attribs={"name": "table"}, return_first=True)
+            table = find_elements(
+                root=self.worldbody,
+                tags="body",
+                attribs={"name": "table"},
+                return_first=True,
+            )
             table.append(marker.get_obj())
 
             # Add this marker to our saved list of all markers
@@ -145,12 +150,16 @@ class WipeArena(TableArena):
         return np.array(
             (
                 np.random.uniform(
-                    -self.table_half_size[0] * self.coverage_factor + self.line_width / 2,
-                    self.table_half_size[0] * self.coverage_factor - self.line_width / 2,
+                    -self.table_half_size[0] * self.coverage_factor
+                    + self.line_width / 2,
+                    self.table_half_size[0] * self.coverage_factor
+                    - self.line_width / 2,
                 ),
                 np.random.uniform(
-                    -self.table_half_size[1] * self.coverage_factor + self.line_width / 2,
-                    self.table_half_size[1] * self.coverage_factor - self.line_width / 2,
+                    -self.table_half_size[1] * self.coverage_factor
+                    + self.line_width / 2,
+                    self.table_half_size[1] * self.coverage_factor
+                    - self.line_width / 2,
                 ),
             )
         )
@@ -175,8 +184,10 @@ class WipeArena(TableArena):
 
         # We keep resampling until we get a valid new position that's on the table
         while (
-            abs(posnew0) >= self.table_half_size[0] * self.coverage_factor - self.line_width / 2
-            or abs(posnew1) >= self.table_half_size[1] * self.coverage_factor - self.line_width / 2
+            abs(posnew0)
+            >= self.table_half_size[0] * self.coverage_factor - self.line_width / 2
+            or abs(posnew1)
+            >= self.table_half_size[1] * self.coverage_factor - self.line_width / 2
         ):
             self.direction += np.random.normal(0, 0.5)
             posnew0 = pos[0] + 0.005 * np.sin(self.direction)

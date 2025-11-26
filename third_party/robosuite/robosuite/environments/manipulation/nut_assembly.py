@@ -9,7 +9,10 @@ from robosuite.models.arenas import PegsArena
 from robosuite.models.objects import RoundNutObject, SquareNutObject
 from robosuite.models.tasks import ManipulationTask
 from robosuite.utils.observables import Observable, sensor
-from robosuite.utils.placement_samplers import SequentialCompositeSampler, UniformRandomSampler
+from robosuite.utils.placement_samplers import (
+    SequentialCompositeSampler,
+    UniformRandomSampler,
+)
 
 
 class NutAssembly(SingleArmEnv):
@@ -189,7 +192,9 @@ class NutAssembly(SingleArmEnv):
         self.nut_to_id = {"square": 0, "round": 1}
         self.nut_id_to_sensors = {}  # Maps nut id to sensor names for that nut
         if nut_type is not None:
-            assert nut_type in self.nut_to_id.keys(), "invalid @nut_type argument - choose one of {}".format(
+            assert (
+                nut_type in self.nut_to_id.keys()
+            ), "invalid @nut_type argument - choose one of {}".format(
                 list(self.nut_to_id.keys())
             )
             self.nut_id = self.nut_to_id[nut_type]  # use for convenient indexing
@@ -324,7 +329,11 @@ class NutAssembly(SingleArmEnv):
             int(
                 self._check_grasp(
                     gripper=self.robots[0].gripper,
-                    object_geoms=[g for active_nut in active_nuts for g in active_nut.contact_geoms],
+                    object_geoms=[
+                        g
+                        for active_nut in active_nuts
+                        for g in active_nut.contact_geoms
+                    ],
                 )
             )
             * grasp_mult
@@ -335,11 +344,13 @@ class NutAssembly(SingleArmEnv):
         table_pos = np.array(self.sim.data.body_xpos[self.table_body_id])
         if active_nuts and r_grasp > 0.0:
             z_target = table_pos[2] + 0.2
-            object_z_locs = self.sim.data.body_xpos[[self.obj_body_id[active_nut.name] for active_nut in active_nuts]][
-                :, 2
-            ]
+            object_z_locs = self.sim.data.body_xpos[
+                [self.obj_body_id[active_nut.name] for active_nut in active_nuts]
+            ][:, 2]
             z_dists = np.maximum(z_target - object_z_locs, 0.0)
-            r_lift = grasp_mult + (1 - np.tanh(15.0 * min(z_dists))) * (lift_mult - grasp_mult)
+            r_lift = grasp_mult + (1 - np.tanh(15.0 * min(z_dists))) * (
+                lift_mult - grasp_mult
+            )
 
         # hover reward for getting object above peg
         r_hover = 0.0
@@ -351,14 +362,18 @@ class NutAssembly(SingleArmEnv):
                 peg_pos = None
                 for nut_name, idn in self.nut_to_id.items():
                     if nut_name in nut.name.lower():
-                        peg_pos = np.array(self.sim.data.body_xpos[peg_body_ids[idn]])[:2]
+                        peg_pos = np.array(self.sim.data.body_xpos[peg_body_ids[idn]])[
+                            :2
+                        ]
                         valid_obj = True
                         break
                 if not valid_obj:
                     raise Exception("Got invalid object to reach: {}".format(nut.name))
                 ob_xy = self.sim.data.body_xpos[self.obj_body_id[nut.name]][:2]
                 dist = np.linalg.norm(peg_pos - ob_xy)
-                r_hovers[i] = r_lift + (1 - np.tanh(10.0 * dist)) * (hover_mult - lift_mult)
+                r_hovers[i] = r_lift + (1 - np.tanh(10.0 * dist)) * (
+                    hover_mult - lift_mult
+                )
             r_hover = np.max(r_hovers)
 
         return r_reach, r_grasp, r_lift, r_hover
@@ -385,7 +400,9 @@ class NutAssembly(SingleArmEnv):
         super()._load_model()
 
         # Adjust base pose accordingly
-        xpos = self.robots[0].robot_model.base_xpos_offset["table"](self.table_full_size[0])
+        xpos = self.robots[0].robot_model.base_xpos_offset["table"](
+            self.table_full_size[0]
+        )
         self.robots[0].robot_model.set_base_xpos(xpos)
 
         # load model for table top workspace
@@ -404,8 +421,12 @@ class NutAssembly(SingleArmEnv):
 
         # Create default (SequentialCompositeSampler) sampler if it has not already been specified
         if self.placement_initializer is None:
-            self.placement_initializer = SequentialCompositeSampler(name="ObjectSampler")
-            for nut_name, default_y_range in zip(nut_names, ([0.11, 0.225], [-0.225, -0.11])):
+            self.placement_initializer = SequentialCompositeSampler(
+                name="ObjectSampler"
+            )
+            for nut_name, default_y_range in zip(
+                nut_names, ([0.11, 0.225], [-0.225, -0.11])
+            ):
                 self.placement_initializer.append_sampler(
                     sampler=UniformRandomSampler(
                         name=f"{nut_name}Sampler",
@@ -433,7 +454,9 @@ class NutAssembly(SingleArmEnv):
             # Add this nut to the placement initializer
             if isinstance(self.placement_initializer, SequentialCompositeSampler):
                 # assumes we have two samplers so we add nuts to them
-                self.placement_initializer.add_objects_to_sampler(sampler_name=f"{nut_name}Sampler", mujoco_objects=nut)
+                self.placement_initializer.add_objects_to_sampler(
+                    sampler_name=f"{nut_name}Sampler", mujoco_objects=nut
+                )
             else:
                 # This is assumed to be a flat sampler, so we just add all nuts to this sampler
                 self.placement_initializer.add_objects(nut)
@@ -463,10 +486,15 @@ class NutAssembly(SingleArmEnv):
 
         for nut in self.nuts:
             self.obj_body_id[nut.name] = self.sim.model.body_name2id(nut.root_body)
-            self.obj_geom_id[nut.name] = [self.sim.model.geom_name2id(g) for g in nut.contact_geoms]
+            self.obj_geom_id[nut.name] = [
+                self.sim.model.geom_name2id(g) for g in nut.contact_geoms
+            ]
 
         # information of objects
-        self.object_site_ids = [self.sim.model.site_name2id(nut.important_sites["handle"]) for nut in self.nuts]
+        self.object_site_ids = [
+            self.sim.model.site_name2id(nut.important_sites["handle"])
+            for nut in self.nuts
+        ]
 
         # keep track of which objects are on their corresponding pegs
         self.objects_on_pegs = np.zeros(len(self.nuts))
@@ -493,7 +521,11 @@ class NutAssembly(SingleArmEnv):
             @sensor(modality=modality)
             def world_pose_in_gripper(obs_cache):
                 return (
-                    T.pose_inv(T.pose2mat((obs_cache[f"{pf}eef_pos"], obs_cache[f"{pf}eef_quat"])))
+                    T.pose_inv(
+                        T.pose2mat(
+                            (obs_cache[f"{pf}eef_pos"], obs_cache[f"{pf}eef_quat"])
+                        )
+                    )
                     if f"{pf}eef_pos" in obs_cache and f"{pf}eef_quat" in obs_cache
                     else np.eye(4)
                 )
@@ -507,7 +539,9 @@ class NutAssembly(SingleArmEnv):
             for i, nut in enumerate(self.nuts):
                 # Create sensors for this nut
                 using_nut = self.single_object_mode == 0 or self.nut_id == i
-                nut_sensors, nut_sensor_names = self._create_nut_sensors(nut_name=nut.name, modality=modality)
+                nut_sensors, nut_sensor_names = self._create_nut_sensors(
+                    nut_name=nut.name, modality=modality
+                )
                 sensors += nut_sensors
                 names += nut_sensor_names
                 enableds += [using_nut] * 4
@@ -559,17 +593,30 @@ class NutAssembly(SingleArmEnv):
 
         @sensor(modality=modality)
         def nut_quat(obs_cache):
-            return T.convert_quat(self.sim.data.body_xquat[self.obj_body_id[nut_name]], to="xyzw")
+            return T.convert_quat(
+                self.sim.data.body_xquat[self.obj_body_id[nut_name]], to="xyzw"
+            )
 
         @sensor(modality=modality)
         def nut_to_eef_pos(obs_cache):
             # Immediately return default value if cache is empty
             if any(
-                [name not in obs_cache for name in [f"{nut_name}_pos", f"{nut_name}_quat", "world_pose_in_gripper"]]
+                [
+                    name not in obs_cache
+                    for name in [
+                        f"{nut_name}_pos",
+                        f"{nut_name}_quat",
+                        "world_pose_in_gripper",
+                    ]
+                ]
             ):
                 return np.zeros(3)
-            obj_pose = T.pose2mat((obs_cache[f"{nut_name}_pos"], obs_cache[f"{nut_name}_quat"]))
-            rel_pose = T.pose_in_A_to_pose_in_B(obj_pose, obs_cache["world_pose_in_gripper"])
+            obj_pose = T.pose2mat(
+                (obs_cache[f"{nut_name}_pos"], obs_cache[f"{nut_name}_quat"])
+            )
+            rel_pose = T.pose_in_A_to_pose_in_B(
+                obj_pose, obs_cache["world_pose_in_gripper"]
+            )
             rel_pos, rel_quat = T.mat2pose(rel_pose)
             obs_cache[f"{nut_name}_to_{pf}eef_quat"] = rel_quat
             return rel_pos
@@ -577,11 +624,18 @@ class NutAssembly(SingleArmEnv):
         @sensor(modality=modality)
         def nut_to_eef_quat(obs_cache):
             return (
-                obs_cache[f"{nut_name}_to_{pf}eef_quat"] if f"{nut_name}_to_{pf}eef_quat" in obs_cache else np.zeros(4)
+                obs_cache[f"{nut_name}_to_{pf}eef_quat"]
+                if f"{nut_name}_to_{pf}eef_quat" in obs_cache
+                else np.zeros(4)
             )
 
         sensors = [nut_pos, nut_quat, nut_to_eef_pos, nut_to_eef_quat]
-        names = [f"{nut_name}_pos", f"{nut_name}_quat", f"{nut_name}_to_{pf}eef_pos", f"{nut_name}_to_{pf}eef_quat"]
+        names = [
+            f"{nut_name}_pos",
+            f"{nut_name}_quat",
+            f"{nut_name}_to_{pf}eef_pos",
+            f"{nut_name}_to_{pf}eef_quat",
+        ]
 
         return sensors, names
 
@@ -599,7 +653,10 @@ class NutAssembly(SingleArmEnv):
 
             # Loop through all objects and reset their positions
             for obj_pos, obj_quat, obj in object_placements.values():
-                self.sim.data.set_joint_qpos(obj.joints[0], np.concatenate([np.array(obj_pos), np.array(obj_quat)]))
+                self.sim.data.set_joint_qpos(
+                    obj.joints[0],
+                    np.concatenate([np.array(obj_pos), np.array(obj_quat)]),
+                )
 
         # Move objects out of the scene depending on the mode
         nut_names = {nut.name for nut in self.nuts}
@@ -694,7 +751,9 @@ class NutAssemblySquare(NutAssembly):
     """
 
     def __init__(self, **kwargs):
-        assert "single_object_mode" not in kwargs and "nut_type" not in kwargs, "invalid set of arguments"
+        assert (
+            "single_object_mode" not in kwargs and "nut_type" not in kwargs
+        ), "invalid set of arguments"
         super().__init__(single_object_mode=2, nut_type="square", **kwargs)
 
 
@@ -704,5 +763,7 @@ class NutAssemblyRound(NutAssembly):
     """
 
     def __init__(self, **kwargs):
-        assert "single_object_mode" not in kwargs and "nut_type" not in kwargs, "invalid set of arguments"
+        assert (
+            "single_object_mode" not in kwargs and "nut_type" not in kwargs
+        ), "invalid set of arguments"
         super().__init__(single_object_mode=2, nut_type="round", **kwargs)

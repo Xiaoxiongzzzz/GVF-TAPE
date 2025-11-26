@@ -30,6 +30,7 @@ def sensor(modality):
     Returns:
         function: decorator function
     """
+
     # Define standard decorator (with no args)
     def decorator(func):
         # Add modality attribute
@@ -208,7 +209,9 @@ class Observable:
         # These values will be modified during update() call
         self._time_since_last_sample = 0.0  # seconds
         self._current_delay = self._delayer()  # seconds
-        self._current_observed_value = 0 if self._is_number else np.zeros(self._data_shape)
+        self._current_observed_value = (
+            0 if self._is_number else np.zeros(self._data_shape)
+        )
         self._sampled = False
 
     def update(self, timestep, obs_cache, force=False):
@@ -228,11 +231,15 @@ class Observable:
             # If the delayed sampling time has been passed and we haven't sampled yet for this sampling period,
             # we should grab a new measurement
             if (
-                not self._sampled and self._sampling_timestep - self._current_delay >= self._time_since_last_sample
+                not self._sampled
+                and self._sampling_timestep - self._current_delay
+                >= self._time_since_last_sample
             ) or force:
                 # Get newest raw value, corrupt it, filter it, and set it as our current observed value
                 obs = np.array(self._filter(self._corrupter(self._sensor(obs_cache))))
-                self._current_observed_value = obs[0] if len(obs.shape) == 1 and obs.shape[0] == 1 else obs
+                self._current_observed_value = (
+                    obs[0] if len(obs.shape) == 1 and obs.shape[0] == 1 else obs
+                )
                 # Update cache entry as well
                 obs_cache[self.name] = np.array(self._current_observed_value)
                 # Toggle sampled and re-sample next time delay
@@ -249,8 +256,12 @@ class Observable:
                         f"Please adjust one (or both)"
                     )
                     # Get newest raw value, corrupt it, filter it, and set it as our current observed value
-                    obs = np.array(self._filter(self._corrupter(self._sensor(obs_cache))))
-                    self._current_observed_value = obs[0] if len(obs.shape) == 1 and obs.shape[0] == 1 else obs
+                    obs = np.array(
+                        self._filter(self._corrupter(self._sensor(obs_cache)))
+                    )
+                    self._current_observed_value = (
+                        obs[0] if len(obs.shape) == 1 and obs.shape[0] == 1 else obs
+                    )
                     # Update cache entry as well
                     obs_cache[self.name] = np.array(self._current_observed_value)
                     # Re-sample next time delay
@@ -264,7 +275,9 @@ class Observable:
         """
         self._time_since_last_sample = 0.0
         self._current_delay = self._delayer()
-        self._current_observed_value = 0 if self._is_number else np.zeros(self._data_shape)
+        self._current_observed_value = (
+            0 if self._is_number else np.zeros(self._data_shape)
+        )
 
     def is_enabled(self):
         """
@@ -380,7 +393,9 @@ class Observable:
             from robosuite.utils.log_utils import ROBOSUITE_DEFAULT_LOGGER
 
             ROBOSUITE_DEFAULT_LOGGER.error(e)
-            raise ValueError("Current sensor for observable {} is invalid.".format(self.name))
+            raise ValueError(
+                "Current sensor for observable {} is invalid.".format(self.name)
+            )
 
     @property
     def obs(self):

@@ -18,7 +18,10 @@ from robosuite.models.objects import (
 )
 from robosuite.models.tasks import ManipulationTask
 from robosuite.utils.observables import Observable, sensor
-from robosuite.utils.placement_samplers import SequentialCompositeSampler, UniformRandomSampler
+from robosuite.utils.placement_samplers import (
+    SequentialCompositeSampler,
+    UniformRandomSampler,
+)
 
 
 class PickPlace(SingleArmEnv):
@@ -175,7 +178,7 @@ class PickPlace(SingleArmEnv):
         table_friction=(1, 0.005, 0.0001),
         bin1_pos=(0.1, -0.25, 0.8),
         bin2_pos=(0.1, 0.28, 0.8),
-        z_offset=0.,
+        z_offset=0.0,
         z_rotation=None,
         use_camera_obs=True,
         use_object_obs=True,
@@ -207,10 +210,14 @@ class PickPlace(SingleArmEnv):
         self.object_id_to_sensors = {}  # Maps object id to sensor names for that object
         self.obj_names = ["Milk", "Bread", "Cereal", "Can"]
         if object_type is not None:
-            assert object_type in self.object_to_id.keys(), "invalid @object_type argument - choose one of {}".format(
+            assert (
+                object_type in self.object_to_id.keys()
+            ), "invalid @object_type argument - choose one of {}".format(
                 list(self.object_to_id.keys())
             )
-            self.object_id = self.object_to_id[object_type]  # use for convenient indexing
+            self.object_id = self.object_to_id[
+                object_type
+            ]  # use for convenient indexing
         self.obj_to_use = None
 
         # settings for table top
@@ -220,8 +227,8 @@ class PickPlace(SingleArmEnv):
         # settings for bin position
         self.bin1_pos = np.array(bin1_pos)
         self.bin2_pos = np.array(bin2_pos)
-        self.z_offset = z_offset # z offset for initializing items in bin
-        self.z_rotation = z_rotation # z rotation for initializing items in bin
+        self.z_offset = z_offset  # z offset for initializing items in bin
+        self.z_rotation = z_rotation  # z rotation for initializing items in bin
 
         # reward configuration
         self.reward_scale = reward_scale
@@ -344,7 +351,11 @@ class PickPlace(SingleArmEnv):
             int(
                 self._check_grasp(
                     gripper=self.robots[0].gripper,
-                    object_geoms=[g for active_obj in active_objs for g in active_obj.contact_geoms],
+                    object_geoms=[
+                        g
+                        for active_obj in active_objs
+                        for g in active_obj.contact_geoms
+                    ],
                 )
             )
             * grasp_mult
@@ -354,38 +365,50 @@ class PickPlace(SingleArmEnv):
         r_lift = 0.0
         if active_objs and r_grasp > 0.0:
             z_target = self.bin2_pos[2] + 0.25
-            object_z_locs = self.sim.data.body_xpos[[self.obj_body_id[active_obj.name] for active_obj in active_objs]][
-                :, 2
-            ]
+            object_z_locs = self.sim.data.body_xpos[
+                [self.obj_body_id[active_obj.name] for active_obj in active_objs]
+            ][:, 2]
             z_dists = np.maximum(z_target - object_z_locs, 0.0)
-            r_lift = grasp_mult + (1 - np.tanh(15.0 * min(z_dists))) * (lift_mult - grasp_mult)
+            r_lift = grasp_mult + (1 - np.tanh(15.0 * min(z_dists))) * (
+                lift_mult - grasp_mult
+            )
 
         # hover reward for getting object above bin
         r_hover = 0.0
         if active_objs:
-            target_bin_ids = [self.object_to_id[active_obj.name.lower()] for active_obj in active_objs]
-            # segment objects into left of the bins and above the bins
-            object_xy_locs = self.sim.data.body_xpos[[self.obj_body_id[active_obj.name] for active_obj in active_objs]][
-                :, :2
+            target_bin_ids = [
+                self.object_to_id[active_obj.name.lower()] for active_obj in active_objs
             ]
+            # segment objects into left of the bins and above the bins
+            object_xy_locs = self.sim.data.body_xpos[
+                [self.obj_body_id[active_obj.name] for active_obj in active_objs]
+            ][:, :2]
             y_check = (
-                np.abs(object_xy_locs[:, 1] - self.target_bin_placements[target_bin_ids, 1]) < self.bin_size[1] / 4.0
+                np.abs(
+                    object_xy_locs[:, 1] - self.target_bin_placements[target_bin_ids, 1]
+                )
+                < self.bin_size[1] / 4.0
             )
             x_check = (
-                np.abs(object_xy_locs[:, 0] - self.target_bin_placements[target_bin_ids, 0]) < self.bin_size[0] / 4.0
+                np.abs(
+                    object_xy_locs[:, 0] - self.target_bin_placements[target_bin_ids, 0]
+                )
+                < self.bin_size[0] / 4.0
             )
             objects_above_bins = np.logical_and(x_check, y_check)
             objects_not_above_bins = np.logical_not(objects_above_bins)
-            dists = np.linalg.norm(self.target_bin_placements[target_bin_ids, :2] - object_xy_locs, axis=1)
+            dists = np.linalg.norm(
+                self.target_bin_placements[target_bin_ids, :2] - object_xy_locs, axis=1
+            )
             # objects to the left get r_lift added to hover reward,
             # those on the right get max(r_lift) added (to encourage dropping)
             r_hover_all = np.zeros(len(active_objs))
-            r_hover_all[objects_above_bins] = lift_mult + (1 - np.tanh(10.0 * dists[objects_above_bins])) * (
-                hover_mult - lift_mult
-            )
-            r_hover_all[objects_not_above_bins] = r_lift + (1 - np.tanh(10.0 * dists[objects_not_above_bins])) * (
-                hover_mult - lift_mult
-            )
+            r_hover_all[objects_above_bins] = lift_mult + (
+                1 - np.tanh(10.0 * dists[objects_above_bins])
+            ) * (hover_mult - lift_mult)
+            r_hover_all[objects_not_above_bins] = r_lift + (
+                1 - np.tanh(10.0 * dists[objects_not_above_bins])
+            ) * (hover_mult - lift_mult)
             r_hover = np.max(r_hover_all)
 
         return r_reach, r_grasp, r_lift, r_hover
@@ -482,8 +505,8 @@ class PickPlace(SingleArmEnv):
         """
         self.visual_objects = []
         for vis_obj_cls, obj_name in zip(
-                (MilkVisualObject, BreadVisualObject, CerealVisualObject, CanVisualObject),
-                self.obj_names,
+            (MilkVisualObject, BreadVisualObject, CerealVisualObject, CanVisualObject),
+            self.obj_names,
         ):
             vis_name = "Visual" + obj_name
             vis_obj = vis_obj_cls(name=vis_name)
@@ -495,8 +518,8 @@ class PickPlace(SingleArmEnv):
         """
         self.objects = []
         for obj_cls, obj_name in zip(
-                (MilkObject, BreadObject, CerealObject, CanObject),
-                self.obj_names,
+            (MilkObject, BreadObject, CerealObject, CanObject),
+            self.obj_names,
         ):
             obj = obj_cls(name=obj_name)
             self.objects.append(obj)
@@ -513,7 +536,9 @@ class PickPlace(SingleArmEnv):
 
         # load model for table top workspace
         mujoco_arena = BinsArena(
-            bin1_pos=self.bin1_pos, table_full_size=self.table_full_size, table_friction=self.table_friction
+            bin1_pos=self.bin1_pos,
+            table_full_size=self.table_full_size,
+            table_friction=self.table_friction,
         )
 
         # Arena always gets set to zero origin
@@ -551,7 +576,9 @@ class PickPlace(SingleArmEnv):
         # object-specific ids
         for obj in self.visual_objects + self.objects:
             self.obj_body_id[obj.name] = self.sim.model.body_name2id(obj.root_body)
-            self.obj_geom_id[obj.name] = [self.sim.model.geom_name2id(g) for g in obj.contact_geoms]
+            self.obj_geom_id[obj.name] = [
+                self.sim.model.geom_name2id(g) for g in obj.contact_geoms
+            ]
 
         # keep track of which objects are in their corresponding bins
         self.objects_in_bins = np.zeros(len(self.objects))
@@ -592,7 +619,11 @@ class PickPlace(SingleArmEnv):
             @sensor(modality=modality)
             def world_pose_in_gripper(obs_cache):
                 return (
-                    T.pose_inv(T.pose2mat((obs_cache[f"{pf}eef_pos"], obs_cache[f"{pf}eef_quat"])))
+                    T.pose_inv(
+                        T.pose2mat(
+                            (obs_cache[f"{pf}eef_pos"], obs_cache[f"{pf}eef_quat"])
+                        )
+                    )
                     if f"{pf}eef_pos" in obs_cache and f"{pf}eef_quat" in obs_cache
                     else np.eye(4)
                 )
@@ -605,7 +636,9 @@ class PickPlace(SingleArmEnv):
             for i, obj in enumerate(self.objects):
                 # Create object sensors
                 using_obj = self.single_object_mode == 0 or self.object_id == i
-                obj_sensors, obj_sensor_names = self._create_obj_sensors(obj_name=obj.name, modality=modality)
+                obj_sensors, obj_sensor_names = self._create_obj_sensors(
+                    obj_name=obj.name, modality=modality
+                )
                 sensors += obj_sensors
                 names += obj_sensor_names
                 enableds += [using_obj] * 4
@@ -657,17 +690,30 @@ class PickPlace(SingleArmEnv):
 
         @sensor(modality=modality)
         def obj_quat(obs_cache):
-            return T.convert_quat(self.sim.data.body_xquat[self.obj_body_id[obj_name]], to="xyzw")
+            return T.convert_quat(
+                self.sim.data.body_xquat[self.obj_body_id[obj_name]], to="xyzw"
+            )
 
         @sensor(modality=modality)
         def obj_to_eef_pos(obs_cache):
             # Immediately return default value if cache is empty
             if any(
-                [name not in obs_cache for name in [f"{obj_name}_pos", f"{obj_name}_quat", "world_pose_in_gripper"]]
+                [
+                    name not in obs_cache
+                    for name in [
+                        f"{obj_name}_pos",
+                        f"{obj_name}_quat",
+                        "world_pose_in_gripper",
+                    ]
+                ]
             ):
                 return np.zeros(3)
-            obj_pose = T.pose2mat((obs_cache[f"{obj_name}_pos"], obs_cache[f"{obj_name}_quat"]))
-            rel_pose = T.pose_in_A_to_pose_in_B(obj_pose, obs_cache["world_pose_in_gripper"])
+            obj_pose = T.pose2mat(
+                (obs_cache[f"{obj_name}_pos"], obs_cache[f"{obj_name}_quat"])
+            )
+            rel_pose = T.pose_in_A_to_pose_in_B(
+                obj_pose, obs_cache["world_pose_in_gripper"]
+            )
             rel_pos, rel_quat = T.mat2pose(rel_pose)
             obs_cache[f"{obj_name}_to_{pf}eef_quat"] = rel_quat
             return rel_pos
@@ -675,11 +721,18 @@ class PickPlace(SingleArmEnv):
         @sensor(modality=modality)
         def obj_to_eef_quat(obs_cache):
             return (
-                obs_cache[f"{obj_name}_to_{pf}eef_quat"] if f"{obj_name}_to_{pf}eef_quat" in obs_cache else np.zeros(4)
+                obs_cache[f"{obj_name}_to_{pf}eef_quat"]
+                if f"{obj_name}_to_{pf}eef_quat" in obs_cache
+                else np.zeros(4)
             )
 
         sensors = [obj_pos, obj_quat, obj_to_eef_pos, obj_to_eef_quat]
-        names = [f"{obj_name}_pos", f"{obj_name}_quat", f"{obj_name}_to_{pf}eef_pos", f"{obj_name}_to_{pf}eef_quat"]
+        names = [
+            f"{obj_name}_pos",
+            f"{obj_name}_quat",
+            f"{obj_name}_to_{pf}eef_pos",
+            f"{obj_name}_to_{pf}eef_quat",
+        ]
 
         return sensors, names
 
@@ -703,7 +756,10 @@ class PickPlace(SingleArmEnv):
                     self.sim.model.body_quat[self.obj_body_id[obj.name]] = obj_quat
                 else:
                     # Set the collision object joints
-                    self.sim.data.set_joint_qpos(obj.joints[0], np.concatenate([np.array(obj_pos), np.array(obj_quat)]))
+                    self.sim.data.set_joint_qpos(
+                        obj.joints[0],
+                        np.concatenate([np.array(obj_pos), np.array(obj_quat)]),
+                    )
 
         # Set the bins to the desired position
         self.sim.model.body_pos[self.sim.model.body_name2id("bin1")] = self.bin1_pos
@@ -745,7 +801,9 @@ class PickPlace(SingleArmEnv):
             obj_pos = self.sim.data.body_xpos[self.obj_body_id[obj_str]]
             dist = np.linalg.norm(gripper_site_pos - obj_pos)
             r_reach = 1 - np.tanh(10.0 * dist)
-            self.objects_in_bins[i] = int((not self.not_in_bin(obj_pos, i)) and r_reach < 0.6)
+            self.objects_in_bins[i] = int(
+                (not self.not_in_bin(obj_pos, i)) and r_reach < 0.6
+            )
 
         # returns True if a single object is in the correct bin
         if self.single_object_mode in {1, 2}:
@@ -804,7 +862,9 @@ class PickPlaceMilk(PickPlace):
     """
 
     def __init__(self, **kwargs):
-        assert "single_object_mode" not in kwargs and "object_type" not in kwargs, "invalid set of arguments"
+        assert (
+            "single_object_mode" not in kwargs and "object_type" not in kwargs
+        ), "invalid set of arguments"
         super().__init__(single_object_mode=2, object_type="milk", **kwargs)
 
 
@@ -814,7 +874,9 @@ class PickPlaceBread(PickPlace):
     """
 
     def __init__(self, **kwargs):
-        assert "single_object_mode" not in kwargs and "object_type" not in kwargs, "invalid set of arguments"
+        assert (
+            "single_object_mode" not in kwargs and "object_type" not in kwargs
+        ), "invalid set of arguments"
         super().__init__(single_object_mode=2, object_type="bread", **kwargs)
 
 
@@ -824,7 +886,9 @@ class PickPlaceCereal(PickPlace):
     """
 
     def __init__(self, **kwargs):
-        assert "single_object_mode" not in kwargs and "object_type" not in kwargs, "invalid set of arguments"
+        assert (
+            "single_object_mode" not in kwargs and "object_type" not in kwargs
+        ), "invalid set of arguments"
         super().__init__(single_object_mode=2, object_type="cereal", **kwargs)
 
 
@@ -834,5 +898,7 @@ class PickPlaceCan(PickPlace):
     """
 
     def __init__(self, **kwargs):
-        assert "single_object_mode" not in kwargs and "object_type" not in kwargs, "invalid set of arguments"
+        assert (
+            "single_object_mode" not in kwargs and "object_type" not in kwargs
+        ), "invalid set of arguments"
         super().__init__(single_object_mode=2, object_type="can", **kwargs)

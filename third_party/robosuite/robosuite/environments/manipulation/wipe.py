@@ -20,7 +20,11 @@ DEFAULT_WIPE_CONFIG = {
     "distance_th_multiplier": 5.0,  # multiplier in the tanh function for the aforementioned reward
     # settings for table top
     "table_full_size": [0.5, 0.8, 0.05],  # Size of tabletop
-    "table_offset": [0.15, 0, 0.9],  # Offset of table (z dimension defines max height of table)
+    "table_offset": [
+        0.15,
+        0,
+        0.9,
+    ],  # Offset of table (z dimension defines max height of table)
     "table_friction": [0.03, 0.005, 0.0001],  # Friction parameters for the table
     "table_friction_std": 0,  # Standard deviation to sample different friction parameters for the table each episode
     "table_height": 0.0,  # Additional height of the table over the default location
@@ -196,14 +200,18 @@ class Wipe(SingleArmEnv):
         ), "Tried to specify gripper other than WipingGripper in Wipe environment!"
 
         # Get config
-        self.task_config = task_config if task_config is not None else DEFAULT_WIPE_CONFIG
+        self.task_config = (
+            task_config if task_config is not None else DEFAULT_WIPE_CONFIG
+        )
 
         # Set task-specific parameters
 
         # settings for the reward
         self.reward_scale = reward_scale
         self.reward_shaping = reward_shaping
-        self.arm_limit_collision_penalty = self.task_config["arm_limit_collision_penalty"]
+        self.arm_limit_collision_penalty = self.task_config[
+            "arm_limit_collision_penalty"
+        ]
         self.wipe_contact_reward = self.task_config["wipe_contact_reward"]
         self.unit_wiped_reward = self.task_config["unit_wiped_reward"]
         self.ee_accel_penalty = self.task_config["ee_accel_penalty"]
@@ -213,7 +221,9 @@ class Wipe(SingleArmEnv):
         # Final reward computation
         # So that is better to finish that to stay touching the table for 100 steps
         # The 0.5 comes from continuous_distance_reward at 0. If something changes, this may change as well
-        self.task_complete_reward = self.unit_wiped_reward * (self.wipe_contact_reward + 0.5)
+        self.task_complete_reward = self.unit_wiped_reward * (
+            self.wipe_contact_reward + 0.5
+        )
         # Verify that the distance multiplier is not greater than the task complete reward
         assert (
             self.task_complete_reward > self.distance_multiplier
@@ -223,8 +233,12 @@ class Wipe(SingleArmEnv):
         self.table_full_size = self.task_config["table_full_size"]
         self.table_height = self.task_config["table_height"]
         self.table_height_std = self.task_config["table_height_std"]
-        delta_height = min(0, np.random.normal(self.table_height, self.table_height_std))  # sample variation in height
-        self.table_offset = np.array(self.task_config["table_offset"]) + np.array((0, 0, delta_height))
+        delta_height = min(
+            0, np.random.normal(self.table_height, self.table_height_std)
+        )  # sample variation in height
+        self.table_offset = np.array(self.task_config["table_offset"]) + np.array(
+            (0, 0, delta_height)
+        )
         self.table_friction = self.task_config["table_friction"]
         self.table_friction_std = self.task_config["table_friction_std"]
         self.line_width = self.task_config["line_width"]
@@ -247,7 +261,8 @@ class Wipe(SingleArmEnv):
 
         # Scale reward if desired (see reward method for details)
         self.reward_normalization_factor = horizon / (
-            self.num_markers * self.unit_wiped_reward + horizon * (self.wipe_contact_reward + self.task_complete_reward)
+            self.num_markers * self.unit_wiped_reward
+            + horizon * (self.wipe_contact_reward + self.task_complete_reward)
         )
 
         # ee resets
@@ -329,7 +344,9 @@ class Wipe(SingleArmEnv):
         """
         reward = 0
 
-        total_force_ee = np.linalg.norm(np.array(self.robots[0].recent_ee_forcetorques.current[:3]))
+        total_force_ee = np.linalg.norm(
+            np.array(self.robots[0].recent_ee_forcetorques.current[:3])
+        )
 
         # Neg Reward from collisions of the arm with the table
         if self.check_contact(self.robots[0].robot_model):
@@ -363,10 +380,30 @@ class Wipe(SingleArmEnv):
             v2 /= np.linalg.norm(v2)
 
             # Corners of the tool in the coordinate frame of the plane
-            t1 = np.array([np.dot(corner1_pos - corner2_pos, v1), np.dot(corner1_pos - corner2_pos, v2)])
-            t2 = np.array([np.dot(corner2_pos - corner2_pos, v1), np.dot(corner2_pos - corner2_pos, v2)])
-            t3 = np.array([np.dot(corner3_pos - corner2_pos, v1), np.dot(corner3_pos - corner2_pos, v2)])
-            t4 = np.array([np.dot(corner4_pos - corner2_pos, v1), np.dot(corner4_pos - corner2_pos, v2)])
+            t1 = np.array(
+                [
+                    np.dot(corner1_pos - corner2_pos, v1),
+                    np.dot(corner1_pos - corner2_pos, v2),
+                ]
+            )
+            t2 = np.array(
+                [
+                    np.dot(corner2_pos - corner2_pos, v1),
+                    np.dot(corner2_pos - corner2_pos, v2),
+                ]
+            )
+            t3 = np.array(
+                [
+                    np.dot(corner3_pos - corner2_pos, v1),
+                    np.dot(corner3_pos - corner2_pos, v2),
+                ]
+            )
+            t4 = np.array(
+                [
+                    np.dot(corner4_pos - corner2_pos, v1),
+                    np.dot(corner4_pos - corner2_pos, v2),
+                ]
+            )
 
             pp = [t1, t2, t4, t3]
 
@@ -375,10 +412,17 @@ class Wipe(SingleArmEnv):
             n /= np.linalg.norm(n)
 
             def isLeft(P0, P1, P2):
-                return (P1[0] - P0[0]) * (P2[1] - P0[1]) - (P2[0] - P0[0]) * (P1[1] - P0[1])
+                return (P1[0] - P0[0]) * (P2[1] - P0[1]) - (P2[0] - P0[0]) * (
+                    P1[1] - P0[1]
+                )
 
             def PointInRectangle(X, Y, Z, W, P):
-                return isLeft(X, Y, P) < 0 and isLeft(Y, Z, P) < 0 and isLeft(Z, W, P) < 0 and isLeft(W, X, P) < 0
+                return (
+                    isLeft(X, Y, P) < 0
+                    and isLeft(Y, Z, P) < 0
+                    and isLeft(Z, W, P) < 0
+                    and isLeft(W, X, P) < 0
+                )
 
             # Only go into this computation if there are contact points
             if self.sim.data.ncon != 0:
@@ -387,7 +431,11 @@ class Wipe(SingleArmEnv):
                 for marker in self.model.mujoco_arena.markers:
 
                     # Current marker 3D location in world frame
-                    marker_pos = np.array(self.sim.data.body_xpos[self.sim.model.body_name2id(marker.root_body)])
+                    marker_pos = np.array(
+                        self.sim.data.body_xpos[
+                            self.sim.model.body_name2id(marker.root_body)
+                        ]
+                    )
 
                     # We use the second tool corner as point on the plane and define the vector connecting
                     # the marker position to that point
@@ -406,7 +454,10 @@ class Wipe(SingleArmEnv):
                         if dist < 0.02:
                             # Write touching points and projected point in coordinates of the plane
                             pp_2 = np.array(
-                                [np.dot(projected_point - corner2_pos, v1), np.dot(projected_point - corner2_pos, v2)]
+                                [
+                                    np.dot(projected_point - corner2_pos, v1),
+                                    np.dot(projected_point - corner2_pos, v2),
+                                ]
                             )
                             # Check if marker is within the tool center:
                             if PointInRectangle(pp[0], pp[1], pp[2], pp[3], pp_2):
@@ -420,7 +471,9 @@ class Wipe(SingleArmEnv):
             # Loop through all new markers we are wiping at this step
             for new_active_marker in new_active_markers:
                 # Grab relevant marker id info
-                new_active_marker_geom_id = self.sim.model.geom_name2id(new_active_marker.visual_geoms[0])
+                new_active_marker_geom_id = self.sim.model.geom_name2id(
+                    new_active_marker.visual_geoms[0]
+                )
                 # Make this marker transparent since we wiped it (alpha = 0)
                 self.sim.model.geom_rgba[new_active_marker_geom_id][3] = 0
                 # Add this marker the wiped list
@@ -435,9 +488,15 @@ class Wipe(SingleArmEnv):
                 # to the centroid of the dirt to wipe
                 if len(self.wiped_markers) < self.num_markers:
                     _, _, mean_pos_to_things_to_wipe = self._get_wipe_information()
-                    mean_distance_to_things_to_wipe = np.linalg.norm(mean_pos_to_things_to_wipe)
+                    mean_distance_to_things_to_wipe = np.linalg.norm(
+                        mean_pos_to_things_to_wipe
+                    )
                     reward += self.distance_multiplier * (
-                        1 - np.tanh(self.distance_th_multiplier * mean_distance_to_things_to_wipe)
+                        1
+                        - np.tanh(
+                            self.distance_th_multiplier
+                            * mean_distance_to_things_to_wipe
+                        )
                     )
 
                 # Reward for keeping contact
@@ -451,13 +510,17 @@ class Wipe(SingleArmEnv):
 
                 # Reward for pressing into table
                 # TODO: Need to include this computation somehow in the scaled reward computation
-                elif total_force_ee > self.pressure_threshold and self.sim.data.ncon > 1:
+                elif (
+                    total_force_ee > self.pressure_threshold and self.sim.data.ncon > 1
+                ):
                     reward += self.wipe_contact_reward + 0.01 * total_force_ee
                     if self.sim.data.ncon > 50:
                         reward += 10.0 * self.wipe_contact_reward
 
                 # Penalize large accelerations
-                reward -= self.ee_accel_penalty * np.mean(abs(self.robots[0].recent_ee_acc.current))
+                reward -= self.ee_accel_penalty * np.mean(
+                    abs(self.robots[0].recent_ee_acc.current)
+                )
 
             # Final reward if all wiped
             if len(self.wiped_markers) == self.num_markers:
@@ -493,7 +556,9 @@ class Wipe(SingleArmEnv):
         super()._load_model()
 
         # Adjust base pose accordingly
-        xpos = self.robots[0].robot_model.base_xpos_offset["table"](self.table_full_size[0])
+        xpos = self.robots[0].robot_model.base_xpos_offset["table"](
+            self.table_full_size[0]
+        )
         self.robots[0].robot_model.set_base_xpos(xpos)
 
         # Get robot's contact geoms
@@ -558,7 +623,11 @@ class Wipe(SingleArmEnv):
 
                 @sensor(modality=modality)
                 def wipe_centroid(obs_cache):
-                    return obs_cache["wipe_centroid"] if "wipe_centroid" in obs_cache else np.zeros(3)
+                    return (
+                        obs_cache["wipe_centroid"]
+                        if "wipe_centroid" in obs_cache
+                        else np.zeros(3)
+                    )
 
                 @sensor(modality=modality)
                 def proportion_wiped(obs_cache):
@@ -573,7 +642,8 @@ class Wipe(SingleArmEnv):
                     def gripper_to_wipe_centroid(obs_cache):
                         return (
                             obs_cache["wipe_centroid"] - obs_cache[f"{pf}eef_pos"]
-                            if "wipe_centroid" in obs_cache and f"{pf}eef_pos" in obs_cache
+                            if "wipe_centroid" in obs_cache
+                            and f"{pf}eef_pos" in obs_cache
                             else np.zeros(3)
                         )
 
@@ -583,7 +653,9 @@ class Wipe(SingleArmEnv):
             else:
                 # use explicit representation of wiping objects
                 for i, marker in enumerate(self.model.mujoco_arena.markers):
-                    marker_sensors, marker_sensor_names = self._create_marker_sensors(i, marker, modality)
+                    marker_sensors, marker_sensor_names = self._create_marker_sensors(
+                        i, marker, modality
+                    )
                     sensors += marker_sensors
                     names += marker_sensor_names
 
@@ -616,7 +688,9 @@ class Wipe(SingleArmEnv):
 
         @sensor(modality=modality)
         def marker_pos(obs_cache):
-            return np.array(self.sim.data.body_xpos[self.sim.model.body_name2id(marker.root_body)])
+            return np.array(
+                self.sim.data.body_xpos[self.sim.model.body_name2id(marker.root_body)]
+            )
 
         @sensor(modality=modality)
         def marker_wiped(obs_cache):
@@ -722,7 +796,12 @@ class Wipe(SingleArmEnv):
             self.ee_torque_bias = self.robots[0].ee_torque
 
         if self.get_info:
-            info["add_vals"] = ["nwipedmarkers", "colls", "percent_viapoints_", "f_excess"]
+            info["add_vals"] = [
+                "nwipedmarkers",
+                "colls",
+                "percent_viapoints_",
+                "f_excess",
+            ]
             info["nwipedmarkers"] = len(self.wiped_markers)
             info["colls"] = self.collisions
             info["percent_viapoints_"] = len(self.wiped_markers) / self.num_markers
@@ -743,7 +822,11 @@ class Wipe(SingleArmEnv):
         if len(self.wiped_markers) < self.num_markers:
             for marker in self.model.mujoco_arena.markers:
                 if marker not in self.wiped_markers:
-                    marker_pos = np.array(self.sim.data.body_xpos[self.sim.model.body_name2id(marker.root_body)])
+                    marker_pos = np.array(
+                        self.sim.data.body_xpos[
+                            self.sim.model.body_name2id(marker.root_body)
+                        ]
+                    )
                     wipe_centroid += marker_pos
                     marker_positions.append(marker_pos)
                     num_non_wiped_markers += 1
@@ -752,7 +835,9 @@ class Wipe(SingleArmEnv):
         # Radius of circle from centroid capturing all remaining wiping markers
         max_radius = 0
         if num_non_wiped_markers > 0:
-            max_radius = np.max(np.linalg.norm(np.array(marker_positions) - wipe_centroid, axis=1))
+            max_radius = np.max(
+                np.linalg.norm(np.array(marker_positions) - wipe_centroid, axis=1)
+            )
         # Return all values
         return max_radius, wipe_centroid, mean_pos_to_things_to_wipe
 
@@ -765,4 +850,7 @@ class Wipe(SingleArmEnv):
         Returns:
             bool: True if contact is surpasses given threshold magnitude
         """
-        return np.linalg.norm(self.robots[0].ee_force - self.ee_force_bias) > self.contact_threshold
+        return (
+            np.linalg.norm(self.robots[0].ee_force - self.ee_force_bias)
+            > self.contact_threshold
+        )

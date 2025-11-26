@@ -52,7 +52,11 @@ class MujocoObject(MujocoModel):
     def __init__(self, obj_type="all", duplicate_collision_geoms=True):
         super().__init__()
         self.asset = ET.Element("asset")
-        assert obj_type in GEOM_GROUPS, "object type must be one in {}, got: {} instead.".format(GEOM_GROUPS, obj_type)
+        assert (
+            obj_type in GEOM_GROUPS
+        ), "object type must be one in {}, got: {} instead.".format(
+            GEOM_GROUPS, obj_type
+        )
         self.obj_type = obj_type
         self.duplicate_collision_geoms = duplicate_collision_geoms
 
@@ -78,7 +82,12 @@ class MujocoObject(MujocoModel):
         """
         for asset in other.asset:
             if (
-                find_elements(root=self.asset, tags=asset.tag, attribs={"name": asset.get("name")}, return_first=True)
+                find_elements(
+                    root=self.asset,
+                    tags=asset.tag,
+                    attribs={"name": asset.get("name")},
+                    return_first=True,
+                )
                 is None
             ):
                 self.asset.append(asset)
@@ -108,7 +117,6 @@ class MujocoObject(MujocoModel):
         raise NotImplementedError
 
     def _get_object_subtree(self):
-
         """
         Returns a ET.Element
         It is a <body/> subtree that defines all collision and / or visualization related fields
@@ -128,14 +136,15 @@ class MujocoObject(MujocoModel):
         """
         # Parse element tree to get all relevant bodies, joints, actuators, and geom groups
         _elements = sort_elements(root=self.get_obj())
-        assert (
-            len(_elements["root_body"]) == 1
-        ), "Invalid number of root bodies found for robot model. Expected 1," "got {}".format(
-            len(_elements["root_body"])
+        assert len(_elements["root_body"]) == 1, (
+            "Invalid number of root bodies found for robot model. Expected 1,"
+            "got {}".format(len(_elements["root_body"]))
         )
         _elements["root_body"] = _elements["root_body"][0]
         _elements["bodies"] = (
-            [_elements["root_body"]] + _elements["bodies"] if "bodies" in _elements else [_elements["root_body"]]
+            [_elements["root_body"]] + _elements["bodies"]
+            if "bodies" in _elements
+            else [_elements["root_body"]]
         )
         self._root_body = _elements["root_body"].get("name")
         self._bodies = [e.get("name") for e in _elements.get("bodies", [])]
@@ -143,19 +152,27 @@ class MujocoObject(MujocoModel):
         self._actuators = [e.get("name") for e in _elements.get("actuators", [])]
         self._sites = [e.get("name") for e in _elements.get("sites", [])]
         self._sensors = [e.get("name") for e in _elements.get("sensors", [])]
-        self._contact_geoms = [e.get("name") for e in _elements.get("contact_geoms", [])]
+        self._contact_geoms = [
+            e.get("name") for e in _elements.get("contact_geoms", [])
+        ]
         self._visual_geoms = [e.get("name") for e in _elements.get("visual_geoms", [])]
 
         # Add default materials if we're using domain randomization
         if macros.USING_INSTANCE_RANDOMIZATION:
-            tex_element, mat_element, _, used = add_material(root=self.get_obj(), naming_prefix=self.naming_prefix)
+            tex_element, mat_element, _, used = add_material(
+                root=self.get_obj(), naming_prefix=self.naming_prefix
+            )
             # Only add the material / texture if they were actually used
             if used:
                 self.asset.append(tex_element)
                 self.asset.append(mat_element)
 
         # Add prefix to all elements
-        add_prefix(root=self.get_obj(), prefix=self.naming_prefix, exclude=self.exclude_from_prefixing)
+        add_prefix(
+            root=self.get_obj(),
+            prefix=self.naming_prefix,
+            exclude=self.exclude_from_prefixing,
+        )
 
     @property
     def name(self):
@@ -295,7 +312,7 @@ class MujocoObject(MujocoModel):
         """
         Returns numpy array with dimensions of a bounding box around this object.
         """
-        return 2. * self.get_bounding_box_half_size()
+        return 2.0 * self.get_bounding_box_half_size()
 
 
 class MujocoXMLObject(MujocoObject, MujocoXML):
@@ -323,10 +340,21 @@ class MujocoXMLObject(MujocoObject, MujocoXML):
             visual geom copy
     """
 
-    def __init__(self, fname, name, joints="default", obj_type="all", duplicate_collision_geoms=True):
+    def __init__(
+        self,
+        fname,
+        name,
+        joints="default",
+        obj_type="all",
+        duplicate_collision_geoms=True,
+    ):
         MujocoXML.__init__(self, fname)
         # Set obj type and duplicate args
-        assert obj_type in GEOM_GROUPS, "object type must be one in {}, got: {} instead.".format(GEOM_GROUPS, obj_type)
+        assert (
+            obj_type in GEOM_GROUPS
+        ), "object type must be one in {}, got: {} instead.".format(
+            GEOM_GROUPS, obj_type
+        )
         self.obj_type = obj_type
         self.duplicate_collision_geoms = duplicate_collision_geoms
 
@@ -376,7 +404,10 @@ class MujocoXMLObject(MujocoObject, MujocoXML):
                 g_name = g_name if g_name is not None else f"g{i}"
                 element.set("name", g_name)
                 # Also optionally duplicate collision geoms if requested (and this is a collision geom)
-                if self.duplicate_collision_geoms and element.get("group") in {None, "0"}:
+                if self.duplicate_collision_geoms and element.get("group") in {
+                    None,
+                    "0",
+                }:
                     parent.append(self._duplicate_visual_from_collision(element))
                     # Also manually set the visual appearances to the original collision model
                     element.set("rgba", array_to_string(OBJECT_COLLISION_COLOR))
@@ -404,7 +435,11 @@ class MujocoXMLObject(MujocoObject, MujocoXML):
         Extends the base class method to also add prefixes to all bodies in this object
         """
         super()._get_object_properties()
-        add_prefix(root=self.root, prefix=self.naming_prefix, exclude=self.exclude_from_prefixing)
+        add_prefix(
+            root=self.root,
+            prefix=self.naming_prefix,
+            exclude=self.exclude_from_prefixing,
+        )
 
     @staticmethod
     def _duplicate_visual_from_collision(element):
@@ -454,12 +489,16 @@ class MujocoXMLObject(MujocoObject, MujocoXML):
 
     @property
     def bottom_offset(self):
-        bottom_site = self.worldbody.find("./body/site[@name='{}bottom_site']".format(self.naming_prefix))
+        bottom_site = self.worldbody.find(
+            "./body/site[@name='{}bottom_site']".format(self.naming_prefix)
+        )
         return string_to_array(bottom_site.get("pos"))
 
     @property
     def top_offset(self):
-        top_site = self.worldbody.find("./body/site[@name='{}top_site']".format(self.naming_prefix))
+        top_site = self.worldbody.find(
+            "./body/site[@name='{}top_site']".format(self.naming_prefix)
+        )
         return string_to_array(top_site.get("pos"))
 
     @property
@@ -492,7 +531,9 @@ class MujocoGeneratedObject(MujocoObject):
     """
 
     def __init__(self, obj_type="all", duplicate_collision_geoms=True):
-        super().__init__(obj_type=obj_type, duplicate_collision_geoms=duplicate_collision_geoms)
+        super().__init__(
+            obj_type=obj_type, duplicate_collision_geoms=duplicate_collision_geoms
+        )
 
         # Store common material names so we don't add prefixes to them
         self.shared_materials = set()
@@ -552,7 +593,11 @@ class MujocoGeneratedObject(MujocoObject):
             self.shared_materials.add(material.name)
             self.shared_textures.add(material.tex_attrib["name"])
         # Update prefix for assets
-        add_prefix(root=self.asset, prefix=self.naming_prefix, exclude=self.exclude_from_prefixing)
+        add_prefix(
+            root=self.asset,
+            prefix=self.naming_prefix,
+            exclude=self.exclude_from_prefixing,
+        )
 
     def exclude_from_prefixing(self, inp):
         """
@@ -568,7 +613,11 @@ class MujocoGeneratedObject(MujocoObject):
         if type(inp) is not str:
             return False
         # Only return True if the string matches the name of a common material
-        return True if inp in self.shared_materials or inp in self.shared_textures else False
+        return (
+            True
+            if inp in self.shared_materials or inp in self.shared_textures
+            else False
+        )
 
     # Methods that still need to be defined by subclass
     def _get_object_subtree(self):
@@ -584,4 +633,7 @@ class MujocoGeneratedObject(MujocoObject):
         raise NotImplementedError
 
     def get_bounding_box_half_size(self):
-        return np.array([self.horizontal_radius, self.horizontal_radius, 0.]) - self.bottom_offset
+        return (
+            np.array([self.horizontal_radius, self.horizontal_radius, 0.0])
+            - self.bottom_offset
+        )

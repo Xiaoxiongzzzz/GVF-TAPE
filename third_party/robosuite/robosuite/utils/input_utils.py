@@ -28,7 +28,10 @@ def choose_environment():
         print("[{}] {}".format(k, env))
     print()
     try:
-        s = input("Choose an environment to run " + "(enter a number from 0 to {}): ".format(len(envs) - 1))
+        s = input(
+            "Choose an environment to run "
+            + "(enter a number from 0 to {}): ".format(len(envs) - 1)
+        )
         # parse input into a number within range
         k = min(max(int(s), 0), len(envs))
     except:
@@ -57,7 +60,10 @@ def choose_controller():
         print("[{}] {} - {}".format(k, controller, controllers_info[controller]))
     print()
     try:
-        s = input("Choose a controller for the robot " + "(enter a number from 0 to {}): ".format(len(controllers) - 1))
+        s = input(
+            "Choose a controller for the robot "
+            + "(enter a number from 0 to {}): ".format(len(controllers) - 1)
+        )
         # parse input into a number within range
         k = min(max(int(s), 0), len(controllers) - 1)
     except:
@@ -83,7 +89,9 @@ def choose_multi_arm_config():
     }
 
     # Select environment configuration
-    print("A multi-arm environment was chosen. Here is a list of multi-arm environment configurations:\n")
+    print(
+        "A multi-arm environment was chosen. Here is a list of multi-arm environment configurations:\n"
+    )
 
     for k, env_config in enumerate(list(env_configs)):
         print("[{}] {}".format(k, env_config))
@@ -138,7 +146,10 @@ def choose_robots(exclude_bimanual=False):
         print("[{}] {}".format(k, robot))
     print()
     try:
-        s = input("Choose a robot " + "(enter a number from 0 to {}): ".format(len(robots) - 1))
+        s = input(
+            "Choose a robot "
+            + "(enter a number from 0 to {}): ".format(len(robots) - 1)
+        )
         # parse input into a number within range
         k = min(max(int(s), 0), len(robots))
     except:
@@ -195,8 +206,16 @@ def input2action(device, robot, active_arm="right", env_configuration=None):
         return None, None
 
     # Get controller reference
-    controller = robot.controller if not isinstance(robot, Bimanual) else robot.controller[active_arm]
-    gripper_dof = robot.gripper.dof if not isinstance(robot, Bimanual) else robot.gripper[active_arm].dof
+    controller = (
+        robot.controller
+        if not isinstance(robot, Bimanual)
+        else robot.controller[active_arm]
+    )
+    gripper_dof = (
+        robot.gripper.dof
+        if not isinstance(robot, Bimanual)
+        else robot.gripper[active_arm].dof
+    )
 
     # First process the raw drotation
     drotation = raw_drotation[[1, 0, 2]]
@@ -240,7 +259,9 @@ def input2action(device, robot, active_arm="right", env_configuration=None):
         dpos = dpos * 75 if isinstance(device, Keyboard) else dpos * 125
     else:
         # No other controllers currently supported
-        print("Error: Unsupported controller specified -- Robot must have either an IK or OSC-based controller!")
+        print(
+            "Error: Unsupported controller specified -- Robot must have either an IK or OSC-based controller!"
+        )
 
     # map 0 to -1 (open) and map 1 to 1 (closed)
     grasp = 1 if grasp else -1

@@ -3,6 +3,7 @@ This file contains all neural vilt_modules related to encoding the spatial
 information of obs_t, i.e., the abstracted knowledge of the current visual
 input conditioned on the language.
 """
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -57,16 +58,22 @@ class PatchEncoder(nn.Module):
         x = self.bn(x)
         return x
 
+
 class FeatureEncoder(nn.Module):
     """
     A feature encoder that encode and tokenize feature map
     """
+
     def __init__(
-            self, input_shape, patch_size, channel_list=[512, 256, 128], no_patch_embed_bias=False
-            ):
+        self,
+        input_shape,
+        patch_size,
+        channel_list=[512, 256, 128],
+        no_patch_embed_bias=False,
+    ):
         super().__init__()
         C, F, H, W = input_shape
-        num_patches = (H // 4 // patch_size[0]) * (W // 4 // patch_size[1]) * F//2
+        num_patches = (H // 4 // patch_size[0]) * (W // 4 // patch_size[1]) * F // 2
         self.patch_size = patch_size
         self.num_patches = num_patches
 
@@ -74,7 +81,9 @@ class FeatureEncoder(nn.Module):
             nn.Conv2d(C, channel_list[0], kernel_size=3, stride=2, padding=1),
             nn.BatchNorm2d(channel_list[0]),
             nn.ReLU(),
-            nn.Conv2d(channel_list[0], channel_list[1], kernel_size=3, stride=2, padding=1),
+            nn.Conv2d(
+                channel_list[0], channel_list[1], kernel_size=3, stride=2, padding=1
+            ),
             nn.BatchNorm2d(channel_list[1]),
             nn.ReLU(),
         )
@@ -83,13 +92,13 @@ class FeatureEncoder(nn.Module):
         )
         self.proj = nn.Conv2d(
             channel_list[2],
-            channel_list[2], 
-            kernel_size=patch_size, 
-            stride=patch_size, 
-            bias=False if no_patch_embed_bias else True
-            )
+            channel_list[2],
+            kernel_size=patch_size,
+            stride=patch_size,
+            bias=False if no_patch_embed_bias else True,
+        )
         self.norm = nn.BatchNorm2d(channel_list[2])
-    
+
     def forward(self, x):
         B, C, F, H, W = x.shape
         x = rearrange(x, "b c f h w -> (b f) c h w")
@@ -98,12 +107,14 @@ class FeatureEncoder(nn.Module):
         x = rearrange(x, "(b f) c h w -> (b h w) c f", f=F)
         x = self.temporal_encoder(x)
         F = x.shape[-1]
-        x = rearrange(x,"(b h w) c f -> (b f) c h w", h=H, w=W)
+        x = rearrange(x, "(b h w) c f -> (b f) c h w", h=H, w=W)
         x = self.proj(x)
         x = self.norm(x)
         x = rearrange(x, "(b f) c h w -> b (h w f) c", f=F)
 
         return x
+
+
 class SpatialSoftmax(nn.Module):
     """
     The spatial softmax layer (https://rll.berkeley.edu/dsae/dsae.pdf)

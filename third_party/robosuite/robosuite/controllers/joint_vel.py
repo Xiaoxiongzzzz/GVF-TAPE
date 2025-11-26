@@ -106,7 +106,9 @@ class JointVelocityController(Controller):
         self.last_joint_vel = np.zeros(self.joint_dim)
 
         # limits
-        self.velocity_limits = np.array(velocity_limits) if velocity_limits is not None else None
+        self.velocity_limits = (
+            np.array(velocity_limits) if velocity_limits is not None else None
+        )
 
         # control frequency
         self.control_freq = policy_freq
@@ -116,7 +118,9 @@ class JointVelocityController(Controller):
 
         # initialize torques and goal velocity
         self.goal_vel = None  # Goal velocity desired, pre-compensation
-        self.current_vel = np.zeros(self.joint_dim)  # Current velocity setpoint, pre-compensation
+        self.current_vel = np.zeros(
+            self.joint_dim
+        )  # Current velocity setpoint, pre-compensation
         self.torques = None  # Torques returned every time run_controller is called
 
     def set_goal(self, velocities):
@@ -141,7 +145,9 @@ class JointVelocityController(Controller):
 
         self.goal_vel = self.scale_action(velocities)
         if self.velocity_limits is not None:
-            self.goal_vel = np.clip(self.goal_vel, self.velocity_limits[0], self.velocity_limits[1])
+            self.goal_vel = np.clip(
+                self.goal_vel, self.velocity_limits[0], self.velocity_limits[1]
+            )
 
         if self.interpolator is not None:
             self.interpolator.set_goal(self.goal_vel)
@@ -182,7 +188,12 @@ class JointVelocityController(Controller):
             self.summed_err += err
 
         # Compute command torques via PID velocity controller plus gravity compensation torques
-        torques = self.kp * err + self.ki * self.summed_err + self.kd * self.derr_buf.average + self.torque_compensation
+        torques = (
+            self.kp * err
+            + self.ki * self.summed_err
+            + self.kd * self.derr_buf.average
+            + self.torque_compensation
+        )
 
         # Clip torques
         self.torques = self.clip_torques(torques)

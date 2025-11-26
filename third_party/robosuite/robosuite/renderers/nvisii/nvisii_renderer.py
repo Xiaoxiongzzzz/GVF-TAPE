@@ -122,14 +122,21 @@ class NVISIIRenderer(Renderer):
             if not os.path.exists(video_path):
                 os.makedirs(video_path)
             self.video = cv2.VideoWriter(
-                video_path + video_name, cv2.VideoWriter_fourcc(*"MP4V"), video_fps, (self.width, self.height)
+                video_path + video_name,
+                cv2.VideoWriter_fourcc(*"MP4V"),
+                video_fps,
+                (self.width, self.height),
             )
             print(f"video mode enabled")
 
         if vision_modalities is None and self.segmentation_type[0] == None:
-            nvisii.sample_pixel_area(x_sample_interval=(0.0, 1.0), y_sample_interval=(0.0, 1.0))
+            nvisii.sample_pixel_area(
+                x_sample_interval=(0.0, 1.0), y_sample_interval=(0.0, 1.0)
+            )
         else:
-            nvisii.sample_pixel_area(x_sample_interval=(0.5, 0.5), y_sample_interval=(0.5, 0.5))
+            nvisii.sample_pixel_area(
+                x_sample_interval=(0.5, 0.5), y_sample_interval=(0.5, 0.5)
+            )
 
         self._init_nvisii_components()
 
@@ -153,7 +160,9 @@ class NVISIIRenderer(Renderer):
 
         self.light_1.get_light().set_intensity(150)  # intensity of the light
         self.light_1.get_transform().set_scale(nvisii.vec3(0.3))  # scale the light down
-        self.light_1.get_transform().set_position(nvisii.vec3(3, 3, 4))  # sets the position of the light
+        self.light_1.get_transform().set_position(
+            nvisii.vec3(3, 3, 4)
+        )  # sets the position of the light
 
     def _init_floor(self, image):
         """
@@ -175,7 +184,9 @@ class NVISIIRenderer(Renderer):
         floor_entity.get_transform().set_position(nvisii.vec3(0, 0, 0))
 
         texture_image = xml_path_completion("textures/" + image)
-        texture = nvisii.texture.create_from_file(name="floor_texture", path=texture_image)
+        texture = nvisii.texture.create_from_file(
+            name="floor_texture", path=texture_image
+        )
 
         floor_entity.get_material().set_base_color_texture(texture)
         floor_entity.get_material().set_roughness(0.4)
@@ -189,9 +200,13 @@ class NVISIIRenderer(Renderer):
             image (string): String for the file to use as an image for the walls
         """
         texture_image = xml_path_completion("textures/" + image)
-        texture = nvisii.texture.create_from_file(name="wall_texture", path=texture_image)
+        texture = nvisii.texture.create_from_file(
+            name="wall_texture", path=texture_image
+        )
 
-        for wall in self.env.model.mujoco_arena.worldbody.findall("./geom[@material='walls_mat']"):
+        for wall in self.env.model.mujoco_arena.worldbody.findall(
+            "./geom[@material='walls_mat']"
+        ):
 
             name = wall.get("name")
             size = [float(x) for x in wall.get("size").split(" ")]
@@ -200,14 +215,20 @@ class NVISIIRenderer(Renderer):
 
             wall_entity = nvisii.entity.create(
                 name=name,
-                mesh=nvisii.mesh.create_box(name=name, size=nvisii.vec3(size[0], size[1], size[2])),
+                mesh=nvisii.mesh.create_box(
+                    name=name, size=nvisii.vec3(size[0], size[1], size[2])
+                ),
                 transform=nvisii.transform.create(name),
                 material=nvisii.material.create(name),
             )
 
-            wall_entity.get_transform().set_position(nvisii.vec3(pos[0], pos[1], pos[2]))
+            wall_entity.get_transform().set_position(
+                nvisii.vec3(pos[0], pos[1], pos[2])
+            )
 
-            wall_entity.get_transform().set_rotation(nvisii.quat(quat[0], quat[1], quat[2], quat[3]))
+            wall_entity.get_transform().set_rotation(
+                nvisii.quat(quat[0], quat[1], quat[2], quat[3])
+            )
 
             wall_entity.get_material().set_base_color_texture(texture)
 
@@ -224,7 +245,9 @@ class NVISIIRenderer(Renderer):
 
         self.camera.set_camera(
             nvisii.camera.create_from_fov(
-                name="camera_camera", field_of_view=1, aspect=float(self.width) / float(self.height)
+                name="camera_camera",
+                field_of_view=1,
+                aspect=float(self.width) / float(self.height),
             )
         )
 
@@ -250,7 +273,10 @@ class NVISIIRenderer(Renderer):
         """
         # configures the camera
         self.camera.get_transform().look_at(
-            at=at_vec, up=up_vec, eye=eye_vec, previous=False  # look at (world coordinate)  # up vector
+            at=at_vec,
+            up=up_vec,
+            eye=eye_vec,
+            previous=False,  # look at (world coordinate)  # up vector
         )
 
         self.camera.get_transform().rotate_around(eye_vec, quat)
@@ -258,7 +284,10 @@ class NVISIIRenderer(Renderer):
     def set_camera_pos_quat(self, pos, quat):
         self.camera.get_transform().set_position(pos)
         self.camera.get_transform().look_at(
-            at=(0, 0, 1.06), up=(0, 0, 1), eye=pos, previous=False  # look at (world coordinate)  # up vector
+            at=(0, 0, 1.06),
+            up=(0, 0, 1),
+            eye=pos,
+            previous=False,  # look at (world coordinate)  # up vector
         )
         # self.camera.get_transform().rotate_around(pos, quat)
 
@@ -268,7 +297,9 @@ class NVISIIRenderer(Renderer):
         """
 
         pos = self.env.sim.data.geom_xpos[self.env.sim.model.geom_name2id(name)]
-        R = self.env.sim.data.geom_xmat[self.env.sim.model.geom_name2id(name)].reshape(3, 3)
+        R = self.env.sim.data.geom_xmat[self.env.sim.model.geom_name2id(name)].reshape(
+            3, 3
+        )
 
         quat_xyzw = mat2quat(R)
         quat = np.array([quat_xyzw[3], quat_xyzw[0], quat_xyzw[1], quat_xyzw[2]])
@@ -326,17 +357,29 @@ class NVISIIRenderer(Renderer):
             else:
                 pos = self.env.sim.data.get_geom_xpos(name)
 
-            B = self.env.sim.data.body_xmat[self.env.sim.model.body_name2id(parent_body_name)].reshape((3, 3))
+            B = self.env.sim.data.body_xmat[
+                self.env.sim.model.body_name2id(parent_body_name)
+            ].reshape((3, 3))
             quat_xyzw_body = mat2quat(B)
             quat_wxyz_body = np.array(
-                [quat_xyzw_body[3], quat_xyzw_body[0], quat_xyzw_body[1], quat_xyzw_body[2]]
+                [
+                    quat_xyzw_body[3],
+                    quat_xyzw_body[0],
+                    quat_xyzw_body[1],
+                    quat_xyzw_body[2],
+                ]
             )  # wxyz
             nvisii_quat = nvisii.quat(*quat_wxyz_body) * nvisii.quat(*geom_quat)
 
             if self.tag_in_name(name):
                 # Add position offset if there are position offset defined in the geom tag
-                homo_mat = T.pose2mat((np.zeros((1, 3), dtype=np.float32), quat_xyzw_body))
-                pos_offset = homo_mat @ np.array([geom_pos[0], geom_pos[1], geom_pos[2], 1.0]).transpose()
+                homo_mat = T.pose2mat(
+                    (np.zeros((1, 3), dtype=np.float32), quat_xyzw_body)
+                )
+                pos_offset = (
+                    homo_mat
+                    @ np.array([geom_pos[0], geom_pos[1], geom_pos[2], 1.0]).transpose()
+                )
                 pos = pos + pos_offset[:3]
 
         else:
@@ -409,7 +452,12 @@ class NVISIIRenderer(Renderer):
             print(f"Rendering {verbose_word}... {self.img_cntr}")
 
     def render_to_file(self, img_file):
-        nvisii.render_to_file(width=self.width, height=self.height, samples_per_pixel=self.spp, file_path=img_file)
+        nvisii.render_to_file(
+            width=self.width,
+            height=self.height,
+            samples_per_pixel=self.spp,
+            file_path=img_file,
+        )
 
     def render_segmentation_data(self, img_file):
 
@@ -422,7 +470,9 @@ class NVISIIRenderer(Renderer):
             options="entity_id",
             seed=1,
         )
-        segmentation_array = np.array(segmentation_array).reshape(self.height, self.width, 4)[:, :, 0]
+        segmentation_array = np.array(segmentation_array).reshape(
+            self.height, self.width, 4
+        )[:, :, 0]
         segmentation_array[segmentation_array > 3.4028234663852886e37] = 0
         segmentation_array[segmentation_array < 3.4028234663852886e-37] = 0
         segmentation_array = np.flipud(segmentation_array)
@@ -451,15 +501,15 @@ class NVISIIRenderer(Renderer):
             depth_data = np.flipud(depth_data)[:, :, [0, 1, 2]]
 
             # normalize depths
-            depth_data[:, :, 0] = (depth_data[:, :, 0] - np.min(depth_data[:, :, 0])) / (
-                np.max(depth_data[:, :, 0]) - np.min(depth_data[:, :, 0])
-            )
-            depth_data[:, :, 1] = (depth_data[:, :, 1] - np.min(depth_data[:, :, 1])) / (
-                np.max(depth_data[:, :, 1]) - np.min(depth_data[:, :, 1])
-            )
-            depth_data[:, :, 2] = (depth_data[:, :, 2] - np.min(depth_data[:, :, 2])) / (
-                np.max(depth_data[:, :, 2]) - np.min(depth_data[:, :, 2])
-            )
+            depth_data[:, :, 0] = (
+                depth_data[:, :, 0] - np.min(depth_data[:, :, 0])
+            ) / (np.max(depth_data[:, :, 0]) - np.min(depth_data[:, :, 0]))
+            depth_data[:, :, 1] = (
+                depth_data[:, :, 1] - np.min(depth_data[:, :, 1])
+            ) / (np.max(depth_data[:, :, 1]) - np.min(depth_data[:, :, 1]))
+            depth_data[:, :, 2] = (
+                depth_data[:, :, 2] - np.min(depth_data[:, :, 2])
+            ) / (np.max(depth_data[:, :, 2]) - np.min(depth_data[:, :, 2]))
 
             from PIL import Image
 
@@ -539,7 +589,9 @@ class NVISIIRenderer(Renderer):
                 for i in range(len(seg_im)):
                     for j in range(len(seg_im[0])):
                         if seg_im[i][j] in self.parser.entity_id_class_mapping:
-                            seg_im[i][j] = self.parser.entity_id_class_mapping[seg_im[i][j]]
+                            seg_im[i][j] = self.parser.entity_id_class_mapping[
+                                seg_im[i][j]
+                            ]
                         else:
                             seg_im[i][j] = max_r - 1
             elif self.segmentation_type[0][0] == "instance":
@@ -547,7 +599,9 @@ class NVISIIRenderer(Renderer):
                 for i in range(len(seg_im)):
                     for j in range(len(seg_im[0])):
                         if seg_im[i][j] in self.parser.entity_id_class_mapping:
-                            seg_im[i][j] = self.parser.entity_id_class_mapping[seg_im[i][j]]
+                            seg_im[i][j] = self.parser.entity_id_class_mapping[
+                                seg_im[i][j]
+                            ]
                         else:
                             seg_im[i][j] = max_r - 1
 
@@ -561,7 +615,9 @@ class NVISIIRenderer(Renderer):
         self.update()
 
     def get_pixel_obs(self):
-        frame_buffer = nvisii.render(width=self.width, height=self.height, samples_per_pixel=self.spp)
+        frame_buffer = nvisii.render(
+            width=self.width, height=self.height, samples_per_pixel=self.spp
+        )
 
         frame_buffer = np.array(frame_buffer).reshape(self.height, self.width, 4)
         frame_buffer = np.flipud(frame_buffer)

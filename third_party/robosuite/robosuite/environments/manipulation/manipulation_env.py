@@ -144,7 +144,9 @@ class ManipulationEnv(RobotEnv):
         renderer_config=None,
     ):
         # Robot info
-        robots = list(robots) if type(robots) is list or type(robots) is tuple else [robots]
+        robots = (
+            list(robots) if type(robots) is list or type(robots) is tuple else [robots]
+        )
         num_robots = len(robots)
 
         # Gripper
@@ -226,12 +228,17 @@ class ManipulationEnv(RobotEnv):
         else:
             o_geoms = [object_geoms] if type(object_geoms) is str else object_geoms
         if isinstance(gripper, GripperModel):
-            g_geoms = [gripper.important_geoms["left_fingerpad"], gripper.important_geoms["right_fingerpad"]]
+            g_geoms = [
+                gripper.important_geoms["left_fingerpad"],
+                gripper.important_geoms["right_fingerpad"],
+            ]
         elif type(gripper) is str:
             g_geoms = [[gripper]]
         else:
             # Parse each element in the gripper_geoms list accordingly
-            g_geoms = [[g_group] if type(g_group) is str else g_group for g_group in gripper]
+            g_geoms = [
+                [g_group] if type(g_group) is str else g_group for g_group in gripper
+            ]
 
         # Search for collisions between each gripper geom group and the object geoms group
         for g_group in g_geoms:
@@ -239,7 +246,9 @@ class ManipulationEnv(RobotEnv):
                 return False
         return True
 
-    def _gripper_to_target(self, gripper, target, target_type="body", return_distance=False):
+    def _gripper_to_target(
+        self, gripper, target, target_type="body", return_distance=False
+    ):
         """
         Calculates the (x,y,z) Cartesian distance (target_pos - gripper_pos) from the specified @gripper to the
         specified @target. If @return_distance is set, will return the Euclidean (scalar) distance instead.
@@ -301,7 +310,9 @@ class ManipulationEnv(RobotEnv):
         rgba = np.zeros(3)
         rgba[0] = 1 - scaled
         rgba[1] = scaled
-        self.sim.model.site_rgba[self.sim.model.site_name2id(gripper.important_sites["grip_site"])][:3] = rgba
+        self.sim.model.site_rgba[
+            self.sim.model.site_name2id(gripper.important_sites["grip_site"])
+        ][:3] = rgba
 
     def _check_robot_configuration(self, robots):
         """

@@ -9,13 +9,16 @@ import torch.nn as nn
 from einops import rearrange
 from torch.nn import functional as F
 
+
 def exists(val):
     return val is not None
+
 
 def default(val, d):
     if val is not None:
         return val
     return d() if callable(d) else d
+
 
 # PyTorch 1.7 has SiLU, but we support PyTorch 1.5.
 class SiLU(nn.Module):
@@ -26,63 +29,70 @@ class SiLU(nn.Module):
 class GroupNorm32(nn.GroupNorm):
     def forward(self, x):
         return super().forward(x.float()).type(x.dtype)
-    
+
+
 class Conv3d(nn.Module):
     def __init__(
         self,
         dim,
-        dim_out = None,
-        kernel_size = 3,
-        stride = [1, 1, 1],
+        dim_out=None,
+        kernel_size=3,
+        stride=[1, 1, 1],
         *,
-        temporal_kernel_size = None,
-        **kwargs
+        temporal_kernel_size=None,
+        **kwargs,
     ):
         super().__init__()
         dim_out = default(dim_out, dim)
         temporal_kernel_size = default(temporal_kernel_size, kernel_size)
 
-        self.spatial_conv = nn.Conv2d(dim, dim_out, kernel_size = kernel_size, padding = kernel_size // 2, stride = stride[1:])
-        self.temporal_conv = nn.Conv1d(dim_out, dim_out, kernel_size = temporal_kernel_size) if kernel_size > 1 else None
+        self.spatial_conv = nn.Conv2d(
+            dim,
+            dim_out,
+            kernel_size=kernel_size,
+            padding=kernel_size // 2,
+            stride=stride[1:],
+        )
+        self.temporal_conv = (
+            nn.Conv1d(dim_out, dim_out, kernel_size=temporal_kernel_size)
+            if kernel_size > 1
+            else None
+        )
         self.kernel_size = kernel_size
 
         if exists(self.temporal_conv):
-            nn.init.dirac_(self.temporal_conv.weight.data) # initialized to be identity
+            nn.init.dirac_(self.temporal_conv.weight.data)  # initialized to be identity
             nn.init.zeros_(self.temporal_conv.bias.data)
 
-    def forward(
-        self,
-        x,
-        ignore_time = False
-    ):
+    def forward(self, x, ignore_time=False):
         b = x.shape[0]
 
         is_video = x.ndim == 5
         ignore_time &= is_video
 
         if is_video:
-            x = rearrange(x, 'b c f h w -> (b f) c h w')
+            x = rearrange(x, "b c f h w -> (b f) c h w")
 
         x = self.spatial_conv(x)
 
         if is_video:
-            x = rearrange(x, '(b f) c h w -> b c f h w', b = b)
+            x = rearrange(x, "(b f) c h w -> b c f h w", b=b)
 
         if ignore_time or not exists(self.temporal_conv):
             return x
-        
+
         h, w = x.shape[-2:]
 
-        x = rearrange(x, 'b c f h w -> (b h w) c f')
+        x = rearrange(x, "b c f h w -> (b h w) c f")
 
         # causal temporal convolution - time is causal in imagen-video
 
         if self.kernel_size > 1:
-            x = F.pad(x, (self.kernel_size//2, self.kernel_size//2))
+            x = F.pad(x, (self.kernel_size // 2, self.kernel_size // 2))
 
         x = self.temporal_conv(x)
 
-        x = rearrange(x, '(b h w) c f -> b c f h w', h = h, w = w)
+        x = rearrange(x, "(b h w) c f -> b c f h w", h=h, w=w)
 
         return x
 
@@ -214,7 +224,7 @@ class CheckpointFunction(th.autograd.Function):
         ctx.input_tensors = list(args[:length])
         ctx.input_params = list(args[length:])
         with th.no_grad():
-            output_tensors = ctx.run_function(*ctx.input_tensors)   
+            output_tensors = ctx.run_function(*ctx.input_tensors)
         return output_tensors
 
     @staticmethod

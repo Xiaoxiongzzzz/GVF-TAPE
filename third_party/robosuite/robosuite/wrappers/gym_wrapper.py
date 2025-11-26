@@ -32,7 +32,9 @@ class GymWrapper(Wrapper, gym.Env):
         # Run super method
         super().__init__(env=env)
         # Create name for gym
-        robots = "".join([type(robot.robot_model).__name__ for robot in self.env.robots])
+        robots = "".join(
+            [type(robot.robot_model).__name__ for robot in self.env.robots]
+        )
         self.name = robots + "_" + type(self.env).__name__
 
         # Get reward range

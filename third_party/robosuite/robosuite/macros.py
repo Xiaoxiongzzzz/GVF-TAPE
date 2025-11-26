@@ -52,4 +52,6 @@ except ImportError:
 
     ROBOSUITE_DEFAULT_LOGGER.warn("No private macro file found!")
     ROBOSUITE_DEFAULT_LOGGER.warn("It is recommended to use a private macro file")
-    ROBOSUITE_DEFAULT_LOGGER.warn("To setup, run: python {}/scripts/setup_macros.py".format(robosuite.__path__[0]))
+    ROBOSUITE_DEFAULT_LOGGER.warn(
+        "To setup, run: python {}/scripts/setup_macros.py".format(robosuite.__path__[0])
+    )

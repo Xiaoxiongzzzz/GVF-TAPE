@@ -9,7 +9,16 @@ from robosuite.renderers.nvisii.nvisii_utils import load_object
 from robosuite.utils.mjcf_utils import string_to_array
 
 Components = namedtuple(
-    "Components", ["obj", "geom_index", "element_id", "parent_body_name", "geom_pos", "geom_quat", "dynamic"]
+    "Components",
+    [
+        "obj",
+        "geom_index",
+        "element_id",
+        "parent_body_name",
+        "geom_pos",
+        "geom_quat",
+        "dynamic",
+    ],
 )
 
 
@@ -72,7 +81,12 @@ class Parser(BaseParser):
         self.parse_meshes()
         element_id = 0
         repeated_names = {}
-        block_rendering_objects = ["VisualBread_g0", "VisualCan_g0", "VisualCereal_g0", "VisualMilk_g0"]
+        block_rendering_objects = [
+            "VisualBread_g0",
+            "VisualCan_g0",
+            "VisualCereal_g0",
+            "VisualMilk_g0",
+        ]
 
         self.entity_id_class_mapping = {}
 
@@ -95,10 +109,16 @@ class Parser(BaseParser):
                     geom_name = parent_body_name + "0"
                     repeated_names[parent_body_name] = 1
 
-            if (geom.get("group") != "1" and geom_type != "plane") or ("collision" in geom_name):
+            if (geom.get("group") != "1" and geom_type != "plane") or (
+                "collision" in geom_name
+            ):
                 continue
 
-            if "floor" in geom_name or "wall" in geom_name or geom_name in block_rendering_objects:
+            if (
+                "floor" in geom_name
+                or "wall" in geom_name
+                or geom_name in block_rendering_objects
+            ):
                 continue
 
             geom_quat = string_to_array(geom.get("quat", "1 0 0 0"))
@@ -106,12 +126,16 @@ class Parser(BaseParser):
 
             # handling special case of bins arena
             if "bin" in parent_body_name:
-                geom_pos = string_to_array(geom.get("pos", "0 0 0")) + string_to_array(parent_body.get("pos", "0 0 0"))
+                geom_pos = string_to_array(geom.get("pos", "0 0 0")) + string_to_array(
+                    parent_body.get("pos", "0 0 0")
+                )
             else:
                 geom_pos = string_to_array(geom.get("pos", "0 0 0"))
 
             if geom_type == "mesh":
-                geom_scale = string_to_array(self.meshes[geom.get("mesh")].get("scale", "1 1 1"))
+                geom_scale = string_to_array(
+                    self.meshes[geom.get("mesh")].get("scale", "1 1 1")
+                )
             else:
                 geom_scale = [1, 1, 1]
             geom_size = string_to_array(geom.get("size", "1 1 1"))
@@ -190,12 +214,19 @@ class Parser(BaseParser):
         self.segmentation type.
         """
 
-        if self.segmentation_type[0] == None or self.segmentation_type[0][0] == "element":
+        if (
+            self.segmentation_type[0] == None
+            or self.segmentation_type[0][0] == "element"
+        ):
             class_id = element_id
         elif self.segmentation_type[0][0] == "class":
-            class_id = self.class2index[self.env.model._geom_ids_to_classes.get(geom_index)]
+            class_id = self.class2index[
+                self.env.model._geom_ids_to_classes.get(geom_index)
+            ]
         elif self.segmentation_type[0][0] == "instance":
-            class_id = self.instance2index[self.env.model._geom_ids_to_instances.get(geom_index)]
+            class_id = self.instance2index[
+                self.env.model._geom_ids_to_instances.get(geom_index)
+            ]
 
         return class_id
 

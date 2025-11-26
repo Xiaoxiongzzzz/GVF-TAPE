@@ -698,7 +698,9 @@ def rotation_matrix(angle, direction, point=None):
     cosa = math.cos(angle)
     direction = unit_vector(direction[:3])
     # rotation matrix around unit vector
-    R = np.array(((cosa, 0.0, 0.0), (0.0, cosa, 0.0), (0.0, 0.0, cosa)), dtype=np.float32)
+    R = np.array(
+        ((cosa, 0.0, 0.0), (0.0, cosa, 0.0), (0.0, 0.0, cosa)), dtype=np.float32
+    )
     R += np.outer(direction, direction) * (1.0 - cosa)
     direction *= sina
     R += np.array(
@@ -870,7 +872,9 @@ def get_orientation_error(target_orn, current_orn):
         orn_error (np.array): (ax,ay,az) current orientation error, corresponds to
             (target_orn - current_orn)
     """
-    current_orn = np.array([current_orn[3], current_orn[0], current_orn[1], current_orn[2]])
+    current_orn = np.array(
+        [current_orn[3], current_orn[0], current_orn[1], current_orn[2]]
+    )
     target_orn = np.array([target_orn[3], target_orn[0], target_orn[1], target_orn[2]])
 
     pinv = np.zeros((3, 4))

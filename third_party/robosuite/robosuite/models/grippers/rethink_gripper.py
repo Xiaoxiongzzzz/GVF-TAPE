@@ -1,6 +1,7 @@
 """
 Gripper with two fingers for Rethink Robots.
 """
+
 import numpy as np
 
 from robosuite.models.grippers.gripper_model import GripperModel
@@ -28,8 +29,18 @@ class RethinkGripperBase(GripperModel):
     @property
     def _important_geoms(self):
         return {
-            "left_finger": ["l_finger_g0", "l_finger_g1", "l_fingertip_g0", "l_fingerpad_g0"],
-            "right_finger": ["r_finger_g0", "r_finger_g1", "r_fingertip_g0", "r_fingerpad_g0"],
+            "left_finger": [
+                "l_finger_g0",
+                "l_finger_g1",
+                "l_fingertip_g0",
+                "l_fingerpad_g0",
+            ],
+            "right_finger": [
+                "r_finger_g0",
+                "r_finger_g1",
+                "r_fingertip_g0",
+                "r_fingerpad_g0",
+            ],
             "left_fingerpad": ["l_fingerpad_g0"],
             "right_fingerpad": ["r_fingerpad_g0"],
         }
@@ -53,7 +64,9 @@ class RethinkGripper(RethinkGripperBase):
         """
         assert len(action) == 1
         self.current_action = np.clip(
-            self.current_action + np.array([1.0, -1.0]) * self.speed * np.sign(action), -1.0, 1.0
+            self.current_action + np.array([1.0, -1.0]) * self.speed * np.sign(action),
+            -1.0,
+            1.0,
         )
         return self.current_action
 

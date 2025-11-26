@@ -105,7 +105,10 @@ class MujocoXML(object):
                     self.worldbody
                     if merge_body == "default"
                     else find_elements(
-                        root=self.worldbody, tags="body", attribs={"name": merge_body}, return_first=True
+                        root=self.worldbody,
+                        tags="body",
+                        attribs={"name": merge_body},
+                        return_first=True,
                     )
                 )
                 for body in other.worldbody:
@@ -144,7 +147,11 @@ class MujocoXML(object):
 
                 model = mujoco.MjModel.from_xml_string(string.getvalue())
                 return model
-            raise ValueError("Unkown model mode: {}. Available options are: {}".format(mode, ",".join(available_modes)))
+            raise ValueError(
+                "Unkown model mode: {}. Available options are: {}".format(
+                    mode, ",".join(available_modes)
+                )
+            )
 
     def get_xml(self):
         """
@@ -181,7 +188,12 @@ class MujocoXML(object):
         """
         for asset in other.asset:
             if (
-                find_elements(root=self.asset, tags=asset.tag, attribs={"name": asset.get("name")}, return_first=True)
+                find_elements(
+                    root=self.asset,
+                    tags=asset.tag,
+                    attribs={"name": asset.get("name")},
+                    return_first=True,
+                )
                 is None
             ):
                 self.asset.append(asset)
@@ -282,9 +294,20 @@ class MujocoModel(object):
             TypeError: [Invalid input type]
         """
         if type(names) is str:
-            return self.naming_prefix + names if not self.exclude_from_prefixing(names) else names
+            return (
+                self.naming_prefix + names
+                if not self.exclude_from_prefixing(names)
+                else names
+            )
         elif type(names) is list:
-            return [self.naming_prefix + name if not self.exclude_from_prefixing(name) else name for name in names]
+            return [
+                (
+                    self.naming_prefix + name
+                    if not self.exclude_from_prefixing(name)
+                    else name
+                )
+                for name in names
+            ]
         elif type(names) is dict:
             names = names.copy()
             for key, val in names.items():
@@ -524,11 +547,12 @@ class MujocoXMLModel(MujocoXML, MujocoModel):
             return filter_key
 
         # Parse element tree to get all relevant bodies, joints, actuators, and geom groups
-        self._elements = sort_elements(root=self.root, element_filter=_add_default_name_filter)
-        assert (
-            len(self._elements["root_body"]) == 1
-        ), "Invalid number of root bodies found for robot model. Expected 1," "got {}".format(
-            len(self._elements["root_body"])
+        self._elements = sort_elements(
+            root=self.root, element_filter=_add_default_name_filter
+        )
+        assert len(self._elements["root_body"]) == 1, (
+            "Invalid number of root bodies found for robot model. Expected 1,"
+            "got {}".format(len(self._elements["root_body"]))
         )
         self._elements["root_body"] = self._elements["root_body"][0]
         self._elements["bodies"] = (
@@ -542,19 +566,31 @@ class MujocoXMLModel(MujocoXML, MujocoModel):
         self._actuators = [e.get("name") for e in self._elements.get("actuators", [])]
         self._sites = [e.get("name") for e in self._elements.get("sites", [])]
         self._sensors = [e.get("name") for e in self._elements.get("sensors", [])]
-        self._contact_geoms = [e.get("name") for e in self._elements.get("contact_geoms", [])]
-        self._visual_geoms = [e.get("name") for e in self._elements.get("visual_geoms", [])]
-        self._base_offset = string_to_array(self._elements["root_body"].get("pos", "0 0 0"))
+        self._contact_geoms = [
+            e.get("name") for e in self._elements.get("contact_geoms", [])
+        ]
+        self._visual_geoms = [
+            e.get("name") for e in self._elements.get("visual_geoms", [])
+        ]
+        self._base_offset = string_to_array(
+            self._elements["root_body"].get("pos", "0 0 0")
+        )
 
         # Update all xml element prefixes
-        add_prefix(root=self.root, prefix=self.naming_prefix, exclude=self.exclude_from_prefixing)
+        add_prefix(
+            root=self.root,
+            prefix=self.naming_prefix,
+            exclude=self.exclude_from_prefixing,
+        )
 
         # Recolor all collision geoms appropriately
         recolor_collision_geoms(root=self.worldbody, rgba=self.contact_geom_rgba)
 
         # Add default materials
         if macros.USING_INSTANCE_RANDOMIZATION:
-            tex_element, mat_element, _, used = add_material(root=self.worldbody, naming_prefix=self.naming_prefix)
+            tex_element, mat_element, _, used = add_material(
+                root=self.worldbody, naming_prefix=self.naming_prefix
+            )
             # Only add if material / texture was actually used
             if used:
                 self.asset.append(tex_element)

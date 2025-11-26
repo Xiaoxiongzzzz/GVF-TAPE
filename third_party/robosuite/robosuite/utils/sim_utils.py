@@ -31,10 +31,18 @@ def check_contact(sim, geoms_1, geoms_2=None):
         contact = sim.data.contact[i]
         # check contact geom in geoms
         c1_in_g1 = sim.model.geom_id2name(contact.geom1) in geoms_1
-        c2_in_g2 = sim.model.geom_id2name(contact.geom2) in geoms_2 if geoms_2 is not None else True
+        c2_in_g2 = (
+            sim.model.geom_id2name(contact.geom2) in geoms_2
+            if geoms_2 is not None
+            else True
+        )
         # check contact geom in geoms (flipped)
         c2_in_g1 = sim.model.geom_id2name(contact.geom2) in geoms_1
-        c1_in_g2 = sim.model.geom_id2name(contact.geom1) in geoms_2 if geoms_2 is not None else True
+        c1_in_g2 = (
+            sim.model.geom_id2name(contact.geom1) in geoms_2
+            if geoms_2 is not None
+            else True
+        )
         if (c1_in_g1 and c2_in_g2) or (c1_in_g2 and c2_in_g1):
             return True
     return False
@@ -53,13 +61,17 @@ def get_contacts(sim, model):
         AssertionError: [Invalid input type]
     """
     # Make sure model is MujocoModel type
-    assert isinstance(model, MujocoModel), "Inputted model must be of type MujocoModel; got type {} instead!".format(
+    assert isinstance(
+        model, MujocoModel
+    ), "Inputted model must be of type MujocoModel; got type {} instead!".format(
         type(model)
     )
     contact_set = set()
     for contact in sim.data.contact[: sim.data.ncon]:
         # check contact geom in geoms; add to contact set if match is found
-        g1, g2 = sim.model.geom_id2name(contact.geom1), sim.model.geom_id2name(contact.geom2)
+        g1, g2 = sim.model.geom_id2name(contact.geom1), sim.model.geom_id2name(
+            contact.geom2
+        )
         if g1 in model.contact_geoms and g2 not in model.contact_geoms:
             contact_set.add(g2)
         elif g2 in model.contact_geoms and g1 not in model.contact_geoms:

@@ -1,7 +1,11 @@
 import numpy as np
 
 from robosuite.models.base import MujocoXMLModel
-from robosuite.utils.mjcf_utils import ROBOT_COLLISION_COLOR, array_to_string, string_to_array
+from robosuite.utils.mjcf_utils import (
+    ROBOT_COLLISION_COLOR,
+    array_to_string,
+    string_to_array,
+)
 from robosuite.utils.transform_utils import euler2mat, mat2quat
 
 REGISTERED_ROBOTS = {}
@@ -68,10 +72,16 @@ class RobotModel(MujocoXMLModel, metaclass=RobotModelMeta):
         self.cameras = self.get_element_names(self.worldbody, "camera")
 
         # By default, set small frictionloss and armature values
-        self.set_joint_attribute(attrib="frictionloss", values=0.1 * np.ones(self.dof), force=False)
-        self.set_joint_attribute(attrib="damping", values=0.1 * np.ones(self.dof), force=False)
         self.set_joint_attribute(
-            attrib="armature", values=np.array([5.0 / (i + 1) for i in range(self.dof)]), force=False
+            attrib="frictionloss", values=0.1 * np.ones(self.dof), force=False
+        )
+        self.set_joint_attribute(
+            attrib="damping", values=0.1 * np.ones(self.dof), force=False
+        )
+        self.set_joint_attribute(
+            attrib="armature",
+            values=np.array([5.0 / (i + 1) for i in range(self.dof)]),
+            force=False,
         )
 
     def set_base_xpos(self, pos):
@@ -81,7 +91,9 @@ class RobotModel(MujocoXMLModel, metaclass=RobotModelMeta):
         Args:
             pos (3-array): (x,y,z) position to place robot base
         """
-        self._elements["root_body"].set("pos", array_to_string(pos - self.bottom_offset))
+        self._elements["root_body"].set(
+            "pos", array_to_string(pos - self.bottom_offset)
+        )
 
     def set_base_ori(self, rot):
         """
@@ -109,7 +121,9 @@ class RobotModel(MujocoXMLModel, metaclass=RobotModelMeta):
         """
         assert values.size == len(self._elements["joints"]), (
             "Error setting joint attributes: "
-            + "Values must be same size as joint dimension. Got {}, expected {}!".format(values.size, self.dof)
+            + "Values must be same size as joint dimension. Got {}, expected {}!".format(
+                values.size, self.dof
+            )
         )
         for i, joint in enumerate(self._elements["joints"]):
             if force or joint.get(attrib, None) is None:

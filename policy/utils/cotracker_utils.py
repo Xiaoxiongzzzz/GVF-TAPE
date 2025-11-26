@@ -35,15 +35,15 @@ def read_video_from_path(path):
 
 class Visualizer:
     def __init__(
-            self,
-            save_dir: str = "./results",
-            grayscale: bool = False,
-            pad_value: int = 0,
-            fps: int = 10,
-            mode: str = "rainbow",  # 'cool', 'optical_flow'
-            linewidth: int = 2,
-            show_first_frame: int = 10,
-            tracks_leave_trace: int = 0,  # -1 for infinite
+        self,
+        save_dir: str = "./results",
+        grayscale: bool = False,
+        pad_value: int = 0,
+        fps: int = 10,
+        mode: str = "rainbow",  # 'cool', 'optical_flow'
+        linewidth: int = 2,
+        show_first_frame: int = 10,
+        tracks_leave_trace: int = 0,  # -1 for infinite
     ):
         self.mode = mode
         self.save_dir = save_dir
@@ -59,18 +59,18 @@ class Visualizer:
         self.fps = fps
 
     def visualize(
-            self,
-            video: torch.Tensor,  # (B,T,C,H,W)
-            tracks: torch.Tensor,  # (B,T,N,2)
-            visibility: torch.Tensor = None,  # (B, T, N, 1) bool
-            gt_tracks: torch.Tensor = None,  # (B,T,N,2)
-            segm_mask: torch.Tensor = None,  # (B,1,H,W)
-            filename: str = "video",
-            writer=None,  # tensorboard Summary Writer, used for visualization during training
-            step: int = 0,
-            query_frame: int = 0,
-            save_video: bool = True,
-            compensate_for_camera_motion: bool = False,
+        self,
+        video: torch.Tensor,  # (B,T,C,H,W)
+        tracks: torch.Tensor,  # (B,T,N,2)
+        visibility: torch.Tensor = None,  # (B, T, N, 1) bool
+        gt_tracks: torch.Tensor = None,  # (B,T,N,2)
+        segm_mask: torch.Tensor = None,  # (B,1,H,W)
+        filename: str = "video",
+        writer=None,  # tensorboard Summary Writer, used for visualization during training
+        step: int = 0,
+        query_frame: int = 0,
+        save_video: bool = True,
+        compensate_for_camera_motion: bool = False,
     ):
         if compensate_for_camera_motion:
             assert segm_mask is not None
@@ -125,14 +125,14 @@ class Visualizer:
             print(f"Video saved to {save_path}")
 
     def draw_tracks_on_video(
-            self,
-            video: torch.Tensor,
-            tracks: torch.Tensor,
-            visibility: torch.Tensor = None,
-            segm_mask: torch.Tensor = None,
-            gt_tracks=None,
-            query_frame: int = 0,
-            compensate_for_camera_motion=False,
+        self,
+        video: torch.Tensor,
+        tracks: torch.Tensor,
+        visibility: torch.Tensor = None,
+        segm_mask: torch.Tensor = None,
+        gt_tracks=None,
+        query_frame: int = 0,
+        compensate_for_camera_motion=False,
     ):
         B, T, C, H, W = video.shape
         _, _, N, D = tracks.shape
@@ -204,9 +204,9 @@ class Visualizer:
                 curr_colors = vector_colors[first_ind : t + 1]
                 if compensate_for_camera_motion:
                     diff = (
-                                   tracks[first_ind : t + 1, segm_mask <= 0]
-                                   - tracks[t : t + 1, segm_mask <= 0]
-                           ).mean(1)[:, None]
+                        tracks[first_ind : t + 1, segm_mask <= 0]
+                        - tracks[t : t + 1, segm_mask <= 0]
+                    ).mean(1)[:, None]
 
                     curr_tracks = curr_tracks - diff
                     curr_tracks = curr_tracks[:, segm_mask > 0]
@@ -231,7 +231,7 @@ class Visualizer:
                     visibile = visibility[0, t, i]
                 if coord[0] != 0 and coord[1] != 0:
                     if not compensate_for_camera_motion or (
-                            compensate_for_camera_motion and segm_mask[i] > 0
+                        compensate_for_camera_motion and segm_mask[i] > 0
                     ):
 
                         cv2.circle(
@@ -239,8 +239,7 @@ class Visualizer:
                             coord,
                             int(self.linewidth),
                             vector_colors[t, i].tolist(),
-                            thickness=-1 if visibile else 2
-                                                          -1,
+                            thickness=-1 if visibile else 2 - 1,
                         )
 
         #  construct the final rgb sequence
@@ -249,11 +248,11 @@ class Visualizer:
         return torch.from_numpy(np.stack(res_video)).permute(0, 3, 1, 2)[None].byte()
 
     def _draw_pred_tracks(
-            self,
-            rgb: np.ndarray,  # H x W x 3
-            tracks: np.ndarray,  # T x 2
-            vector_colors: np.ndarray,
-            alpha: float = 0.5,
+        self,
+        rgb: np.ndarray,  # H x W x 3
+        tracks: np.ndarray,  # T x 2
+        vector_colors: np.ndarray,
+        alpha: float = 0.5,
     ):
         T, N, _ = tracks.shape
 
@@ -278,9 +277,9 @@ class Visualizer:
         return rgb
 
     def _draw_gt_tracks(
-            self,
-            rgb: np.ndarray,  # H x W x 3,
-            gt_tracks: np.ndarray,  # T x 2
+        self,
+        rgb: np.ndarray,  # H x W x 3,
+        gt_tracks: np.ndarray,  # T x 2
     ):
         T, N, _ = gt_tracks.shape
         color = np.array((211.0, 0.0, 0.0))

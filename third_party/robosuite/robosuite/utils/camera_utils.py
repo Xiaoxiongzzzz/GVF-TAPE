@@ -6,6 +6,7 @@ This module includes:
 - Utility functions for performing common camera operations such as retrieving
 camera matrices and transforming from world to camera frame or vice-versa.
 """
+
 import json
 import xml.etree.ElementTree as ET
 
@@ -58,7 +59,12 @@ def get_camera_extrinsic_matrix(sim, camera_name):
 
     # IMPORTANT! This is a correction so that the camera axis is set up along the viewpoint correctly.
     camera_axis_correction = np.array(
-        [[1.0, 0.0, 0.0, 0.0], [0.0, -1.0, 0.0, 0.0], [0.0, 0.0, -1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]
+        [
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, -1.0, 0.0, 0.0],
+            [0.0, 0.0, -1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ]
     )
     R = R @ camera_axis_correction
     return R
@@ -78,7 +84,10 @@ def get_camera_transform_matrix(sim, camera_name, camera_height, camera_width):
     """
     R = get_camera_extrinsic_matrix(sim=sim, camera_name=camera_name)
     K = get_camera_intrinsic_matrix(
-        sim=sim, camera_name=camera_name, camera_height=camera_height, camera_width=camera_width
+        sim=sim,
+        camera_name=camera_name,
+        camera_height=camera_height,
+        camera_width=camera_width,
     )
     K_exp = np.eye(4)
     K_exp[:3, :3] = K
@@ -100,7 +109,12 @@ def get_camera_segmentation(sim, camera_name, camera_height, camera_width):
         im (np.array): 2-channel segmented image where the first contains the
             geom types and the second contains the geom IDs
     """
-    return sim.render(camera_name=camera_name, height=camera_height, width=camera_width, segmentation=True)[::-1]
+    return sim.render(
+        camera_name=camera_name,
+        height=camera_height,
+        width=camera_width,
+        segmentation=True,
+    )[::-1]
 
 
 def get_real_depth_map(sim, depth_map):
@@ -125,7 +139,9 @@ def get_real_depth_map(sim, depth_map):
     return near / (1.0 - depth_map * (1.0 - near / far))
 
 
-def project_points_from_world_to_camera(points, world_to_camera_transform, camera_height, camera_width):
+def project_points_from_world_to_camera(
+    points, world_to_camera_transform, camera_height, camera_width
+):
     """
     Helper function to project a batch of points in the world frame
     into camera pixels using the world to camera transformation.
@@ -143,7 +159,10 @@ def project_points_from_world_to_camera(points, world_to_camera_transform, camer
     """
     assert points.shape[-1] == 3  # last dimension must be 3D
     assert len(world_to_camera_transform.shape) == 2
-    assert world_to_camera_transform.shape[0] == 4 and world_to_camera_transform.shape[1] == 4
+    assert (
+        world_to_camera_transform.shape[0] == 4
+        and world_to_camera_transform.shape[1] == 4
+    )
 
     # convert points to homogenous coordinates -> (px, py, pz, 1)
     ones_pad = np.ones(points.shape[:-1] + (1,))
@@ -196,7 +215,9 @@ def transform_from_pixels_to_world(pixels, depth_map, camera_to_world_transform)
     pixels = pixels.astype(float)
     im_h, im_w = depth_map.shape[-2:]
     depth_map_reshaped = depth_map.reshape(-1, im_h, im_w, 1)
-    z = bilinear_interpolate(im=depth_map_reshaped, x=pixels[..., 1:2], y=pixels[..., 0:1])
+    z = bilinear_interpolate(
+        im=depth_map_reshaped, x=pixels[..., 1:2], y=pixels[..., 0:1]
+    )
     z = z.reshape(*depth_map_leading_shape, 1)  # shape [..., 1]
 
     # form 4D homogenous camera vector to transform - [x * z, y * z, z, 1]
@@ -299,7 +320,9 @@ class CameraMover:
         if pos is not None:
             self.env.sim.data.set_mocap_pos(self.mover_body_name, pos)
         if quat is not None:
-            self.env.sim.data.set_mocap_quat(self.mover_body_name, T.convert_quat(quat, to="wxyz"))
+            self.env.sim.data.set_mocap_quat(
+                self.mover_body_name, T.convert_quat(quat, to="wxyz")
+            )
 
         # Make sure changes propagate in sim
         self.env.sim.forward()
@@ -315,7 +338,9 @@ class CameraMover:
         """
         # Grab values from sim
         pos = self.env.sim.data.get_mocap_pos(self.mover_body_name)
-        quat = T.convert_quat(self.env.sim.data.get_mocap_quat(self.mover_body_name), to="xyzw")
+        quat = T.convert_quat(
+            self.env.sim.data.get_mocap_quat(self.mover_body_name), to="xyzw"
+        )
 
         return pos, quat
 
@@ -382,7 +407,11 @@ class CameraMover:
         """
         # current camera rotation + pos
         camera_pos = np.array(self.env.sim.data.get_mocap_pos(self.mover_body_name))
-        camera_rot = T.quat2mat(T.convert_quat(self.env.sim.data.get_mocap_quat(self.mover_body_name), to="xyzw"))
+        camera_rot = T.quat2mat(
+            T.convert_quat(
+                self.env.sim.data.get_mocap_quat(self.mover_body_name), to="xyzw"
+            )
+        )
 
         # rotate by angle and direction to get new camera rotation
         rad = np.pi * angle / 180.0
@@ -487,7 +516,9 @@ class DemoPlaybackCameraMover(CameraMover):
         # If custom env_config is specified, make sure that there's no overlap with default args and merge with config
         if env_config is not None:
             for k in env_config.keys():
-                assert k not in default_args, f"Key {k} cannot be specified in env_config!"
+                assert (
+                    k not in default_args
+                ), f"Key {k} cannot be specified in env_config!"
             env_info.update(env_config)
 
         # Merge in default args
@@ -592,7 +623,9 @@ class DemoPlaybackCameraMover(CameraMover):
         # Return all relevant frames
         return {k.split(f"{self.camera}_")[-1]: obs[k] for k in obs if self.camera in k}
 
-    def grab_episode_frames(self, demo_num, pan_point=(0, 0, 0.8), pan_axis=(0, 0, 1), pan_rate=0.01):
+    def grab_episode_frames(
+        self, demo_num, pan_point=(0, 0, 0.8), pan_axis=(0, 0, 1), pan_rate=0.01
+    ):
         """
         Playback entire episode @demo_num, while optionally rotating the camera about point @pan_point and
             axis @pan_axis if @pan_rate > 0
@@ -613,7 +646,9 @@ class DemoPlaybackCameraMover(CameraMover):
 
         # Initialize dict to return
         obs = self.env._get_observation()
-        frames_dict = {k.split(f"{self.camera}_")[-1]: [] for k in obs if self.camera in k}
+        frames_dict = {
+            k.split(f"{self.camera}_")[-1]: [] for k in obs if self.camera in k
+        }
 
         # Continue to loop playback steps while there are still frames left in the episode
         while self.step < self.n_steps:

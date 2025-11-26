@@ -1,6 +1,7 @@
 """
 Defines the base class of all mounts
 """
+
 import numpy as np
 
 from robosuite.models.base import MujocoXMLModel

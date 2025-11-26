@@ -100,7 +100,8 @@ class ConeObject(CompositeObject):
         # stack the boxes / cylinders in the z-direction
         ngeoms_each_side = (self.n - 1) // 2
         geom_locations = [
-            (0.0, 0.0, i * self.unit_height * 2.0) for i in range(-ngeoms_each_side, ngeoms_each_side + 1)
+            (0.0, 0.0, i * self.unit_height * 2.0)
+            for i in range(-ngeoms_each_side, ngeoms_each_side + 1)
         ]
 
         if self.use_box:
@@ -133,7 +134,9 @@ class ConeObject(CompositeObject):
                 geom_names="c_{}".format(i),
                 # geom_rgbas=None if self.has_material else self.rgba,
                 geom_rgbas=self.rgba,
-                geom_materials=self.material.mat_attrib["name"] if self.has_material else None,
+                geom_materials=(
+                    self.material.mat_attrib["name"] if self.has_material else None
+                ),
                 geom_frictions=self.friction,
                 geom_condims=4,
             )

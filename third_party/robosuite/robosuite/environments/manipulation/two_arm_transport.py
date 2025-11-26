@@ -9,7 +9,10 @@ from robosuite.models.objects import BoxObject, HammerObject, TransportGroup
 from robosuite.models.tasks import ManipulationTask
 from robosuite.utils.mjcf_utils import CustomMaterial
 from robosuite.utils.observables import Observable, sensor
-from robosuite.utils.placement_samplers import SequentialCompositeSampler, UniformRandomSampler
+from robosuite.utils.placement_samplers import (
+    SequentialCompositeSampler,
+    UniformRandomSampler,
+)
 
 
 class TwoArmTransport(TwoArmEnv):
@@ -179,7 +182,9 @@ class TwoArmTransport(TwoArmEnv):
         # settings for table top
         self.tables_boundary = tables_boundary
         self.table_full_size = np.array(tables_boundary)
-        self.table_full_size[1] *= 0.25  # each table size will only be a fraction of the full boundary
+        self.table_full_size[
+            1
+        ] *= 0.25  # each table size will only be a fraction of the full boundary
         self.table_friction = table_friction
         self.table_offsets = np.zeros((2, 3))
         self.table_offsets[0, 1] = self.tables_boundary[1] * -3 / 8  # scale y offset
@@ -250,7 +255,9 @@ class TwoArmTransport(TwoArmEnv):
         # use a shaping reward if specified
         if self.reward_shaping:
             # TODO! So we print a warning and force sparse rewards
-            print(f"\n\nWarning! No dense reward current implemented for this task. Forcing sparse rewards\n\n")
+            print(
+                f"\n\nWarning! No dense reward current implemented for this task. Forcing sparse rewards\n\n"
+            )
             self.reward_shaping = False
 
         # Else this is the sparse reward setting
@@ -272,13 +279,19 @@ class TwoArmTransport(TwoArmEnv):
 
         # Adjust base pose(s) accordingly
         if self.env_configuration == "bimanual":
-            xpos = self.robots[0].robot_model.base_xpos_offset["table"](self.table_full_size[0])
+            xpos = self.robots[0].robot_model.base_xpos_offset["table"](
+                self.table_full_size[0]
+            )
             self.robots[0].robot_model.set_base_xpos(xpos)
         else:
             if self.env_configuration == "single-arm-opposed":
                 # Set up robots facing towards each other by rotating them from their default position
-                for robot, rotation, offset in zip(self.robots, (np.pi / 2, -np.pi / 2), (-0.25, 0.25)):
-                    xpos = robot.robot_model.base_xpos_offset["table"](self.table_full_size[0])
+                for robot, rotation, offset in zip(
+                    self.robots, (np.pi / 2, -np.pi / 2), (-0.25, 0.25)
+                ):
+                    xpos = robot.robot_model.base_xpos_offset["table"](
+                        self.table_full_size[0]
+                    )
                     rot = np.array((0, 0, rotation))
                     xpos = T.euler2mat(rot) @ np.array(xpos)
                     xpos += np.array((0, offset, 0))
@@ -287,7 +300,9 @@ class TwoArmTransport(TwoArmEnv):
             else:  # "single-arm-parallel" configuration setting
                 # Set up robots parallel to each other but offset from the center
                 for robot, offset in zip(self.robots, (-0.6, 0.6)):
-                    xpos = robot.robot_model.base_xpos_offset["table"](self.table_full_size[0])
+                    xpos = robot.robot_model.base_xpos_offset["table"](
+                        self.table_full_size[0]
+                    )
                     xpos = np.array(xpos) + np.array((0, offset, 0))
                     robot.robot_model.set_base_xpos(xpos)
 
@@ -307,7 +322,12 @@ class TwoArmTransport(TwoArmEnv):
         mujoco_arena.set_camera(
             camera_name="agentview",
             pos=[0.8894354364730311, -3.481824231498976e-08, 1.7383813133506494],
-            quat=[0.6530981063842773, 0.2710406184196472, 0.27104079723358154, 0.6530979871749878],
+            quat=[
+                0.6530981063842773,
+                0.2710406184196472,
+                0.27104079723358154,
+                0.6530979871749878,
+            ],
         )
 
         # TODO: Add built-in method into TwoArmEnv so we have an elegant way of automatically adding extra cameras to all these envs
@@ -315,12 +335,22 @@ class TwoArmTransport(TwoArmEnv):
         mujoco_arena.set_camera(
             camera_name="shouldercamera0",
             pos=[0.4430096057365183, -1.0697399743660143, 1.3639950119362048],
-            quat=[0.804057240486145, 0.5531665086746216, 0.11286306381225586, 0.18644218146800995],
+            quat=[
+                0.804057240486145,
+                0.5531665086746216,
+                0.11286306381225586,
+                0.18644218146800995,
+            ],
         )
         mujoco_arena.set_camera(
             camera_name="shouldercamera1",
             pos=[-0.40900713993039983, 0.9613722572245062, 1.3084072951772754],
-            quat=[0.15484197437763214, 0.12077208608388901, -0.5476858019828796, -0.8133130073547363],
+            quat=[
+                0.15484197437763214,
+                0.12077208608388901,
+                -0.5476858019828796,
+                -0.8133130073547363,
+            ],
         )
 
         # Add relevant materials
@@ -376,7 +406,14 @@ class TwoArmTransport(TwoArmEnv):
         self.placement_initializer = SequentialCompositeSampler(name="ObjectSampler")
 
         # Pre-define settings for each object's placement
-        object_names = ["start_bin", "lid", "payload", "target_bin", "trash", "trash_bin"]
+        object_names = [
+            "start_bin",
+            "lid",
+            "payload",
+            "target_bin",
+            "trash",
+            "trash_bin",
+        ]
         table_nums = [0, 0, 0, 1, 1, 1]
         x_centers = [
             self.table_full_size[0] * 0.25,
@@ -576,7 +613,11 @@ class TwoArmTransport(TwoArmEnv):
                 # Else if this is either the lid, payload, or trash object,
                 # we override their positions to match their respective containers' positions
                 elif "lid" in obj.name:
-                    obj_pos = (start_bin_pos[0], start_bin_pos[1], obj_pos[2] + self.transport.bin_size[2])
+                    obj_pos = (
+                        start_bin_pos[0],
+                        start_bin_pos[1],
+                        obj_pos[2] + self.transport.bin_size[2],
+                    )
                 elif "payload" in obj.name:
                     obj_pos = (
                         start_bin_pos[0],
@@ -587,10 +628,14 @@ class TwoArmTransport(TwoArmEnv):
                     obj_pos = (
                         target_bin_pos[0],
                         target_bin_pos[1],
-                        obj_pos[2] + self.transport.objects["target_bin"].wall_thickness,
+                        obj_pos[2]
+                        + self.transport.objects["target_bin"].wall_thickness,
                     )
                 # Set the collision object joints
-                self.sim.data.set_joint_qpos(obj.joints[0], np.concatenate([np.array(obj_pos), np.array(obj_quat)]))
+                self.sim.data.set_joint_qpos(
+                    obj.joints[0],
+                    np.concatenate([np.array(obj_pos), np.array(obj_quat)]),
+                )
 
     def _check_success(self):
         """
@@ -599,4 +644,9 @@ class TwoArmTransport(TwoArmEnv):
         Returns:
             bool: True if transport has been completed
         """
-        return True if self.transport.payload_in_target_bin and self.transport.trash_in_trash_bin else False
+        return (
+            True
+            if self.transport.payload_in_target_bin
+            and self.transport.trash_in_trash_bin
+            else False
+        )

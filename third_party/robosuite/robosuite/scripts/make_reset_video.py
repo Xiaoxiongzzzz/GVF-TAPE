@@ -75,7 +75,9 @@ if __name__ == "__main__":
         options["robots"] = choose_robots(exclude_bimanual=True)
 
     # Load the controller
-    options["controller_configs"] = load_controller_config(default_controller="OSC_POSE")
+    options["controller_configs"] = load_controller_config(
+        default_controller="OSC_POSE"
+    )
 
     # initialize the task
     env = suite.make(

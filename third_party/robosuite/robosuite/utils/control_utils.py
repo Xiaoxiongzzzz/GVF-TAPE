@@ -5,7 +5,9 @@ from robosuite.utils.numba import jit_decorator
 
 
 @jit_decorator
-def nullspace_torques(mass_matrix, nullspace_matrix, initial_joint, joint_pos, joint_vel, joint_kp=10):
+def nullspace_torques(
+    mass_matrix, nullspace_matrix, initial_joint, joint_pos, joint_vel, joint_kp=10
+):
     """
     For a robot with redundant DOF(s), a nullspace exists which is orthogonal to the remainder of the controllable
     subspace of the robot's joints. Therefore, an additional secondary objective that does not impact the original
@@ -33,7 +35,9 @@ def nullspace_torques(mass_matrix, nullspace_matrix, initial_joint, joint_pos, j
     joint_kv = np.sqrt(joint_kp) * 2
 
     # calculate desired torques based on gains and error
-    pose_torques = np.dot(mass_matrix, (joint_kp * (initial_joint - joint_pos) - joint_kv * joint_vel))
+    pose_torques = np.dot(
+        mass_matrix, (joint_kp * (initial_joint - joint_pos) - joint_kv * joint_vel)
+    )
 
     # map desired torques to null subspace within joint torque actuator space
     nullspace_torques = np.dot(nullspace_matrix.transpose(), pose_torques)
@@ -138,7 +142,8 @@ def set_goal_position(delta, current_position, position_limit=None, set_pos=None
     if position_limit is not None:
         if position_limit.shape != (2, n):
             raise ValueError(
-                "Position limit should be shaped (2,{}) " "but is instead: {}".format(n, position_limit.shape)
+                "Position limit should be shaped (2,{}) "
+                "but is instead: {}".format(n, position_limit.shape)
             )
 
         # Clip goal position
@@ -147,7 +152,9 @@ def set_goal_position(delta, current_position, position_limit=None, set_pos=None
     return goal_position
 
 
-def set_goal_orientation(delta, current_orientation, orientation_limit=None, set_ori=None):
+def set_goal_orientation(
+    delta, current_orientation, orientation_limit=None, set_ori=None
+):
     """
     Calculates and returns the desired goal orientation, clipping the result accordingly to @orientation_limits.
     @delta and @current_orientation must be specified if a relative goal is requested, else @set_ori must be
@@ -180,7 +187,8 @@ def set_goal_orientation(delta, current_orientation, orientation_limit=None, set
     if np.array(orientation_limit).any():
         if orientation_limit.shape != (2, 3):
             raise ValueError(
-                "Orientation limit should be shaped (2,3) " "but is instead: {}".format(orientation_limit.shape)
+                "Orientation limit should be shaped (2,3) "
+                "but is instead: {}".format(orientation_limit.shape)
             )
 
         # Convert to euler angles for clipping
@@ -189,7 +197,9 @@ def set_goal_orientation(delta, current_orientation, orientation_limit=None, set
         # Clip euler angles according to specified limits
         limited = False
         for idx in range(3):
-            if orientation_limit[0][idx] < orientation_limit[1][idx]:  # Normal angle sector meaning
+            if (
+                orientation_limit[0][idx] < orientation_limit[1][idx]
+            ):  # Normal angle sector meaning
                 if orientation_limit[0][idx] < euler[idx] < orientation_limit[1][idx]:
                     continue
                 else:
@@ -211,7 +221,10 @@ def set_goal_orientation(delta, current_orientation, orientation_limit=None, set
                     else:
                         euler[idx] = orientation_limit[1][idx]
             else:  # Inverted angle sector meaning
-                if orientation_limit[0][idx] < euler[idx] or euler[idx] < orientation_limit[1][idx]:
+                if (
+                    orientation_limit[0][idx] < euler[idx]
+                    or euler[idx] < orientation_limit[1][idx]
+                ):
                     continue
                 else:
                     limited = True

@@ -12,8 +12,14 @@ states_key_mapping = {
 }
 
 
-def set_up_libero_envs(suite_name: str, task_name: str, render_device: int, horizon: int, init_state_id: int):
-    '''
+def set_up_libero_envs(
+    suite_name: str,
+    task_name: str,
+    render_device: int,
+    horizon: int,
+    init_state_id: int,
+):
+    """
     Args:
     suite_name: e.g. libero_spatial, libero_goal ...
     task_name: e.g. "pick_up_the_black_bowl_from_table_center_and_place_it_on_the_plate"
@@ -21,7 +27,7 @@ def set_up_libero_envs(suite_name: str, task_name: str, render_device: int, hori
     Return:
     env: OffScreenRenderEnv
     task_prompt: str e.g. "pick up the black bowl from table center and place it on the plate"
-    '''
+    """
     benchmark_dict = benchmark.get_benchmark_dict()
     task_suite = benchmark_dict[suite_name]()
 
@@ -29,16 +35,16 @@ def set_up_libero_envs(suite_name: str, task_name: str, render_device: int, hori
     task = task_suite.get_task(task_id)
     task_prompt = task.language
 
-    bddl_files_path = '/data/zhangchuye/Documents/VideoGeneration/third_party/LIBERO/LIBERO/libero/libero/bddl_files'
+    bddl_files_path = "./third_party/LIBERO/libero/libero/bddl_files"
     task_bddl_file = os.path.join(bddl_files_path, task.problem_folder, task.bddl_file)
 
-    env_args ={
-    "bddl_file_name": task_bddl_file,
-    "camera_heights": 128,
-    "camera_widths": 128,
-    "render_gpu_device_id": render_device, 
-    "has_renderer": True,
-    "horizon": horizon,
+    env_args = {
+        "bddl_file_name": task_bddl_file,
+        "camera_heights": 128,
+        "camera_widths": 128,
+        "render_gpu_device_id": render_device,
+        "has_renderer": True,
+        "horizon": horizon,
     }
     env = OffScreenRenderEnv(**env_args)
     env.seed(0)
@@ -52,8 +58,9 @@ def set_up_libero_envs(suite_name: str, task_name: str, render_device: int, hori
 
     return env, task_prompt
 
+
 def process_obs(obs, extra_state_keys, device):
-    ''' 
+    """
     get the needed input in specified dtype and load to device
     Args:
     obs: the raw observation output by the environment
@@ -63,18 +70,30 @@ def process_obs(obs, extra_state_keys, device):
     visual_obs: [b, view, channel, height, width]
     extra_states: {k: [b, dim]}
     NOTE: NOT Nomarlized (0-255)
-    '''
-    agent_view = torch.flip(torch.from_numpy(obs['agentview_image']).to(device), dims=(0,))            #[height, width, channel]
-    eye_in_hand = torch.flip(torch.from_numpy(obs['robot0_eye_in_hand_image']).to(device), dims=(0,))  #[height, width, channel]
-    visual_obs = torch.stack([agent_view, eye_in_hand], dim=0).unsqueeze(0)      # [batch, view, height, width, channel]
-    visual_obs = visual_obs.permute(0, 1, 4, 2, 3)      #[batch, view, channel, height, width]
+    """
+    agent_view = torch.flip(
+        torch.from_numpy(obs["agentview_image"]).to(device), dims=(0,)
+    )  # [height, width, channel]
+    eye_in_hand = torch.flip(
+        torch.from_numpy(obs["robot0_eye_in_hand_image"]).to(device), dims=(0,)
+    )  # [height, width, channel]
+    visual_obs = torch.stack([agent_view, eye_in_hand], dim=0).unsqueeze(
+        0
+    )  # [batch, view, height, width, channel]
+    visual_obs = visual_obs.permute(
+        0, 1, 4, 2, 3
+    )  # [batch, view, channel, height, width]
     # free agent_view and eye_in_hand from memory
     del agent_view
     del eye_in_hand
     torch.cuda.empty_cache()
 
-    extra_states = {k: obs[states_key_mapping[k]] for k in extra_state_keys}       #{k: [dims,]}
-    extra_states = {k: torch.from_numpy(v).unsqueeze(0) for k, v in extra_states.items()}   #{k: [batch, dims,]}
+    extra_states = {
+        k: obs[states_key_mapping[k]] for k in extra_state_keys
+    }  # {k: [dims,]}
+    extra_states = {
+        k: torch.from_numpy(v).unsqueeze(0) for k, v in extra_states.items()
+    }  # {k: [batch, dims,]}
     extra_states = {k: v.to(torch.float32).to(device) for k, v in extra_states.items()}
 
     return visual_obs, extra_states

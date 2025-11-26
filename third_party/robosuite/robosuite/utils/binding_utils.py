@@ -34,7 +34,10 @@ if CUDA_VISIBLE_DEVICES != "":
             MUJOCO_EGL_DEVICE_ID in CUDA_VISIBLE_DEVICES
         ), "MUJOCO_EGL_DEVICE_ID needs to be set to one of the device id specified in CUDA_VISIBLE_DEVICES"
 
-if macros.MUJOCO_GPU_RENDERING and os.environ.get("MUJOCO_GL", None) not in ["osmesa", "glx"]:
+if macros.MUJOCO_GPU_RENDERING and os.environ.get("MUJOCO_GL", None) not in [
+    "osmesa",
+    "glx",
+]:
     # If gpu rendering is specified in macros, then we enforce gpu
     # option for rendering
     if _SYSTEM == "Darwin":
@@ -51,9 +54,13 @@ if _MUJOCO_GL not in ("disable", "disabled", "off", "false", "0"):
     elif _SYSTEM == "Darwin":
         _VALID_MUJOCO_GL += ("cgl",)
     if _MUJOCO_GL not in _VALID_MUJOCO_GL:
-        raise RuntimeError(f"invalid value for environment variable MUJOCO_GL: {_MUJOCO_GL}")
+        raise RuntimeError(
+            f"invalid value for environment variable MUJOCO_GL: {_MUJOCO_GL}"
+        )
     if _SYSTEM == "Linux" and _MUJOCO_GL == "osmesa":
-        from robosuite.renderers.context.osmesa_context import OSMesaGLContext as GLContext
+        from robosuite.renderers.context.osmesa_context import (
+            OSMesaGLContext as GLContext,
+        )
     elif _SYSTEM == "Linux" and _MUJOCO_GL == "egl":
         from robosuite.renderers.context.egl_context import EGLGLContext as GLContext
     else:
@@ -68,14 +75,18 @@ class MjRenderContext:
     See https://github.com/openai/mujoco-py/blob/4830435a169c1f3e3b5f9b58a7c3d9c39bdf4acb/mujoco_py/mjrendercontext.pyx
     """
 
-    def __init__(self, sim, offscreen=True, device_id=-1, max_width=640, max_height=480):
+    def __init__(
+        self, sim, offscreen=True, device_id=-1, max_width=640, max_height=480
+    ):
         assert offscreen, "only offscreen supported for now"
         self.sim = sim
         self.offscreen = offscreen
         self.device_id = device_id
 
         # setup GL context with defaults for now
-        self.gl_ctx = GLContext(max_width=max_width, max_height=max_height, device_id=self.device_id)
+        self.gl_ctx = GLContext(
+            max_width=max_width, max_height=max_height, device_id=self.device_id
+        )
         self.gl_ctx.make_current()
 
         # Ensure the model data has been updated so that there
@@ -109,7 +120,9 @@ class MjRenderContext:
         self._set_mujoco_context_and_buffers()
 
     def _set_mujoco_context_and_buffers(self):
-        self.con = mujoco.MjrContext(self.model._model, mujoco.mjtFontScale.mjFONTSCALE_150)
+        self.con = mujoco.MjrContext(
+            self.model._model, mujoco.mjtFontScale.mjFONTSCALE_150
+        )
         mujoco.mjr_setBuffer(mujoco.mjtFramebuffer.mjFB_OFFSCREEN, self.con)
 
     def update_offscreen_size(self, width, height):
@@ -145,7 +158,13 @@ class MjRenderContext:
             self.cam.fixedcamid = camera_id
 
         mujoco.mjv_updateScene(
-            self.model._model, self.data._data, self.vopt, self.pert, self.cam, mujoco.mjtCatBit.mjCAT_ALL, self.scn
+            self.model._model,
+            self.data._data,
+            self.vopt,
+            self.pert,
+            self.cam,
+            mujoco.mjtCatBit.mjCAT_ALL,
+            self.scn,
         )
 
         if segmentation:
@@ -168,11 +187,17 @@ class MjRenderContext:
         rgb_img = np.empty((height, width, 3), dtype=np.uint8)
         depth_img = np.empty((height, width), dtype=np.float32) if depth else None
 
-        mujoco.mjr_readPixels(rgb=rgb_img, depth=depth_img, viewport=viewport, con=self.con)
+        mujoco.mjr_readPixels(
+            rgb=rgb_img, depth=depth_img, viewport=viewport, con=self.con
+        )
 
         ret_img = rgb_img
         if segmentation:
-            seg_img = rgb_img[:, :, 0] + rgb_img[:, :, 1] * (2**8) + rgb_img[:, :, 2] * (2**16)
+            seg_img = (
+                rgb_img[:, :, 0]
+                + rgb_img[:, :, 1] * (2**8)
+                + rgb_img[:, :, 2] * (2**16)
+            )
             seg_img[seg_img >= (self.scn.ngeom + 1)] = 0
             seg_ids = np.full((self.scn.ngeom + 1, 2), fill_value=-1, dtype=np.int32)
 
@@ -207,7 +232,13 @@ class MjRenderContext:
 
 class MjRenderContextOffscreen(MjRenderContext):
     def __init__(self, sim, device_id, max_width=640, max_height=480):
-        super().__init__(sim, offscreen=True, device_id=device_id, max_width=max_width, max_height=max_height)
+        super().__init__(
+            sim,
+            offscreen=True,
+            device_id=device_id,
+            max_width=max_width,
+            max_height=max_height,
+        )
 
 
 class MjSimState:
@@ -254,7 +285,9 @@ class _MjModelMeta(type):
                 if attr not in dct:
                     # pylint: disable=protected-access
                     fget = lambda self, attr=attr: getattr(self._model, attr)
-                    fset = lambda self, value, attr=attr: setattr(self._model, attr, value)
+                    fset = lambda self, value, attr=attr: setattr(
+                        self._model, attr, value
+                    )
                     # pylint: enable=protected-access
                     dct[attr] = property(fget, fset)
         return super().__new__(cls, name, bases, dct)
@@ -326,35 +359,41 @@ class MjModel(metaclass=_MjModelMeta):
         Make some useful internal mappings that mujoco-py supported.
         """
         p = self
-        self.body_names, self._body_name2id, self._body_id2name = self._extract_mj_names(
-            p.name_bodyadr, p.nbody, mujoco.mjtObj.mjOBJ_BODY
+        self.body_names, self._body_name2id, self._body_id2name = (
+            self._extract_mj_names(p.name_bodyadr, p.nbody, mujoco.mjtObj.mjOBJ_BODY)
         )
-        self.joint_names, self._joint_name2id, self._joint_id2name = self._extract_mj_names(
-            p.name_jntadr, p.njnt, mujoco.mjtObj.mjOBJ_JOINT
+        self.joint_names, self._joint_name2id, self._joint_id2name = (
+            self._extract_mj_names(p.name_jntadr, p.njnt, mujoco.mjtObj.mjOBJ_JOINT)
         )
-        self.geom_names, self._geom_name2id, self._geom_id2name = self._extract_mj_names(
-            p.name_geomadr, p.ngeom, mujoco.mjtObj.mjOBJ_GEOM
+        self.geom_names, self._geom_name2id, self._geom_id2name = (
+            self._extract_mj_names(p.name_geomadr, p.ngeom, mujoco.mjtObj.mjOBJ_GEOM)
         )
-        self.site_names, self._site_name2id, self._site_id2name = self._extract_mj_names(
-            p.name_siteadr, p.nsite, mujoco.mjtObj.mjOBJ_SITE
+        self.site_names, self._site_name2id, self._site_id2name = (
+            self._extract_mj_names(p.name_siteadr, p.nsite, mujoco.mjtObj.mjOBJ_SITE)
         )
-        self.light_names, self._light_name2id, self._light_id2name = self._extract_mj_names(
-            p.name_lightadr, p.nlight, mujoco.mjtObj.mjOBJ_LIGHT
+        self.light_names, self._light_name2id, self._light_id2name = (
+            self._extract_mj_names(p.name_lightadr, p.nlight, mujoco.mjtObj.mjOBJ_LIGHT)
         )
-        self.camera_names, self._camera_name2id, self._camera_id2name = self._extract_mj_names(
-            p.name_camadr, p.ncam, mujoco.mjtObj.mjOBJ_CAMERA
+        self.camera_names, self._camera_name2id, self._camera_id2name = (
+            self._extract_mj_names(p.name_camadr, p.ncam, mujoco.mjtObj.mjOBJ_CAMERA)
         )
-        self.actuator_names, self._actuator_name2id, self._actuator_id2name = self._extract_mj_names(
-            p.name_actuatoradr, p.nu, mujoco.mjtObj.mjOBJ_ACTUATOR
+        self.actuator_names, self._actuator_name2id, self._actuator_id2name = (
+            self._extract_mj_names(
+                p.name_actuatoradr, p.nu, mujoco.mjtObj.mjOBJ_ACTUATOR
+            )
         )
-        self.sensor_names, self._sensor_name2id, self._sensor_id2name = self._extract_mj_names(
-            p.name_sensoradr, p.nsensor, mujoco.mjtObj.mjOBJ_SENSOR
+        self.sensor_names, self._sensor_name2id, self._sensor_id2name = (
+            self._extract_mj_names(
+                p.name_sensoradr, p.nsensor, mujoco.mjtObj.mjOBJ_SENSOR
+            )
         )
-        self.tendon_names, self._tendon_name2id, self._tendon_id2name = self._extract_mj_names(
-            p.name_tendonadr, p.ntendon, mujoco.mjtObj.mjOBJ_TENDON
+        self.tendon_names, self._tendon_name2id, self._tendon_id2name = (
+            self._extract_mj_names(
+                p.name_tendonadr, p.ntendon, mujoco.mjtObj.mjOBJ_TENDON
+            )
         )
-        self.mesh_names, self._mesh_name2id, self._mesh_id2name = self._extract_mj_names(
-            p.name_meshadr, p.nmesh, mujoco.mjtObj.mjOBJ_MESH
+        self.mesh_names, self._mesh_name2id, self._mesh_id2name = (
+            self._extract_mj_names(p.name_meshadr, p.nmesh, mujoco.mjtObj.mjOBJ_MESH)
         )
 
     def body_id2name(self, id):
@@ -366,7 +405,10 @@ class MjModel(metaclass=_MjModelMeta):
     def body_name2id(self, name):
         """Get body id from mujoco body name."""
         if name not in self._body_name2id:
-            raise ValueError('No "body" with name %s exists. Available "body" names = %s.' % (name, self.body_names))
+            raise ValueError(
+                'No "body" with name %s exists. Available "body" names = %s.'
+                % (name, self.body_names)
+            )
         return self._body_name2id[name]
 
     def joint_id2name(self, id):
@@ -378,7 +420,10 @@ class MjModel(metaclass=_MjModelMeta):
     def joint_name2id(self, name):
         """Get joint id from joint name."""
         if name not in self._joint_name2id:
-            raise ValueError('No "joint" with name %s exists. Available "joint" names = %s.' % (name, self.joint_names))
+            raise ValueError(
+                'No "joint" with name %s exists. Available "joint" names = %s.'
+                % (name, self.joint_names)
+            )
         return self._joint_name2id[name]
 
     def geom_id2name(self, id):
@@ -390,7 +435,10 @@ class MjModel(metaclass=_MjModelMeta):
     def geom_name2id(self, name):
         """Get geom id from  geom name."""
         if name not in self._geom_name2id:
-            raise ValueError('No "geom" with name %s exists. Available "geom" names = %s.' % (name, self.geom_names))
+            raise ValueError(
+                'No "geom" with name %s exists. Available "geom" names = %s.'
+                % (name, self.geom_names)
+            )
         return self._geom_name2id[name]
 
     def site_id2name(self, id):
@@ -402,7 +450,10 @@ class MjModel(metaclass=_MjModelMeta):
     def site_name2id(self, name):
         """Get site id from site name."""
         if name not in self._site_name2id:
-            raise ValueError('No "site" with name %s exists. Available "site" names = %s.' % (name, self.site_names))
+            raise ValueError(
+                'No "site" with name %s exists. Available "site" names = %s.'
+                % (name, self.site_names)
+            )
         return self._site_name2id[name]
 
     def light_id2name(self, id):
@@ -414,7 +465,10 @@ class MjModel(metaclass=_MjModelMeta):
     def light_name2id(self, name):
         """Get light id from light name."""
         if name not in self._light_name2id:
-            raise ValueError('No "light" with name %s exists. Available "light" names = %s.' % (name, self.light_names))
+            raise ValueError(
+                'No "light" with name %s exists. Available "light" names = %s.'
+                % (name, self.light_names)
+            )
         return self._light_name2id[name]
 
     def camera_id2name(self, id):
@@ -427,7 +481,8 @@ class MjModel(metaclass=_MjModelMeta):
         """Get camera id from  camera name."""
         if name not in self._camera_name2id:
             raise ValueError(
-                'No "camera" with name %s exists. Available "camera" names = %s.' % (name, self.camera_names)
+                'No "camera" with name %s exists. Available "camera" names = %s.'
+                % (name, self.camera_names)
             )
         return self._camera_name2id[name]
 
@@ -441,7 +496,8 @@ class MjModel(metaclass=_MjModelMeta):
         """Get actuator id from actuator name."""
         if name not in self._actuator_name2id:
             raise ValueError(
-                'No "actuator" with name %s exists. Available "actuator" names = %s.' % (name, self.actuator_names)
+                'No "actuator" with name %s exists. Available "actuator" names = %s.'
+                % (name, self.actuator_names)
             )
         return self._actuator_name2id[name]
 
@@ -455,7 +511,8 @@ class MjModel(metaclass=_MjModelMeta):
         """Get sensor id from sensor name."""
         if name not in self._sensor_name2id:
             raise ValueError(
-                'No "sensor" with name %s exists. Available "sensor" names = %s.' % (name, self.sensor_names)
+                'No "sensor" with name %s exists. Available "sensor" names = %s.'
+                % (name, self.sensor_names)
             )
         return self._sensor_name2id[name]
 
@@ -469,7 +526,8 @@ class MjModel(metaclass=_MjModelMeta):
         """Get tendon id from tendon name."""
         if name not in self._tendon_name2id:
             raise ValueError(
-                'No "tendon" with name %s exists. Available "tendon" names = %s.' % (name, self.tendon_names)
+                'No "tendon" with name %s exists. Available "tendon" names = %s.'
+                % (name, self.tendon_names)
             )
         return self._tendon_name2id[name]
 
@@ -482,7 +540,10 @@ class MjModel(metaclass=_MjModelMeta):
     def mesh_name2id(self, name):
         """Get mesh id from mesh name."""
         if name not in self._mesh_name2id:
-            raise ValueError('No "mesh" with name %s exists. Available "mesh" names = %s.' % (name, self.mesh_names))
+            raise ValueError(
+                'No "mesh" with name %s exists. Available "mesh" names = %s.'
+                % (name, self.mesh_names)
+            )
         return self._mesh_name2id[name]
 
     # def userdata_id2name(self, id):
@@ -518,7 +579,10 @@ class MjModel(metaclass=_MjModelMeta):
         elif joint_type == mujoco.mjtJoint.mjJNT_BALL:
             ndim = 4
         else:
-            assert joint_type in (mujoco.mjtJoint.mjJNT_HINGE, mujoco.mjtJoint.mjJNT_SLIDE)
+            assert joint_type in (
+                mujoco.mjtJoint.mjJNT_HINGE,
+                mujoco.mjtJoint.mjJNT_SLIDE,
+            )
             ndim = 1
 
         if ndim == 1:
@@ -543,7 +607,10 @@ class MjModel(metaclass=_MjModelMeta):
         elif joint_type == mujoco.mjtJoint.mjJNT_BALL:
             ndim = 3
         else:
-            assert joint_type in (mujoco.mjtJoint.mjJNT_HINGE, mujoco.mjtJoint.mjJNT_SLIDE)
+            assert joint_type in (
+                mujoco.mjtJoint.mjJNT_HINGE,
+                mujoco.mjtJoint.mjJNT_SLIDE,
+            )
             ndim = 1
 
         if ndim == 1:
@@ -565,7 +632,9 @@ class _MjDataMeta(type):
                 if attr not in dct:
                     # pylint: disable=protected-access
                     fget = lambda self, attr=attr: getattr(self._data, attr)
-                    fset = lambda self, value, attr=attr: setattr(self._data, attr, value)
+                    fset = lambda self, value, attr=attr: setattr(
+                        self._data, attr, value
+                    )
                     # pylint: enable=protected-access
                     dct[attr] = property(fget, fset)
         return super().__new__(cls, name, bases, dct)
@@ -1011,7 +1080,9 @@ class MjData(metaclass=_MjDataMeta):
         else:
             start_i, end_i = addr
             value = np.array(value)
-            assert value.shape == (end_i - start_i,), "Value has incorrect shape %s: %s" % (name, value)
+            assert value.shape == (
+                end_i - start_i,
+            ), "Value has incorrect shape %s: %s" % (name, value)
             self.qpos[start_i:end_i] = value
 
     def get_joint_qvel(self, name):
@@ -1045,7 +1116,9 @@ class MjData(metaclass=_MjDataMeta):
         else:
             start_i, end_i = addr
             value = np.array(value)
-            assert value.shape == (end_i - start_i,), "Value has incorrect shape %s: %s" % (name, value)
+            assert value.shape == (
+                end_i - start_i,
+            ), "Value has incorrect shape %s: %s" % (name, value)
             self.qvel[start_i:end_i] = value
 
 
@@ -1126,9 +1199,14 @@ class MjSim:
         assert self._render_context_offscreen is not None
         with _MjSim_render_lock:
             self._render_context_offscreen.render(
-                width=width, height=height, camera_id=camera_id, segmentation=segmentation
+                width=width,
+                height=height,
+                camera_id=camera_id,
+                segmentation=segmentation,
             )
-            return self._render_context_offscreen.read_pixels(width, height, depth=depth, segmentation=segmentation)
+            return self._render_context_offscreen.read_pixels(
+                width, height, depth=depth, segmentation=segmentation
+            )
 
     def add_render_context(self, render_context):
         assert render_context.offscreen

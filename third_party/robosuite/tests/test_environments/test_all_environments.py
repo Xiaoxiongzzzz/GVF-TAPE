@@ -8,6 +8,7 @@ This runs some basic sanity checks on the environment, namely, checking that:
 
 Obviously, if an environment crashes during runtime, that is considered a failure as well.
 """
+
 import numpy as np
 
 import robosuite as suite
@@ -38,7 +39,11 @@ def test_all_environments():
                 env_config["robots"] = robot_name
 
             # Notify user of which test we are currently on
-            print("Testing env: {} with robots {} with config {}...".format(env_name, env_config["robots"], config))
+            print(
+                "Testing env: {} with robots {} with config {}...".format(
+                    env_name, env_config["robots"], config
+                )
+            )
 
             # Create environment
             env = suite.make(

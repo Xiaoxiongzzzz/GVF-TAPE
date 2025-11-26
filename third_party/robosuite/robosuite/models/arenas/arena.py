@@ -58,7 +58,12 @@ class Arena(MujocoXML):
                 See http://www.mujoco.org/book/XMLreference.html#camera for exact attribute specifications.
         """
         # Determine if camera already exists
-        camera = find_elements(root=self.worldbody, tags="camera", attribs={"name": camera_name}, return_first=True)
+        camera = find_elements(
+            root=self.worldbody,
+            tags="camera",
+            attribs={"name": camera_name},
+            return_first=True,
+        )
 
         # Compose attributes
         if camera_attribs is None:
@@ -68,7 +73,9 @@ class Arena(MujocoXML):
 
         if camera is None:
             # If camera doesn't exist, then add a new camera with the specified attributes
-            self.worldbody.append(new_element(tag="camera", name=camera_name, **camera_attribs))
+            self.worldbody.append(
+                new_element(tag="camera", name=camera_name, **camera_attribs)
+            )
         else:
             # Otherwise, we edit all specified attributes in that camera
             for attrib, value in camera_attribs.items():

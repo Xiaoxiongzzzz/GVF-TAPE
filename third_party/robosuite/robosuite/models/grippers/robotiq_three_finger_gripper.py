@@ -1,6 +1,7 @@
 """
 Gripper with 11-DoF controlling three fingers and its open/close variant.
 """
+
 import numpy as np
 
 from robosuite.models.grippers.gripper_model import GripperModel
@@ -72,7 +73,9 @@ class RobotiqThreeFingerGripper(RobotiqThreeFingerGripperBase):
             AssertionError: [Invalid action dimension size]
         """
         assert len(action) == self.dof
-        self.current_action = np.clip(self.current_action + self.speed * np.array(action), -1.0, 1.0)
+        self.current_action = np.clip(
+            self.current_action + self.speed * np.array(action), -1.0, 1.0
+        )
         # Automatically set the scissor joint to "closed" position by default
         return np.concatenate([self.current_action * np.ones(3), [-1]])
 
@@ -103,7 +106,9 @@ class RobotiqThreeFingerDexterousGripper(RobotiqThreeFingerGripperBase):
             AssertionError: [Invalid action dimension size]
         """
         assert len(action) == self.dof
-        self.current_action = np.clip(self.current_action + self.speed * np.sign(action), -1.0, 1.0)
+        self.current_action = np.clip(
+            self.current_action + self.speed * np.sign(action), -1.0, 1.0
+        )
         return self.current_action
 
     @property

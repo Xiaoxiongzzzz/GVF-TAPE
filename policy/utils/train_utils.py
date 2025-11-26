@@ -18,6 +18,7 @@ def init_wandb(cfg):
     )
     OmegaConf.save(cfg, f"{wandb.run.dir}/config.yaml")
 
+
 def pretty_print_cfg(cfg):
     """
     Pretty print the config as cascading bullet points.
@@ -48,6 +49,7 @@ def set_random_seed(seed):
         random.seed(seed)
         np.random.seed(seed)
 
+
 def setup_optimizer(optim_cfg, model):
     """
     Setup the optimizer. Return the optimizer.
@@ -75,6 +77,7 @@ def setup_lr_scheduler(optimizer, scheduler_cfg):
     if sched is None:
         return None
     return sched(optimizer, **scheduler_cfg.params)
+
 
 def get_named_trainable_params(model):
     return [
