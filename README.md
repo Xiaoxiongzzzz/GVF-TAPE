@@ -24,7 +24,7 @@ We recommend using **Conda** to set up the environment.
 ```bash
 # 1. Clone the repository
 git clone git@github.com:Xiaoxiongzzzz/GVF-TAPE.git
-cd repo_name
+cd GVF-TAPE
 
 # 2. Create environment
 conda env create -f environment.yml
