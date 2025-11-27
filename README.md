@@ -12,8 +12,11 @@
 ---
 
 ## 🎥 Highlights
-
-![Teaser](./assets/teaser.webp)
+<p align="center">
+  <img src="./assets/teaser.webp" width="800" />
+  <br>
+  <em><strong>From Imagination to Execution.</strong> The system generates clear and physically plausible video plans (Middle: RGB, Right: Depth), which successfully guide the real robot (Left) to accomplish the goal in the physical world.）</em>
+</p>
 
 **Abstract:** *We introduce **GVF-TAPE**, a framework that enables robots to learn complex manipulation skills **without any action labels**. The system decouples visual planning from execution: it generates a high-fidelity **RGB-D video plan** (Visual Foresight) and executes it using a pose estimator trained on **random exploration** data. This design allows for scalable, closed-loop manipulation in unstructured real-world environments, generalizing to novel objects and tasks.*
 
@@ -51,6 +54,12 @@ the results will be saved in outputs/.
 This repository is released under the MIT license. 
 
 ## 🙏 Acknowledgement
+
+We would like to thank the authors of the following open-source projects, on which this work is built or inspired:
+
+* **Codebase Base:** **[AVDC](https://github.com/flow-diffusion/AVDC)**
+* **Inspirations:** **[V2A](https://github.com/video-to-action/video-to-action-release)** and **[ATM](https://github.com/Large-Trajectory-Model/ATM)**
+* **Simulation & Benchmarks:** **[Robosuite](https://github.com/ARISE-Initiative/robosuite)**, **[LIBERO](https://github.com/Lifelong-Robot-Learning/LIBERO)**, and **[Robomimic](https://github.com/ARISE-Initiative/robomimic)**
 
 ## 📝 Citation
 
