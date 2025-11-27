@@ -23,7 +23,7 @@ We recommend using **Conda** to set up the environment.
 
 ```bash
 # 1. Clone the repository
-git clone --recursive git@github.com:Xiaoxiongzzzz/GVF-TAPE.git
+git clone --recursive https://github.com/Xiaoxiongzzzz/GVF-TAPE
 cd GVF-TAPE
 ```
 Using the following command to install the dependencies. This might take some time.
