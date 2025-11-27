@@ -29,6 +29,47 @@ cd GVF-TAPE
 # 2. Create environment
 conda env create -f environment.yml
 conda activate gvftape
+```
 
-# 3. Install additional dependencies (if needed)
-pip install -e .
+## 👉 Download Weights
+We provide model weights for libero-spatial, libero-object and libero-goal on [hugging face](https://huggingface.co/Ackermannnnnn/CoRL_2025_GVF-TAPE/tree/main), you can download the weights by runing the following code.
+```python
+python ./scripts/download_weights.py
+```
+
+
+## 🦾 Evaluation on LIBERO
+Choose suite (spatial/object/goal) in scripts/eval_ik_proprio.py and run 
+```
+python -m scripts.eval_ik_proprio
+```
+the results will be saved in outputs/.
+
+## 🏷️ License
+This repository is released under the MIT license. 
+
+## 🙏 Acknowledgement
+
+## 📝 Citation
+
+If you find our work useful in your research, please consider citing:
+
+```bibtex
+@inproceedings{zhang2025generative,
+  title={Generative Visual Foresight Meets Task-Agnostic Pose Estimation in Robotic Table-top Manipulation},
+  author={Zhang, Chuye and Zhang, Xiaoxiong and Zheng, Linfang and Pan, Wei and Zhang, Wei},
+  booktitle={Conference on Robot Learning},
+  pages={2823--2846},
+  year={2025},
+  organization={PMLR}
+}
+```
+
+## 📬 Contact & Support
+I am always excited to connect with researchers and developers in the community! 🌟
+
+Whether you have **questions about the paper**, **ideas for future work**, or just want to **discuss the latest trends in Robot Learning**, please **do not hesitate** to reach out. I'd love to hear from you!
+
+👉 **[Drop me an email](mailto:12110807@mail.sustech.edu.cn?subject=Hi%20Xiaoxiong%20-%20Regarding%20GVF-TAPE)** 👈
+
+* **Xiaoxiong Zhang**: `12110807 [at] mail.sustech.edu.cn`
