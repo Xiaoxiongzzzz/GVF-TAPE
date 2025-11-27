@@ -70,6 +70,6 @@ I am always excited to connect with researchers and developers in the community!
 
 Whether you have **questions about the paper**, **ideas for future work**, or just want to **discuss the latest trends in Robot Learning**, please **do not hesitate** to reach out. I'd love to hear from you!
 
-👉 **[Drop me an email](mailto:12433017mail.sustech.edu.cn?subject=Hi%20Xiaoxiong%20-%20Regarding%20GVF-TAPE)** 👈
+👉 **[Drop me an email](mailto:12433017@mail.sustech.edu.cn?subject=Hi%20Xiaoxiong%20-%20Regarding%20GVF-TAPE)** 👈
 
 * **Xiaoxiong Zhang**: `12433017 [at] mail.sustech.edu.cn`
