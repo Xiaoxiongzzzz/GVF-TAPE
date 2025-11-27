@@ -25,7 +25,9 @@ We recommend using **Conda** to set up the environment.
 # 1. Clone the repository
 git clone --recursive git@github.com:Xiaoxiongzzzz/GVF-TAPE.git
 cd GVF-TAPE
-
+```
+Using the following command to install the dependencies. This might take some time.
+```bash
 # 2. Create environment
 conda env create -f environment.yml
 conda activate gvftape

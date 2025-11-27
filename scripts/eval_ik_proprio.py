@@ -34,27 +34,9 @@ import torchvision
 
 # torch.cuda.empty_cache()
 
-# CONFIG_PATH = "conf/eval_rgb_ik.yaml"
-# CONFIG_PATH = "conf/eval_play_cross_depth_encoder.yaml"
-# CONFIG_PATH = "conf/eval_depth_cross_rgb.yaml"
-# CONFIG_PATH = "conf/eval_play_depth_cross_rgb.yaml"
-# CONFIG_PATH = "conf/eval_rgb_ik.yaml"
-# CONFIG_PATH = "conf/eval_object_scratch_dxr_expert.yaml"
-# CONFIG_PATH = "conf/eval_goal_scratch_r_play.yaml"
 CONFIG_PATH = "conf/eval_goal_scratch_dxr_play.yaml"
-# CONFIG_PATH = "conf/eval_spatial_scratch_dxr_expert.yaml"
-# CONFIG_PATH = "conf/eval_object_scratch_dxr_expert.yaml"
-# CONFIG_PATH = "conf/eval_goal_scratch_dxr_expert.yaml"
-# CONFIG_PATH = "conf/eval_long_scratch_dxr_expert.yaml"
-# CONFIG_PATH = "conf/eval_long_scratch_dxr_play.yaml"
 # CONFIG_PATH = "conf/eval_object_scratch_dxr_play.yaml"
-# CONFIG_PATH = "conf/eval_object_scratch_r_play.yaml"
 # CONFIG_PATH = "conf/eval_spatial_scratch_dxr_play.yaml"
-# CONFIG_PATH = "conf/eval_90_8tk_scratch_dxr_play.yaml"
-# CONFIG_PATH = "conf/eval_spatial_scratch_r_play.yaml"
-# CONFIG_PATH = "conf/eval_object_scratch_r_play.yaml"
-# CONFIG_PATH = "conf/eval_goal_scratch_r_play.yaml"
-
 
 class IKEvaluator:
     def __init__(self, config_path=CONFIG_PATH):
