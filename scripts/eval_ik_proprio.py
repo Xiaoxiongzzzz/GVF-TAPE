@@ -34,9 +34,9 @@ import torchvision
 
 # torch.cuda.empty_cache()
 
-CONFIG_PATH = "conf/eval_goal_scratch_dxr_play.yaml"
+# CONFIG_PATH = "conf/eval_goal_scratch_dxr_play.yaml"
 # CONFIG_PATH = "conf/eval_object_scratch_dxr_play.yaml"
-# CONFIG_PATH = "conf/eval_spatial_scratch_dxr_play.yaml"
+CONFIG_PATH = "conf/eval_spatial_scratch_dxr_play.yaml"
 
 class IKEvaluator:
     def __init__(self, config_path=CONFIG_PATH):
